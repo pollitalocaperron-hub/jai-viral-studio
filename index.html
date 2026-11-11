@@ -97,7 +97,7 @@ function renderVisualScenes(){
  $("visualStatus").textContent=currentScenes.length+" composiciones 2D creadas en este navegador. Son artes base editables; aún falta animación de línea de tiempo y exportación MP4.";
 }
 $("makeVisuals").addEventListener("click",renderVisualScenes);
-\nasync function makePlan(){
+async function makePlan(){
  const topic=$("topic").value.trim(),notes=$("research").value.trim();if(!topic){$("topic").focus();$("status").textContent="Primero escribe el tema del vídeo.";return;}
  $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";
  try{
