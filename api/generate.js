@@ -6,7 +6,8 @@ export default async function handler(req, res) {
 
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
-    return res.status(500).json({ error: "Falta configurar GEMINI_API_KEY en Vercel." });
+    console.error("[JAI][Gemini] GEMINI_API_KEY no está configurada.");
+    return res.status(500).json({ error: "Falta configurar GEMINI_API_KEY en Vercel.", diagnosticCode: "MISSING_API_KEY" });
   }
 
   const { topic, notes = "", duration = "45–60 segundos", platform = "Reels" } = req.body || {};
@@ -70,17 +71,43 @@ ${safeNotes}
       }
     );
 
-    const data = await response.json();
+    const rawBody = await response.text();
+    let data;
+    try {
+      data = JSON.parse(rawBody);
+    } catch {
+      console.error("[JAI][Gemini] Respuesta no JSON. HTTP", response.status, "Body:", rawBody.slice(0, 500));
+      return res.status(502).json({
+        error: "Gemini devolvió una respuesta que no pudimos interpretar. Revisa Runtime Logs.",
+        diagnosticCode: "NON_JSON_PROVIDER_RESPONSE",
+        providerStatus: response.status
+      });
+    }
+
     if (!response.ok) {
+      const providerMessage = data?.error?.message || "Sin detalle del proveedor";
+      console.error("[JAI][Gemini] HTTP", response.status, "Status:", data?.error?.status || "unknown", "Message:", providerMessage.slice(0, 700));
+
       const status = response.status;
       const message = status === 429
-        ? "Gemini alcanzó su límite gratuito temporal. Espera a que se restablezca la cuota y vuelve a intentarlo."
+        ? "Gemini alcanzó un límite de uso (429). No se realizará ningún cobro; podemos probar un proveedor alternativo."
         : status === 403
-        ? "Google no autorizó esta solicitud. Revisa que la clave pertenezca al proyecto correcto y que Gemini API esté disponible."
+        ? "Google rechazó el acceso (403). Hay que revisar permisos o disponibilidad del nivel gratuito; no actives facturación."
         : status === 400
-        ? "Gemini rechazó el formato de la solicitud. Inténtalo de nuevo."
-        : "Gemini no pudo completar la solicitud en este momento. Inténtalo más tarde.";
-      return res.status(status >= 400 && status < 500 ? status : 502).json({ error: message });
+        ? "Gemini rechazó la solicitud (400). El registro técnico ya contiene el detalle para corregirla."
+        : status === 404
+        ? "El modelo o endpoint de Gemini no está disponible (404). Revisaremos el nombre del modelo."
+        : status === 503
+        ? "Gemini está temporalmente saturado (503). Podemos reintentar o usar un proveedor alternativo."
+        : status === 504
+        ? "Gemini tardó demasiado en responder (504). Reduciremos la carga o reintentaremos."
+        : "Gemini respondió con un error HTTP " + status + ". Revisa Runtime Logs para conocer el detalle.";
+
+      return res.status(status >= 400 && status < 500 ? status : 502).json({
+        error: message,
+        diagnosticCode: data?.error?.status || "GEMINI_HTTP_ERROR",
+        providerStatus: status
+      });
     }
 
     const output = data.candidates?.[0]?.content?.parts
@@ -89,12 +116,31 @@ ${safeNotes}
       .trim();
 
     if (!output) {
-      return res.status(502).json({ error: "Gemini devolvió una respuesta vacía. Inténtalo otra vez." });
+      console.error("[JAI][Gemini] Respuesta sin texto. finishReason:", data.candidates?.[0]?.finishReason || "unknown");
+      return res.status(502).json({
+        error: "Gemini respondió sin contenido. Revisa Runtime Logs.",
+        diagnosticCode: "EMPTY_GEMINI_RESPONSE"
+      });
     }
 
-    const plan = JSON.parse(output);
+    let plan;
+    try {
+      plan = JSON.parse(output);
+    } catch (parseError) {
+      console.error("[JAI][Gemini] El modelo no devolvió JSON válido:", parseError.message, "Contenido:", output.slice(0, 500));
+      return res.status(502).json({
+        error: "Gemini generó contenido, pero el formato no fue válido. Podemos ajustar el formato automáticamente.",
+        diagnosticCode: "INVALID_MODEL_JSON"
+      });
+    }
+
+    console.info("[JAI][Gemini] Plan generado correctamente.");
     return res.status(200).json(plan);
   } catch (error) {
-    return res.status(502).json({ error: "No se pudo procesar la respuesta de Gemini. Inténtalo de nuevo." });
+    console.error("[JAI][Gemini] Error de conexión:", error?.name || "Error", error?.message || "Sin detalle");
+    return res.status(502).json({
+      error: "No se pudo conectar con Gemini. Revisa Runtime Logs; no compartas claves ni secretos.",
+      diagnosticCode: "GEMINI_CONNECTION_ERROR"
+    });
   }
 }
