@@ -28,6 +28,12 @@ REGLAS EDITORIALES Y CIENTÍFICAS:
 - No presentes como universal una explicación que dependa de profundidad, composición, iluminación, escala u otras condiciones.
 - No afirmes que verificaste fuentes externas si no se proporcionaron fuentes en las notas.
 - Abre con un hook potente de 1–3 segundos que cree curiosidad concreta, pero no llames "mentira" a una explicación parcialmente cierta sin matizarla.
+- REGLA OBLIGATORIA DE RETENCIÓN: el video debe volverse más interesante cada 3 segundos, desde el inicio hasta el cierre. Divide toda la duración en bloques consecutivos de máximo 3 segundos (0–3, 3–6, 6–9, etc.; el último puede ser más corto).
+- En CADA bloque debe ocurrir un estímulo nuevo y perceptible que haga querer seguir viendo: una nueva imagen o composición, movimiento significativo, pregunta concreta, dato sorprendente verificado, demostración visual, cambio de escala/perspectiva, contraste o avance de la explicación. No cuenta como estímulo suficiente cambiar únicamente el color, mover una barra o repetir el mismo plano.
+- Cada bloque debe aportar información o curiosidad distinta; evita repetir el mismo recurso visual o reformular la misma idea. Alterna recursos visuales y narrativos para que el ritmo no se vuelva mecánico.
+- Cada 6–9 segundos introduce una revelación, contraste, mini-giro o respuesta parcial que abra una nueva pregunta. El cierre debe entregar una recompensa clara y memorable que responda la promesa inicial.
+- Crea un mapa de retención temporal llamado retention_map: un objeto por cada bloque consecutivo de máximo 3 segundos, cubriendo TODA la duración sin huecos ni solapamientos. Cada objeto debe incluir time (inicio–fin), new_stimulus (qué cambia de forma concreta), narrative_advance (qué nueva información aporta) y curiosity (qué razón da para continuar).
+- Comprueba internamente que retention_map cubre desde 00:00 hasta el final, que cada bloque aporta un estímulo real y que la progresión aumenta el interés. Reescribe cualquier bloque débil antes de responder.
 - Estructura: hook, promesa, contexto breve, explicación progresiva, revelación/detalle memorable y cierre con pregunta o llamada a interacción natural.
 - Evita relleno, repeticiones, clickbait engañoso y frases genéricas.
 - Escribe narración natural en español, con ritmo y frases fáciles de decir en voz alta.
@@ -38,12 +44,13 @@ REGLAS EDITORIALES Y CIENTÍFICAS:
 - Ajusta el guion a la duración elegida.
 
 Devuelve SOLAMENTE JSON válido con estas claves:
-category, angle, hook, script, story, verification, quality_check.
+category, angle, hook, script, story, retention_map, verification, quality_check.
 category: categoría breve.
 angle: enfoque editorial en 2-3 frases.
 hook: hook inicial.
 script: guion completo con marcas [HOOK], [PROMESA], [CONTEXTO], [EXPLICACIÓN], [REVELACIÓN], [CIERRE].
 story: arreglo de 5 a 8 objetos de escena; cada objeto debe tener los campos time, objective, visual, animation, on_screen_text, transition.
+retention_map: arreglo cronológico de bloques de máximo 3 segundos que cubra toda la duración; cada objeto debe tener time, new_stimulus, narrative_advance, curiosity.
 verification: lista de afirmaciones/datos que deben verificarse y qué evidencia falta.
 quality_check: lista de comprobaciones editoriales, científicas y de producción.
 
