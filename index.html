@@ -47,14 +47,14 @@ footer{text-align:center;color:#71819e;font-size:11px;margin-top:26px}
  <div style="height:16px"></div>
  <label for="research">Tu investigación o indicaciones (opcional)</label>
  <textarea id="research" placeholder="Pega aquí tus notas, fuentes, datos que quieras incluir o el enfoque que imaginas..."></textarea>
- <div class="hint">La aplicación conservará tus notas en este dispositivo. En esta primera versión no se envían a ninguna IA.</div>
+ <div class="hint">Tus notas se enviarán de forma segura a Gemini para preparar el plan. No incluyas información sensible.</div>
  <div style="height:16px"></div>
  <div class="grid">
   <div><label for="duration">Duración objetivo</label><select id="duration"><option>30–45 segundos</option><option>45–60 segundos</option><option>60–90 segundos</option></select></div>
   <div><label for="platform">Destino principal</label><select id="platform"><option>Reels</option><option>YouTube Shorts</option><option>TikTok</option><option>Multiplataforma</option></select></div>
  </div>
- <button class="primary" id="create">Crear estructura del vídeo</button>
- <div class="hint status" id="status">Motor de producción: prototipo local. La conexión de IA y exportación MP4 se integrarán en la siguiente fase.</div>
+ <button class="primary" id="create">Crear plan de producción con IA</button>
+ <div class="hint status" id="status">Motor editorial con Gemini · MP4 y animación completa: siguientes etapas de desarrollo.</div>
 </section>
 <section class="card output" id="output">
  <div class="row" style="justify-content:space-between"><h3 class="section-title">Plan de producción</h3><span class="tag">9:16 · 1080 × 1920</span></div>
@@ -81,7 +81,7 @@ footer{text-align:center;color:#71819e;font-size:11px;margin-top:26px}
  <h3 class="section-title">Proyectos guardados</h3>
  <div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div>
 </section>
-<footer>J.A.I. Viral Studio · Prototipo privado · No conectado aún a servicios externos de IA.</footer>
+<footer>J.A.I. Viral Studio · Producción editorial con Gemini · Exportación MP4 en desarrollo.</footer>
 </div>
 <script>
 const $=id=>document.getElementById(id);
@@ -104,14 +104,14 @@ async function makePlan(){
   const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value})});
   const data=await response.json();
   if(!response.ok) throw new Error(data.error||"No se pudo generar el plan.");
-  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · OpenAI</span><span class="tag">Motion graphics 2D</span>';
+  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Gemini</span><span class="tag">Motion graphics 2D</span>';
   $("angle").textContent=data.angle||"Enfoque pendiente.";
   $("hook").textContent=data.hook||"Hook pendiente.";
   $("script").textContent=data.script||"Guion pendiente.";
-  $("story").textContent=data.story||"Storyboard pendiente.";
+  $("story").textContent=(data.story||"Storyboard pendiente.") + (data.verification ? "\\n\\nVERIFICACIONES\\n"+data.verification : "") + (data.quality_check ? "\\n\\nCONTROL DE CALIDAD\\n"+data.quality_check : "");
   currentPlan="J.A.I. VIRAL STUDIO\nTema: "+topic+"\nCategoría: "+(data.category||"")+"\nEnfoque: "+(data.angle||"")+"\nHook: "+(data.hook||"")+"\n\n"+(data.script||"")+"\n\nSTORYBOARD\n"+(data.story||"");
   $("output").classList.add("show");
-  $("status").textContent="¡Plan generado con inteligencia artificial! Puedes guardarlo en tus proyectos.";
+  $("status").textContent="¡Gemini generó el plan editorial! Revisa el guion y el storyboard antes de producir.";
   $("output").scrollIntoView({behavior:"smooth",block:"start"});
  }catch(error){
   $("status").textContent=error.message||"Ocurrió un error al generar el plan.";
