@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<title>J.A.I. Viral Studio</title>
+<style>
+:root{--bg:#090d18;--panel:#111a2c;--panel2:#172239;--line:#273653;--text:#f4f7ff;--muted:#9aa9c4;--green:#4de0a1;--cyan:#69d9ef;--pink:#d68cff;--warn:#ffcf70}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 85% 0%,#19284a 0,transparent 38%),var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:900px;margin:auto;padding:22px 16px 60px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:11px}.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--green),var(--cyan));display:grid;place-items:center;color:#07131a;font-weight:900;font-size:20px;box-shadow:0 8px 30px #4de0a133}
+h1{font-size:19px;margin:0;letter-spacing:.3px}.sub{font-size:12px;color:var(--muted);margin-top:3px}.pill{font-size:11px;border:1px solid #256c56;color:var(--green);padding:6px 10px;border-radius:99px;white-space:nowrap}
+.hero{padding:22px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(145deg,#14213a,#101729 70%);margin-bottom:16px}
+.eyebrow{color:var(--green);font-weight:700;font-size:11px;letter-spacing:1.5px;text-transform:uppercase}
+h2{font-size:25px;line-height:1.15;margin:9px 0}.hero p{color:var(--muted);line-height:1.5;margin:8px 0 0}
+.card{background:linear-gradient(180deg,#121d31,#0f1728);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}
+label{display:block;font-weight:650;margin:0 0 8px}textarea,input,select{width:100%;background:#0a1221;border:1px solid #30415f;border-radius:12px;color:var(--text);padding:13px;font:inherit;outline:none}
+textarea:focus,input:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 3px #4de0a11c}textarea{min-height:112px;resize:vertical}
+.hint{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.45}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cursor:pointer}
+.primary{width:100%;margin-top:14px;color:#06150f;background:linear-gradient(90deg,var(--green),var(--cyan));box-shadow:0 8px 25px #4de0a126}
+.secondary{color:var(--text);background:#1b2942;border:1px solid #344563}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.section-title{font-size:16px;margin:0 0 12px}.status{color:var(--warn);font-size:12px}
+.output{display:none}.output.show{display:block}.tag{display:inline-block;border:1px solid #34506b;background:#14243a;color:#bcecff;border-radius:99px;padding:5px 9px;font-size:11px;margin:4px 4px 4px 0}
+.result{white-space:pre-wrap;line-height:1.55;color:#e6edff;background:#0a1221;border:1px solid #273653;border-radius:12px;padding:14px;font-size:13px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.step{background:#0b1424;border:1px solid #263754;border-radius:12px;padding:12px}.step b{display:block;font-size:12px;margin-bottom:5px}.step span{font-size:11px;color:var(--muted)}
+footer{text-align:center;color:#71819e;font-size:11px;margin-top:26px}
+@media(max-width:560px){.grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr 1fr}.hero{padding:18px}h2{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+ <div class="brand"><div class="logo">J</div><div><h1>J.A.I. Viral Studio</h1><div class="sub">Tu idea → una producción vertical</div></div></div>
+ <div class="pill">PROTOTIPO · DÍA 1</div>
+</header>
+<section class="hero">
+ <div class="eyebrow">Creative intelligence studio</div>
+ <h2>Convirtamos una idea<br>en un vídeo que explique.</h2>
+ <p>Escribe el tema y añade tu investigación. J.A.I. organizará el concepto, el enfoque y el plan visual para un vídeo educativo 9:16.</p>
+</section>
+<section class="card">
+ <label for="topic">¿Qué vídeo quieres crear?</label>
+ <input id="topic" maxlength="160" placeholder="Ej. ¿Por qué se sella la carne?">
+ <div class="hint">Escribe una pregunta, un dato o una idea concreta.</div>
+ <div style="height:16px"></div>
+ <label for="research">Tu investigación o indicaciones (opcional)</label>
+ <textarea id="research" placeholder="Pega aquí tus notas, fuentes, datos que quieras incluir o el enfoque que imaginas..."></textarea>
+ <div class="hint">La aplicación conservará tus notas en este dispositivo. En esta primera versión no se envían a ninguna IA.</div>
+ <div style="height:16px"></div>
+ <div class="grid">
+  <div><label for="duration">Duración objetivo</label><select id="duration"><option>30–45 segundos</option><option>45–60 segundos</option><option>60–90 segundos</option></select></div>
+  <div><label for="platform">Destino principal</label><select id="platform"><option>Reels</option><option>YouTube Shorts</option><option>TikTok</option><option>Multiplataforma</option></select></div>
+ </div>
+ <button class="primary" id="create">Crear estructura del vídeo</button>
+ <div class="hint status" id="status">Motor de producción: prototipo local. La conexión de IA y exportación MP4 se integrarán en la siguiente fase.</div>
+</section>
+<section class="card output" id="output">
+ <div class="row" style="justify-content:space-between"><h3 class="section-title">Plan de producción</h3><span class="tag">9:16 · 1080 × 1920</span></div>
+ <div id="category" style="margin-bottom:10px"></div>
+ <label>Enfoque recomendado</label><div class="result" id="angle"></div>
+ <div style="height:13px"></div><label>Hook inicial</label><div class="result" id="hook"></div>
+ <div style="height:13px"></div><label>Guion base</label><div class="result" id="script"></div>
+ <div style="height:13px"></div><label>Storyboard visual 2D</label><div class="result" id="story"></div>
+ <div style="height:13px"></div><label>Lista de control</label>
+ <div class="steps">
+  <div class="step"><b>01 · Investigación</b><span>Verificar afirmaciones y fuentes.</span></div>
+  <div class="step"><b>02 · Diseño 2D</b><span>Objetos, diagramas y movimiento.</span></div>
+  <div class="step"><b>03 · Voz</b><span>Narración y sincronización.</span></div>
+  <div class="step"><b>04 · Montaje</b><span>Ritmo, subtítulos y sonido.</span></div>
+  <div class="step"><b>05 · Revisión</b><span>Exactitud y originalidad.</span></div>
+  <div class="step"><b>06 · Exportación</b><span>MP4 vertical 9:16.</span></div>
+ </div>
+ <div class="row" style="margin-top:14px">
+  <button class="secondary" id="copy">Copiar plan</button>
+  <button class="secondary" id="save">Guardar proyecto</button>
+ </div>
+</section>
+<section class="card">
+ <h3 class="section-title">Proyectos guardados</h3>
+ <div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div>
+</section>
+<footer>J.A.I. Viral Studio · Prototipo privado · No conectado aún a servicios externos de IA.</footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let currentPlan="";
+function classify(t){
+ const s=t.toLowerCase();
+ if(/carne|cocina|alimento|comida|café|cafe|pan|huevo|sabor|nutri/.test(s)) return "Ciencia de los alimentos · Gastronomía";
+ if(/cuerpo|cerebro|corazón|corazon|sangre|salud|médic|medic|alcohol|fumar|sueño|sueno/.test(s)) return "Ciencia · Salud y cuerpo humano";
+ if(/historia|imperio|guerra|civilización|civilizacion|antigu/.test(s)) return "Historia · Cultura";
+ if(/dinero|ahorro|economía|economia|banco|inversión|inversion/.test(s)) return "Educación financiera";
+ if(/espacio|planeta|universo|estrella|física|fisica|química|quimica/.test(s)) return "Ciencia · Universo y naturaleza";
+ return "Educación · Curiosidades y explicación";
+}
+function makePlan(){
+ const topic=$("topic").value.trim(), notes=$("research").value.trim();
+ if(!topic){$("topic").focus();$("status").textContent="Primero escribe el tema del vídeo.";return;}
+ const cat=classify(topic);
+ const noteLine=notes? "Integra las notas del usuario, separando hechos comprobables de hipótesis: "+notes : "Investiga el tema con fuentes fiables antes de afirmar datos específicos.";
+ const hook=`¿Alguna vez te has preguntado ${topic.charAt(0).toLowerCase()+topic.slice(1).replace(/[?¿]/g,"")} ? La respuesta es más interesante de lo que parece.`;
+ const script=`[HOOK]\n${hook}\n\n[CONTEXTO]\nPresenta el fenómeno en una frase sencilla y plantea qué va a descubrir el espectador.\n\n[EXPLICACIÓN]\nExplica el mecanismo paso a paso, con lenguaje cotidiano. Usa una comparación visual para cada concepto difícil.\n\n[DETALLE SORPRENDENTE]\nAñade un dato concreto, comprobado y relevante que aporte valor, sin exagerar ni inventar cifras.\n\n[CIERRE]\nResume la explicación en una frase memorable y termina con una pregunta genuina para invitar a comentar.\n\nNOTA EDITORIAL: ${noteLine}`;
+ const story=`ESCENA 1 · 0–3 s · Hook visual fuerte: objeto principal en primer plano, entrada rápida y texto cinético.\nESCENA 2 · 3–10 s · Contexto: diagrama 2D sencillo que sitúe el fenómeno.\nESCENA 3 · 10–25 s · Mecanismo: secuencia de 2–3 pasos con flechas, etiquetas y acercamientos.\nESCENA 4 · 25–35 s · Revelación: comparación visual antes/después o causa/efecto.\nESCENA 5 · Final · Resumen gráfico y pregunta para comentarios.\n\nESTILO: motion graphics 2D, sin personajes; formas limpias, contraste alto, movimiento fluido, subtítulos grandes y cambios visuales frecuentes.\nFORMATO: vertical 9:16, 1080 × 1920. Duración: ${$("duration").value}. Plataforma: ${$("platform").value}.`;
+ $("category").innerHTML=`<span class="tag">${cat}</span><span class="tag">Clasificación preliminar</span><span class="tag">Motion graphics 2D</span>`;
+ $("angle").textContent=`Explicar «${topic}» con un enfoque educativo, visual y fácil de entender. Prioridad: curiosidad + claridad + información verificable. La categoría es una sugerencia inicial, no una medición de tendencias.`;
+ $("hook").textContent=hook;
+ $("script").textContent=script;
+ $("story").textContent=story;
+ currentPlan=`J.A.I. VIRAL STUDIO\nTema: ${topic}\nCategoría: ${cat}\nEnfoque: ${$("angle").textContent}\nHook: ${hook}\n\n${script}\n\nSTORYBOARD\n${story}`;
+ $("output").classList.add("show");
+ $("status").textContent="Estructura creada localmente. Aún no se ha llamado a ninguna IA ni se ha generado un vídeo.";
+ $("output").scrollIntoView({behavior:"smooth",block:"start"});
+}
+$("create").addEventListener("click",makePlan);
+$("copy").addEventListener("click",async()=>{if(!currentPlan)return;try{await navigator.clipboard.writeText(currentPlan);$("status").textContent="Plan copiado."; }catch(e){$("status").textContent="No se pudo copiar automáticamente. Mantén pulsado el texto para copiarlo.";}});
+function getProjects(){try{return JSON.parse(localStorage.getItem("jaiProjects")||"[]")}catch(e){return[]}}
+function renderProjects(){const p=getProjects();$("projects").innerHTML=p.length?p.map((x,i)=>`<div style="padding:9px 0;border-bottom:1px solid #273653"><b>${escapeHtml(x.topic)}</b><div class="hint">${escapeHtml(x.date)}</div></div>`).join(""):"Todavía no hay proyectos guardados en este dispositivo."}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+$("save").addEventListener("click",()=>{const topic=$("topic").value.trim();if(!topic){$("status").textContent="Escribe un tema antes de guardar.";return;}const p=getProjects();p.unshift({topic,date:new Date().toLocaleString("es-MX"),notes:$("research").value});try{localStorage.setItem("jaiProjects",JSON.stringify(p.slice(0,30)));renderProjects();$("status").textContent="Proyecto guardado en este navegador."; }catch(e){$("status").textContent="No se pudo guardar. Comprueba el almacenamiento del navegador.";}});
+renderProjects();
+</script>
+</body>
+</html>
