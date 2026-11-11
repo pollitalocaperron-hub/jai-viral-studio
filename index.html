@@ -135,7 +135,7 @@ function previewTimeline(){
   $("timelineStatus").textContent="Revisando escena "+(index+1)+" de "+rows.length+" · "+(timelineState.items[index].time||"Tiempo por definir");
   const seconds=timelineState.items[index].seconds;index++;
   if(index>=rows.length){clearInterval(timelineState.timer);timelineState.timer=null;$("timelineStatus").textContent="Secuencia revisada. La línea de tiempo está lista para la siguiente etapa de renderizado.";return;}
-  timelineState.timer=setTimeout(show,Math.max(1200,seconds*350));
+  timelineState.timer=setTimeout(show,Math.max(1200,seconds*1000));
  };
  show();
 }
