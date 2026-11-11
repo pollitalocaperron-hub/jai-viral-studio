@@ -101,7 +101,7 @@ $("makeVisuals").addEventListener("click",renderVisualScenes);
 const timelineState={items:[],index:0,timer:null};
 function sceneSeconds(scene){
  const raw=String(scene?.time||"");
- const match=raw.match(/(\\d{1,2}):(\\d{2})\\s*[-–—]\\s*(\\d{1,2}):(\\d{2})/);
+ const match=raw.match(/(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})/);
  if(match){const start=Number(match[1])*60+Number(match[2]);const end=Number(match[3])*60+Number(match[4]);if(end>start)return end-start;}
  return 6;
 }
@@ -128,7 +128,7 @@ function buildTimeline(){
 }
 function previewTimeline(){
  if(!timelineState.items.length)return;
- if(timelineState.timer){clearInterval(timelineState.timer);timelineState.timer=null;}
+ if(timelineState.timer){clearTimeout(timelineState.timer);timelineState.timer=null;}
  const rows=[...$("timelineTracks").children];let index=0;
  const show=()=>{
   rows.forEach((row,i)=>{row.style.borderColor=i===index?"#4de0a1":"#263754";row.style.boxShadow=i===index?"0 0 0 1px #4de0a1 inset":"none";});
