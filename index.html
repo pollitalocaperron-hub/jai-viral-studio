@@ -95,23 +95,27 @@ function classify(t){
  if(/espacio|planeta|universo|estrella|física|fisica|química|quimica/.test(s)) return "Ciencia · Universo y naturaleza";
  return "Educación · Curiosidades y explicación";
 }
-function makePlan(){
+async function makePlan(){
  const topic=$("topic").value.trim(), notes=$("research").value.trim();
  if(!topic){$("topic").focus();$("status").textContent="Primero escribe el tema del vídeo.";return;}
- const cat=classify(topic);
- const noteLine=notes? "Integra las notas del usuario, separando hechos comprobables de hipótesis: "+notes : "Investiga el tema con fuentes fiables antes de afirmar datos específicos.";
- const hook=`¿Alguna vez te has preguntado ${topic.charAt(0).toLowerCase()+topic.slice(1).replace(/[?¿]/g,"")} ? La respuesta es más interesante de lo que parece.`;
- const script=`[HOOK]\n${hook}\n\n[CONTEXTO]\nPresenta el fenómeno en una frase sencilla y plantea qué va a descubrir el espectador.\n\n[EXPLICACIÓN]\nExplica el mecanismo paso a paso, con lenguaje cotidiano. Usa una comparación visual para cada concepto difícil.\n\n[DETALLE SORPRENDENTE]\nAñade un dato concreto, comprobado y relevante que aporte valor, sin exagerar ni inventar cifras.\n\n[CIERRE]\nResume la explicación en una frase memorable y termina con una pregunta genuina para invitar a comentar.\n\nNOTA EDITORIAL: ${noteLine}`;
- const story=`ESCENA 1 · 0–3 s · Hook visual fuerte: objeto principal en primer plano, entrada rápida y texto cinético.\nESCENA 2 · 3–10 s · Contexto: diagrama 2D sencillo que sitúe el fenómeno.\nESCENA 3 · 10–25 s · Mecanismo: secuencia de 2–3 pasos con flechas, etiquetas y acercamientos.\nESCENA 4 · 25–35 s · Revelación: comparación visual antes/después o causa/efecto.\nESCENA 5 · Final · Resumen gráfico y pregunta para comentarios.\n\nESTILO: motion graphics 2D, sin personajes; formas limpias, contraste alto, movimiento fluido, subtítulos grandes y cambios visuales frecuentes.\nFORMATO: vertical 9:16, 1080 × 1920. Duración: ${$("duration").value}. Plataforma: ${$("platform").value}.`;
- $("category").innerHTML=`<span class="tag">${cat}</span><span class="tag">Clasificación preliminar</span><span class="tag">Motion graphics 2D</span>`;
- $("angle").textContent=`Explicar «${topic}» con un enfoque educativo, visual y fácil de entender. Prioridad: curiosidad + claridad + información verificable. La categoría es una sugerencia inicial, no una medición de tendencias.`;
- $("hook").textContent=hook;
- $("script").textContent=script;
- $("story").textContent=story;
- currentPlan=`J.A.I. VIRAL STUDIO\nTema: ${topic}\nCategoría: ${cat}\nEnfoque: ${$("angle").textContent}\nHook: ${hook}\n\n${script}\n\nSTORYBOARD\n${story}`;
- $("output").classList.add("show");
- $("status").textContent="Estructura creada localmente. Aún no se ha llamado a ninguna IA ni se ha generado un vídeo.";
- $("output").scrollIntoView({behavior:"smooth",block:"start"});
+ $("create").disabled=true;
+ $("status").textContent="J.A.I. está investigando y preparando tu guion…";
+ try{
+  const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value})});
+  const data=await response.json();
+  if(!response.ok) throw new Error(data.error||"No se pudo generar el plan.");
+  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · OpenAI</span><span class="tag">Motion graphics 2D</span>';
+  $("angle").textContent=data.angle||"Enfoque pendiente.";
+  $("hook").textContent=data.hook||"Hook pendiente.";
+  $("script").textContent=data.script||"Guion pendiente.";
+  $("story").textContent=data.story||"Storyboard pendiente.";
+  currentPlan="J.A.I. VIRAL STUDIO\nTema: "+topic+"\nCategoría: "+(data.category||"")+"\nEnfoque: "+(data.angle||"")+"\nHook: "+(data.hook||"")+"\n\n"+(data.script||"")+"\n\nSTORYBOARD\n"+(data.story||"");
+  $("output").classList.add("show");
+  $("status").textContent="¡Plan generado con inteligencia artificial! Puedes guardarlo en tus proyectos.";
+  $("output").scrollIntoView({behavior:"smooth",block:"start"});
+ }catch(error){
+  $("status").textContent=error.message||"Ocurrió un error al generar el plan.";
+ }finally{$("create").disabled=false;}
 }
 $("create").addEventListener("click",makePlan);
 $("copy").addEventListener("click",async()=>{if(!currentPlan)return;try{await navigator.clipboard.writeText(currentPlan);$("status").textContent="Plan copiado."; }catch(e){$("status").textContent="No se pudo copiar automáticamente. Mantén pulsado el texto para copiarlo.";}});
