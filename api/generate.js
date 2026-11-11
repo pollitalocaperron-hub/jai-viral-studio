@@ -21,10 +21,13 @@ Eres el director editorial, guionista y estratega de retención de J.A.I. Viral 
 Diseña un plan de producción de alta calidad para un video educativo vertical 9:16.
 Objetivo: maximizar interés, comprensión, retención y potencial de compartirse sin prometer viralidad ni usar engaños.
 
-REGLAS EDITORIALES:
+REGLAS EDITORIALES Y CIENTÍFICAS:
 - No inventes cifras, estudios, citas, fuentes ni hechos. Distingue hechos conocidos de hipótesis y señala qué requiere verificación.
 - Las notas del usuario son material de partida, no hechos automáticamente confirmados.
-- Abre con un hook potente de 1–3 segundos que cree curiosidad concreta.
+- En ciencia, explica el mecanismo con precisión y evita simplificaciones que cambien la causa física. No confundas absorción, reflexión, dispersión, refracción o emisión. Si hay varios mecanismos, indica cuál predomina y bajo qué condiciones.
+- No presentes como universal una explicación que dependa de profundidad, composición, iluminación, escala u otras condiciones.
+- No afirmes que verificaste fuentes externas si no se proporcionaron fuentes en las notas.
+- Abre con un hook potente de 1–3 segundos que cree curiosidad concreta, pero no llames "mentira" a una explicación parcialmente cierta sin matizarla.
 - Estructura: hook, promesa, contexto breve, explicación progresiva, revelación/detalle memorable y cierre con pregunta o llamada a interacción natural.
 - Evita relleno, repeticiones, clickbait engañoso y frases genéricas.
 - Escribe narración natural en español, con ritmo y frases fáciles de decir en voz alta.
@@ -40,9 +43,9 @@ category: categoría breve.
 angle: enfoque editorial en 2-3 frases.
 hook: hook inicial.
 script: guion completo con marcas [HOOK], [PROMESA], [CONTEXTO], [EXPLICACIÓN], [REVELACIÓN], [CIERRE].
-story: storyboard detallado de 5 a 8 escenas.
+story: arreglo de 5 a 8 objetos de escena; cada objeto debe tener los campos time, objective, visual, animation, on_screen_text, transition.
 verification: lista de afirmaciones/datos que deben verificarse y qué evidencia falta.
-quality_check: checklist de calidad editorial, viralidad responsable y producción.
+quality_check: lista de comprobaciones editoriales, científicas y de producción.
 
 Tema: ${topic.trim()}
 Duración objetivo: ${duration}
@@ -77,17 +80,12 @@ ${safeNotes}
       data = JSON.parse(rawBody);
     } catch {
       console.error("[JAI][Gemini] Respuesta no JSON. HTTP", response.status, "Body:", rawBody.slice(0, 500));
-      return res.status(502).json({
-        error: "Gemini devolvió una respuesta que no pudimos interpretar. Revisa Runtime Logs.",
-        diagnosticCode: "NON_JSON_PROVIDER_RESPONSE",
-        providerStatus: response.status
-      });
+      return res.status(502).json({ error: "Gemini devolvió una respuesta que no pudimos interpretar. Revisa Runtime Logs.", diagnosticCode: "NON_JSON_PROVIDER_RESPONSE", providerStatus: response.status });
     }
 
     if (!response.ok) {
       const providerMessage = data?.error?.message || "Sin detalle del proveedor";
       console.error("[JAI][Gemini] HTTP", response.status, "Status:", data?.error?.status || "unknown", "Message:", providerMessage.slice(0, 700));
-
       const status = response.status;
       const message = status === 429
         ? "Gemini alcanzó un límite de uso (429). No se realizará ningún cobro; podemos probar un proveedor alternativo."
@@ -102,25 +100,13 @@ ${safeNotes}
         : status === 504
         ? "Gemini tardó demasiado en responder (504). Reduciremos la carga o reintentaremos."
         : "Gemini respondió con un error HTTP " + status + ". Revisa Runtime Logs para conocer el detalle.";
-
-      return res.status(status >= 400 && status < 500 ? status : 502).json({
-        error: message,
-        diagnosticCode: data?.error?.status || "GEMINI_HTTP_ERROR",
-        providerStatus: status
-      });
+      return res.status(status >= 400 && status < 500 ? status : 502).json({ error: message, diagnosticCode: data?.error?.status || "GEMINI_HTTP_ERROR", providerStatus: status });
     }
 
-    const output = data.candidates?.[0]?.content?.parts
-      ?.map(part => part.text || "")
-      .join("")
-      .trim();
-
+    const output = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
     if (!output) {
       console.error("[JAI][Gemini] Respuesta sin texto. finishReason:", data.candidates?.[0]?.finishReason || "unknown");
-      return res.status(502).json({
-        error: "Gemini respondió sin contenido. Revisa Runtime Logs.",
-        diagnosticCode: "EMPTY_GEMINI_RESPONSE"
-      });
+      return res.status(502).json({ error: "Gemini respondió sin contenido. Revisa Runtime Logs.", diagnosticCode: "EMPTY_GEMINI_RESPONSE" });
     }
 
     let plan;
@@ -128,19 +114,13 @@ ${safeNotes}
       plan = JSON.parse(output);
     } catch (parseError) {
       console.error("[JAI][Gemini] El modelo no devolvió JSON válido:", parseError.message, "Contenido:", output.slice(0, 500));
-      return res.status(502).json({
-        error: "Gemini generó contenido, pero el formato no fue válido. Podemos ajustar el formato automáticamente.",
-        diagnosticCode: "INVALID_MODEL_JSON"
-      });
+      return res.status(502).json({ error: "Gemini generó contenido, pero el formato no fue válido. Podemos ajustar el formato automáticamente.", diagnosticCode: "INVALID_MODEL_JSON" });
     }
 
     console.info("[JAI][Gemini] Plan generado correctamente.");
     return res.status(200).json(plan);
   } catch (error) {
     console.error("[JAI][Gemini] Error de conexión:", error?.name || "Error", error?.message || "Sin detalle");
-    return res.status(502).json({
-      error: "No se pudo conectar con Gemini. Revisa Runtime Logs; no compartas claves ni secretos.",
-      diagnosticCode: "GEMINI_CONNECTION_ERROR"
-    });
+    return res.status(502).json({ error: "No se pudo conectar con Gemini. Revisa Runtime Logs; no compartas claves ni secretos.", diagnosticCode: "GEMINI_CONNECTION_ERROR" });
   }
 }
