@@ -78,7 +78,7 @@ const $=id=>document.getElementById(id);let currentPlan="",currentPlanData=null,
 async function readJsonResponse(response,label){
  const raw=await response.text();
  try{return JSON.parse(raw);}catch(error){
-  const detail=raw.replace(/\\s+/g," ").trim().slice(0,260)||"respuesta vacía";
+  const detail=raw.replace(/\s+/g," ").trim().slice(0,260)||"respuesta vacía";
   throw new Error(label+" devolvió una respuesta que no es JSON (HTTP "+response.status+", "+(response.headers.get("content-type")||"tipo desconocido")+"): "+detail);
  }
 }
@@ -86,8 +86,8 @@ async function readJsonResponse(response,label){
 function readable(value){
  if(value===null||value===undefined)return "No especificado";
  if(typeof value==="string"||typeof value==="number"||typeof value==="boolean")return String(value);
- if(Array.isArray(value))return value.map((item,i)=>typeof item==="object"?"• "+readable(item):"• "+String(item)).join("\\n");
- if(typeof value==="object")return Object.entries(value).map(([key,val])=>key.replace(/_/g," ").replace(/\\b\\w/g,c=>c.toUpperCase())+": "+readable(val)).join("\\n");
+ if(Array.isArray(value))return value.map((item,i)=>typeof item==="object"?"• "+readable(item):"• "+String(item)).join("\n");
+ if(typeof value==="object")return Object.entries(value).map(([key,val])=>key.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())+": "+readable(val)).join("\n");
  return String(value);
 }
 function renderRetentionMap(value){
@@ -124,7 +124,7 @@ function renderStory(value){
    const card=document.createElement("article");card.className="scene";
    const heading=document.createElement("h4");heading.textContent="ESCENA "+(index+1);card.appendChild(heading);
    if(scene&&typeof scene==="object"&&!Array.isArray(scene)){
-    Object.entries(scene).forEach(([key,val])=>{const p=document.createElement("p");const b=document.createElement("b");b.textContent=key.replace(/_/g," ").replace(/\\b\\w/g,c=>c.toUpperCase())+": ";p.append(b,document.createTextNode(readable(val)));card.appendChild(p);});
+    Object.entries(scene).forEach(([key,val])=>{const p=document.createElement("p");const b=document.createElement("b");b.textContent=key.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())+": ";p.append(b,document.createTextNode(readable(val)));card.appendChild(p);});
    }else{const p=document.createElement("p");p.textContent=readable(scene);card.appendChild(p);}
    root.appendChild(card);
   });
@@ -346,7 +346,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  if(Array.isArray(captionCues)&&captionCues.length){
   const cue=captionCues.slice().sort((a,b)=>a.start-b.start).find(entry=>audioElapsed>=entry.start&&audioElapsed<entry.end);
   if(cue&&String(cue.text||"").trim()){
-   const words=String(cue.text).trim().split(/\\s+/),lines=[];let line="";
+   const words=String(cue.text).trim().split(/\s+/),lines=[];let line="";
    ctx.font="700 34px Arial";
    words.forEach(word=>{const test=line?line+" "+word:word;if(line&&ctx.measureText(test).width>w-110){lines.push(line);line=word;}else line=test;});
    if(line)lines.push(line);
@@ -468,7 +468,7 @@ async function makePlan(){
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual CGI</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
-  rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
+  rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan="J.A.I. VIRAL STUDIO\nTema: "+topic+"\nCategoría: "+readable(data.category)+"\nEnfoque: "+readable(data.angle)+"\nHook: "+readable(data.hook)+"\n\n"+readable(data.script)+"\n\nSTORYBOARD\n"+readable(data.story)+"\n\nMAPA DE RETENCIÓN\n"+readable(data.retention_map)+"\n\nVERIFICACIONES\n"+readable(data.verification)+"\n\nCONTROL DE CALIDAD\n"+readable(data.quality_check);
   buildTimeline();
   const normalizedRetention=timelineState.items.map(item=>({time:item.time,new_stimulus:item.retentionStimulus,narrative_advance:item.narrativeAdvance||item.visualAction,curiosity:item.curiosity,visual_action:item.visualAction,on_screen_text:item.on_screen_text}));
   renderRetentionMap(normalizedRetention);
@@ -541,7 +541,7 @@ function parseSubtitleFile(raw){
 }
 $("downloadSrt").addEventListener("click",()=>{
  const stamp=value=>{const ms=Math.max(0,Math.round(value*1000)),hours=Math.floor(ms/3600000),minutes=Math.floor(ms%3600000/60000),seconds=Math.floor(ms%60000/1000),millis=ms%1000;return String(hours).padStart(2,"0")+":"+String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0")+","+String(millis).padStart(3,"0");};
- const body=captionCues.slice().sort((a,b)=>a.start-b.start).map((cue,index)=>(index+1)+"\\n"+stamp(cue.start)+" --> "+stamp(cue.end)+"\\n"+cue.text).join("\\n\\n");
+ const body=captionCues.slice().sort((a,b)=>a.start-b.start).map((cue,index)=>(index+1)+"\n"+stamp(cue.start)+" --> "+stamp(cue.end)+"\n"+cue.text).join("\n\n");
  const url=URL.createObjectURL(new Blob([body],{type:"text/plain;charset=utf-8"})),link=document.createElement("a");link.href=url;link.download="jai-subtitulos-editados.srt";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 $("generateCaptions").addEventListener("click",()=>{
@@ -582,10 +582,10 @@ $("generateNarration").addEventListener("click",async()=>{
 $("stopKokoro").addEventListener("click",()=>{$("kokoroAudio").pause();if(kokoroSource){try{kokoroSource.stop();}catch(e){}kokoroSource=null;}});
 function cleanNarrationText(raw){
  return String(raw||"")
-  .replace(/\\[(?:HOOK|PROMESA|CONTEXTO|EXPLICACIÓN|REVELACIÓN|CIERRE)\\]/gi," ")
-  .replace(/^\\s*(?:ESCENA|BLOQUE)\\s+\\d+[^\\n]*$/gim," ")
-  .replace(/^\\s*(?:HOOK|PROMESA|CONTEXTO|EXPLICACIÓN|REVELACIÓN|CIERRE)\\s*[:·-]\\s*/gim,"")
-  .replace(/\\n{3,}/g,"\\n\\n").replace(/[ \\t]{2,}/g," ").trim();
+  .replace(/\[(?:HOOK|PROMESA|CONTEXTO|EXPLICACIÓN|REVELACIÓN|CIERRE)\]/gi," ")
+  .replace(/^\s*(?:ESCENA|BLOQUE)\s+\d+[^\n]*$/gim," ")
+  .replace(/^\s*(?:HOOK|PROMESA|CONTEXTO|EXPLICACIÓN|REVELACIÓN|CIERRE)\s*[:·-]\s*/gim,"")
+  .replace(/\n{3,}/g,"\n\n").replace(/[ \t]{2,}/g," ").trim();
 }
 function availableSpanishVoices(){
  if(!("speechSynthesis" in window))return [];
