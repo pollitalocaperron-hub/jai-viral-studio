@@ -325,10 +325,10 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
 
     const validSourceIds = new Set(researchSources.map(source => source.id));
     plan.research_sources = researchSources;
+    const auditStopWords = new Set(["cuando","porque","sobre","durante","entre","despues","proceso","afirmacion","conocimiento","general","temperatura","molecular","cambio","forma"]);
     if (Array.isArray(plan.fact_audit)) plan.fact_audit = plan.fact_audit.map(item => {
       const claimTokens = String(item.claim || "").toLowerCase().match(/[a-záéíóúüñ]{5,}/g) || [];
-      const stop = new Set(["cuando","porque","sobre","durante","entre","despues","proceso","afirmacion","conocimiento","general","temperatura","molecular","cambio","forma"]);
-      const keyTerms = [...new Set(claimTokens)].filter(word => !stop.has(word));
+      const keyTerms = [...new Set(claimTokens)].filter(word => !auditStopWords.has(word));
       const ids = (Array.isArray(item.source_ids) ? item.source_ids : []).filter(id => {
         const source = researchSources.find(entry => entry.id === id);
         if (!source) return false;
@@ -344,7 +344,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
       if (item.source_ids && item.source_ids.length) return false;
       if (item.status !== "no verificada") return false;
       const tokens = String(item.claim || "").toLowerCase().match(/[a-záéíóúüñ]{6,}/g) || [];
-      const keyTerms = [...new Set(tokens)].filter(word => !stop.has(word));
+      const keyTerms = [...new Set(tokens)].filter(word => !auditStopWords.has(word));
       return keyTerms.length >= 2 && keyTerms.filter(word => narrativeText.includes(word)).length >= 2;
     });
     if (unresolvedInScript.length) return res.status(422).json({ error: "La auditoría detectó afirmaciones sin fuente que siguen apareciendo en el guion. El plan fue bloqueado para evitar enseñar datos no verificados.", diagnosticCode: "UNVERIFIED_CLAIMS_IN_SCRIPT", blockedClaims: unresolvedInScript.map(x => x.claim) });
