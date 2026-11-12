@@ -392,7 +392,7 @@ async function renderVideo(){
  recorder.onstop=()=>{
   stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:mime});const url=URL.createObjectURL(blob);
   $("downloadVideo").href=url;$("downloadVideo").hidden=false;
-  $("renderStatus").textContent="Vídeo listo ("+(blob.size/1048576).toFixed(1)+" MB), formato WebM"+(audioBuffer?" con narración Kokoro integrada":" sin narración. Genera una voz Kokoro para incluir audio")+". MP4 todavía está pendiente.";
+  $("renderStatus").textContent="Vídeo listo ("+(blob.size/1048576).toFixed(1)+" MB), formato WebM"+(audioBuffer?" con narración Gemini integrada":" sin narración. Genera la narración Gemini para incluir audio")+". MP4 todavía está pendiente.";
   renderRecording=false;$("renderVideo").disabled=false;
  };
  const timelineDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(1,item.seconds),0);
