@@ -619,7 +619,7 @@ $("generateNarration").addEventListener("click",async()=>{
   kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);
   $("kokoroAudio").src=kokoroAudioUrl;$("kokoroAudio").style.display="block";
   $("downloadNarration").href=kokoroAudioUrl;$("downloadNarration").hidden=false;
-  $("kokoroStatus").textContent="Narración lista: "+kokoroAudioDuration.toFixed(1)+" segundos. Ya puedes escucharla, descargarla e integrarla en el render WebM.";
+  $("kokoroStatus").textContent="Narración lista: "+kokoroAudioDuration.toFixed(1)+" segundos. Ya puedes escucharla, descargarla e integrarla en el video final.";
  }catch(error){$("kokoroStatus").textContent="No se pudo generar la voz: "+(error.message||"error desconocido");}
  finally{narrationGenerating=false;button.disabled=false;}
 });
