@@ -56,7 +56,16 @@ function draw(ctx,canvas,item,index,progress){
  const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,"#07162c");bg.addColorStop(1,water?"#06435e":"#18294b");ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
  // Beat-level action has priority. Broad words such as "comparación" in the scene objective
  // must never override the concrete object/action requested for this three-second beat.
- let mode="ocean";
+ let mode="editorial";
+ const foodTopic=/maillard|carne|bistec|filete|sarten|coccion|dorado|costra|proteina|aminoacido|azucar|alimento|tostad|cafe|pan/.test(all);
+ if(foodTopic){
+  if(/resultado|costra dorada|carne dorada|bistec cocido|filete cocido|plato terminado|aspecto final|crujiente/.test(beat))mode="food_result";
+  else if(/reaccion quimica|aminoacido|azucar|molecula|compuestos de aroma|compuestos de sabor|reaccion de maillard|a nivel molecular/.test(beat))mode="food_chemistry";
+  else if(/dora|color marron|color cafe|superficie marron|costra|cambio de color|se tuesta|pardeamiento/.test(beat))mode="food_browning";
+  else if(/sarten|plancha|aceite|chisporrote|contacto con el calor|entra en la sarten|cae sobre|cocinar|calor intenso|temperatura/.test(beat))mode="food_pan";
+  else if(/carne cruda|bistec crudo|filete crudo|antes de cocinar|alimento crudo|superficie rosada|pieza de carne/.test(beat))mode="food_raw";
+  else mode="food_raw";
+ }
  // Specific beat actions win over broad scene descriptions. The same parent scene
  // can therefore produce a different composition every three-second beat.
  if(/aparicion simultanea|vaso y el mar|vaso frente al mar|paradoja/.test(beat))mode="paradox";
@@ -92,7 +101,34 @@ function draw(ctx,canvas,item,index,progress){
  else if(/columna|profund/.test(sceneText))mode="column";
  else if(/compar/.test(sceneText))mode="compare";
  ctx.save();
- if(mode==="paradox"){
+ if(mode==="food_raw"){
+  panel(55,430,610,520,"#594039");ctx.fillStyle="#bd6b62";ctx.beginPath();ctx.ellipse(350,690,230,145,-.12,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#f3c4a0";ctx.lineWidth=13;ctx.beginPath();ctx.moveTo(190,665);ctx.bezierCurveTo(280,570,355,790,510,660);ctx.stroke();
+  label("ANTES DEL CALOR",cx,330,30);label("SUPERFICIE ROSADA",cx,900,23);
+ }else if(mode==="food_pan"){
+  ctx.fillStyle="#303b49";ctx.beginPath();ctx.ellipse(350,760,290,185,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#9eabb7";ctx.lineWidth=17;ctx.stroke();
+  line(585,735,690,680,"#8795a5",38);const y=520+p*155;ctx.fillStyle="#c77968";ctx.beginPath();ctx.ellipse(340,y,180,105,-.1,0,Math.PI*2);ctx.fill();
+  for(let k=0;k<8;k++){const x=155+k*54,sy=610+Math.sin(p*8+k)*18;ctx.strokeStyle="rgba(245,245,235,.75)";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x,sy);ctx.bezierCurveTo(x-24,sy-45,x+28,sy-70,x,sy-110);ctx.stroke();}
+  label("CARNE + SARTÉN CALIENTE",cx,330,26);label("EL CONTACTO INICIA EL DORADO",cx,1030,22);
+ }else if(mode==="food_browning"){
+  ctx.fillStyle="#34333a";ctx.beginPath();ctx.ellipse(350,710,280,190,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#bd7662";ctx.beginPath();ctx.ellipse(350,700,230,145,0,0,Math.PI*2);ctx.fill();
+  ctx.save();ctx.beginPath();ctx.ellipse(350,700,230,145,0,0,Math.PI*2);ctx.clip();ctx.fillStyle="#9b4e2e";ctx.fillRect(120,545,460,300*p);ctx.restore();
+  label("EL COLOR CAMBIA",cx,330,31);label("SE FORMA UNA COSTRA DORADA",cx,980,24);
+ }else if(mode==="food_chemistry"){
+  panel(35,470,290,360,"#263e55");panel(395,470,290,360,"#493b2b");label("AMINOÁCIDO",180,430,22);label("AZÚCAR",540,430,22);
+  dot(150,625,42,"#f0c66d");dot(220,625,27,"#78c9e8");line(178,625,194,625,"#fff",8);
+  dot(500,625,42,"#e6a15b");dot(560,590,24,"#f5d77c");dot(560,660,24,"#f5d77c");arrow(330,650,390,650,"#f8e4a5",9);
+  panel(95,900,530,130,"#244c43");label("NUEVOS COMPUESTOS",cx,960,25);label("AROMA Y SABOR",cx,1005,23);label("CALOR + REACCIÓN QUÍMICA",cx,300,26);
+ }else if(mode==="food_result"){
+  panel(55,455,610,510,"#303944");ctx.fillStyle="#8f482c";ctx.beginPath();ctx.ellipse(350,700,235,155,-.08,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#d99b70";ctx.beginPath();ctx.ellipse(350,700,195,112,-.08,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#f0c18b";ctx.lineWidth=18;ctx.beginPath();ctx.ellipse(350,700,225,145,-.08,0,Math.PI*2);ctx.stroke();
+  label("EL DORADO QUE DA SABOR",cx,330,28);label("REACCIÓN DE MAILLARD",cx,1015,24);
+ }else if(mode==="editorial"){
+  panel(45,360,630,650,"#24384f");const subject=String(item.visualAction||item.visual||item.objective||"Idea principal").slice(0,72);
+  const action=String(item.retentionStimulus||item.visualAction||item.animation||"").slice(0,80);
+  label("IDEA CENTRAL",cx,465,26);label(subject,cx,590,subject.length>35?22:29);panel(95,700,530,170,"#34546a");
+  label("QUÉ ESTÁ PASANDO",cx,755,21);label(action,cx,815,action.length>48?19:23);label("ESCENA ENFOCADA EN EL TEMA",cx,940,20);
+ }else if(mode==="paradox"){
   // Apertura con objetos reconocibles: vaso realista en primer plano y horizonte oceánico.
   ctx.fillStyle="#d9e8f2";ctx.fillRect(0,0,w,390);
   ctx.fillStyle="#f8d98a";ctx.beginPath();ctx.arc(565,245,62,0,Math.PI*2);ctx.fill();
@@ -256,11 +292,7 @@ function draw(ctx,canvas,item,index,progress){
  }else if(mode==="rays"){
   ocean(430);ctx.fillStyle="#ffd66e";ctx.beginPath();ctx.arc(555,260,68,0,Math.PI*2);ctx.fill();rays(110,330,420,.8);
   const bx=210+p*210;line(bx,430,bx+85,900,"#fff1b1",13);label("LA LUZ DEL SOL ENTRA",cx,235,29);
- }else{
-  ocean(430);
-  for(let k=0;k<7;k++){const y=520+k*75;const x=35+((k*97+p*160)%620);ctx.beginPath();ctx.ellipse(x,y,55,9,0,0,Math.PI*2);ctx.strokeStyle="rgba(171,242,255,.7)";ctx.lineWidth=4;ctx.stroke();}
-  label("EL OCÉANO EN GRAN ESCALA",cx,260,29);
- }
+ }else{panel(45,360,630,650,"#24384f");label("EXPLORANDO EL FENÓMENO",cx,650,27);}
  ctx.restore();
  // Editorial overlay and persistent progress indicator.
  panel(28,54,664,112,"rgba(2,10,24,.82)");label(title,cx,122,title.length>36?23:30);
