@@ -36,6 +36,12 @@ REGLAS EDITORIALES Y CIENTÍFICAS:
 - visual_action debe describir una acción física visible y realizable (por ejemplo: la cámara atraviesa una capa, un objeto cae y rebota, una esfera se abre y revela su interior, dos elementos chocan o una comparación aparece lado a lado). No uses instrucciones abstractas como 'hacerlo interesante'.
 - No encadenes más de dos bloques con el mismo objeto protagonista. Alterna plano general, demostración física, macro, comparación, vista interna, entorno y escala humana cuando el tema lo permita.
 - visual_action debe describir un movimiento físico observable con inicio y resultado; evita acciones vagas como "flota", "brilla" o "se mueve" sin explicar qué cambia.
+- Escribe visual_action como una instrucción de animación concreta en español, con esta estructura: "Composición: [tipo de plano]. Sujeto: [objeto/personaje]. Acción: [verbo físico y trayectoria]. Resultado: [cambio visible al terminar]".
+- Usa verbos visuales literales que puedan dibujarse en 2D: entra, sale, cae, rebota, choca, se abre, se divide, atraviesa, se acerca, se aleja, gira, orbita, se desplaza, fluye, se expande, se contrae, se compara o revela. Evita metáforas que no indiquen qué debe aparecer en pantalla.
+- La acción debe ser específica al tema y al bloque; no reutilices la misma acción cambiando únicamente el adjetivo. Identifica un sujeto visual claro y un resultado observable.
+- Cuando una acción implique comparación, muestra dos estados simultáneos claramente rotulados. Cuando implique revelar, empieza ocultando el detalle y termina mostrándolo. Cuando implique movimiento, muestra posición inicial, desplazamiento y posición final.
+- No describas solo "la cámara hace zoom": el cambio de cámara debe revelar un detalle o información nueva y estar acompañado por un elemento visual temático.
+- Mantén las escenas dibujables con formas 2D, siluetas, mapas, objetos y diagramas limpios; evita recurrir a círculos, rectángulos o flechas genéricas si no representan literalmente el fenómeno.
 - Propón profundidad y variedad de encuadre: primer plano, plano medio, plano general, perspectiva lateral, corte transversal y elementos en primer término.
 - No inventes acciones físicamente imposibles ni datos numéricos para hacer espectacular una escena.
 - Cada bloque consecutivo debe cambiar al menos dos aspectos visuales: composición/encuadre, escala, perspectiva, objeto protagonista, acción, entorno o esquema de color. No repitas el mismo plano con una pequeña oscilación.
