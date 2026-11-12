@@ -6,7 +6,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 function draw(ctx,canvas,item,index,progress){
  const w=canvas.width,h=canvas.height,cx=w/2,p=clamp(Number(progress)||0,0,1);
- const beat=norm([item.visualAction,item.retentionStimulus,item.new_stimulus,item.visual_action,item.on_screen_text].join(" "));
+ const beat=norm([item.visualAction,item.retentionStimulus,item.new_stimulus,item.visual_action].join(" ")); // El texto editorial nunca decide qué objeto se dibuja.
  const sceneText=norm([item.visual,item.animation,item.objective].join(" "));
  const all=beat+" "+sceneText;
  const water=/oceano|agua|mar|gota|vaso|profund|columna/.test(all);
