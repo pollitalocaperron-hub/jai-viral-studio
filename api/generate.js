@@ -72,6 +72,7 @@ E. EDITOR: comprueba que la narración realmente explica el tema completo dentro
 - Para sacarosa/azúcar de mesa: NO afirmes que tiene un punto de fusión simple y limpio a 186 °C. La sacarosa se ablanda/funde y puede descomponerse durante el calentamiento; la temperatura reportada depende de condiciones y método. No presentes 186 °C como umbral exacto universal.
 - Para sacarosa/azúcar de mesa: NO afirmes que la caramelización empieza exactamente a 160 °C ni uses una secuencia universal "se funde a 186 °C y carameliza por encima de 160 °C". La caramelización es un conjunto de reacciones térmicas cuya velocidad y productos dependen de temperatura, tiempo, humedad, pH y condiciones.
 - Para sacarosa/azúcar de mesa: explica que el calor aumenta el movimiento molecular y puede desordenar la estructura cristalina; durante el calentamiento intenso pueden coexistir cambios físicos y reacciones químicas. No afirmes que el material permanece químicamente idéntico durante todo el proceso.
+- Para sacarosa: no narres una secuencia universal y limpia de cristal → líquido de sacarosa químicamente intacta → caramelo. La sacarosa puede sufrir descomposición térmica durante el calentamiento; el ablandamiento, la pérdida de orden cristalino y las reacciones químicas pueden solaparse según condiciones. No atribuyas el proceso a que la vibración "vence" enlaces de hidrógeno individuales. Si no hay fuente directa, explica lo observable y reconoce el límite del mecanismo.
 - No inventes microgotas, diámetros, escalas, termómetros, temperaturas, porcentajes o tiempos microscópicos ("0.5 mm", etc.) sin respaldo explícito. Usa escalas cualitativas si no hay evidencia.
 - CONTROL DE DURACIÓN: la duración declarada debe coincidir entre guion, storyboard y mapa. Estima el guion hablado a 130–145 palabras/minuto en español. Si la duración objetivo es 30–45 s, apunta a 65–95 palabras narradas y storyboard/mapa deben cubrir esa misma duración. No declares 36 s si el guion narrado requiere 48.5 s. Si la locución generada luego dura más, la interfaz debe adaptar el montaje o advertirlo sin afirmar sincronía exacta.
 - Antes de devolver JSON, realiza una auditoría cruzada: cualquier dato marcado pendiente no debe reaparecer como certeza en el guion ni en los visuales; comprueba duración estimada y cronología; comprueba que cada visual_proof sea demostrable y no un detalle inventado.
@@ -322,7 +323,29 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
       });
     }
 
-    console.info("[JAI] Plan generado correctamente con", providerUsed);
+    const validSourceIds = new Set(researchSources.map(source => source.id));
+    plan.research_sources = researchSources;
+    if (Array.isArray(plan.fact_audit)) plan.fact_audit = plan.fact_audit.map(item => {
+      const ids = Array.isArray(item.source_ids) ? item.source_ids.filter(id => validSourceIds.has(id)) : [];
+      return { ...item, source_ids: ids, status: ids.length ? "fuente recuperada; pertinencia pendiente de revisión" : "no verificada", evidence: ids.length ? String(item.evidence || "Revisar el resumen de la fuente antes de publicar.") : "No hay una fuente recuperada vinculada a esta afirmación." };
+    });
+    const scriptText = String(plan.script || "").toLowerCase();
+    const unresolvedInScript = (Array.isArray(plan.fact_audit) ? plan.fact_audit : []).filter(item => {
+      if (item.source_ids && item.source_ids.length) return false;
+      const tokens = String(item.claim || "").toLowerCase().match(/[a-záéíóúüñ]{6,}/g) || [];
+      const stop = new Set(["cuando","porque","sobre","durante","entre","despues","proceso","afirmacion","conocimiento","general","temperatura","molecular"]);
+      const keyTerms = [...new Set(tokens)].filter(word => !stop.has(word));
+      return keyTerms.length >= 2 && keyTerms.filter(word => scriptText.includes(word)).length >= 2;
+    });
+    if (unresolvedInScript.length) return res.status(422).json({ error: "La auditoría detectó afirmaciones sin fuente que siguen apareciendo en el guion. El plan fue bloqueado para evitar enseñar datos no verificados.", diagnosticCode: "UNVERIFIED_CLAIMS_IN_SCRIPT", blockedClaims: unresolvedInScript.map(x => x.claim) });
+    const spokenText = String(plan.script || "").replace(/\[[^\]]+\]/g, " ");
+    const wordCount = (spokenText.match(/[a-záéíóúüñ0-9]+/gi) || []).length;
+    const estimatedSeconds = Math.round(wordCount / 140 * 60);
+    const starts = Array.isArray(plan.story) ? plan.story.map(scene => { const value = scene && scene.time; if (typeof value === "number") return value; if (typeof value === "string" && /^\d+$/.test(value)) return Number(value); const match = String(value || "").match(/(\d+):(\d{2})/); return match ? Number(match[1]) * 60 + Number(match[2]) : NaN; }).filter(Number.isFinite) : [];
+    const storyboardSeconds = starts.length ? Math.max(...starts) + 6 : 0;
+    plan.duration_validation = { script_word_count: wordCount, estimated_narration_seconds: estimatedSeconds, storyboard_seconds: storyboardSeconds, within_tolerance: storyboardSeconds > 0 && Math.abs(estimatedSeconds - storyboardSeconds) <= Math.max(5, storyboardSeconds * 0.15) };
+    if (!plan.duration_validation.within_tolerance) return res.status(422).json({ error: "La duración estimada del guion no coincide con el storyboard. El plan fue bloqueado para evitar una falsa sincronización.", diagnosticCode: "SCRIPT_TIMELINE_MISMATCH", duration_validation: plan.duration_validation });
+    console.info("[JAI] Plan generado y validado con", providerUsed);
     return res.status(200).json(plan);
   } catch (error) {
     console.error("[JAI] Error de conexión:", error?.name || "Error", error?.message || "Sin detalle");
