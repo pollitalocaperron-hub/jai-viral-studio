@@ -59,16 +59,12 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <div class="hint" id="kokoroStatus" aria-live="polite">Primero genera el guion y después crea la narración neuronal.</div>
  <audio id="kokoroAudio" controls style="display:none;width:100%;margin-top:12px"></audio>
  <a id="downloadNarration" class="secondary" hidden download="jai-narracion.wav">Descargar narración WAV</a>
- <label for="captionFile">Archivo de subtítulos (SRT/VTT)</label>
- <input id="captionFile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip">
- <label for="captionImport">O pega aquí los subtítulos con sus tiempos</label>
- <textarea id="captionImport" rows="5" placeholder="00:00:00,000 --> 00:00:02,500&#10;Texto del primer subtítulo&#10;&#10;00:00:02,500 --> 00:00:05,000&#10;Texto del segundo subtítulo"></textarea>
- <div class="row" style="margin-top:8px">
-  <button class="secondary" id="importCaptions" type="button">Cargar subtítulos</button>
+ <div class="row" style="margin-top:10px">
+  <button class="secondary" id="generateCaptions" type="button" disabled>Generar subtítulos desde la narración</button>
   <button class="secondary" id="addCaptionCue" type="button">Añadir subtítulo</button>
-  <button class="secondary" id="downloadSrt" type="button" disabled>Descargar SRT editado</button>
+  <button class="secondary" id="downloadSrt" type="button" disabled>Descargar SRT</button>
  </div>
- <div class="hint" id="captionStatus" aria-live="polite">Editor sin coste: importa un archivo SRT/VTT o crea subtítulos y ajusta sus tiempos. La transcripción automática queda pendiente de una opción gratuita.</div>
+ <div class="hint" id="captionStatus" aria-live="polite">J.A.I. generará subtítulos automáticamente al crear la narración. Los tiempos son una estimación editable basada en el guion y la duración real del audio; no requiere subir archivos.</div>
  <div id="captionEditor" style="display:grid;gap:9px;margin-top:10px"></div>
 </section>
 <div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de ritmo · microavance cada 3 segundos, sin cortes obligatorios</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Fotogramas IA · Estilo científico</span></div><p class="hint">Genera fotogramas científicos distintos cuando cada bloque aporte información nueva. Mantén la continuidad visual cuando ayude a comprender; todas las tomas comparten la misma dirección de arte.</p><button class="primary" id="makeVisuals" type="button">Generar fotogramas cinematográficos</button><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Editor de escenas · Línea de tiempo</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza las escenas del storyboard en orden. Esta etapa prepara la secuencia y sus tiempos; todavía no exporta el MP4.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Revisar secuencia</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar video de prueba</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video WebM</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Kokoro, se mezclará dentro del WebM. La exportación MP4 sigue pendiente.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
@@ -466,8 +462,8 @@ async function makePlan(){
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
   kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;captionCues=[];
   $("kokoroAudio").pause();$("kokoroAudio").removeAttribute("src");$("kokoroAudio").style.display="none";
-  $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("captionImport").value="";$("captionFile").value="";$("downloadSrt").disabled=true;
-  $("captionStatus").textContent="Nuevo guion: genera una narración e importa sus subtítulos para mantener la sincronía.";
+  $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("generateCaptions").disabled=true;
+  $("captionStatus").textContent="Nuevo guion: genera la narración y J.A.I. preparará sus subtítulos automáticamente.";
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual CGI</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
@@ -510,6 +506,17 @@ function renderCaptionEditor(){
   card.appendChild(remove);root.appendChild(card);
  });
 }
+function buildEstimatedCaptionCues(raw,duration){
+ const words=cleanNarrationText(raw).replaceAll("\n"," ").trim().split(/\s+/).filter(Boolean);
+ if(!words.length||!Number.isFinite(duration)||duration<=0)return [];
+ const groups=[];let group=[];
+ words.forEach(word=>{group.push(word);const last=word.slice(-1);if(group.length>=6||".!?…".includes(last)){groups.push(group.join(" "));group=[];}});
+ if(group.length)groups.push(group.join(" "));
+ if(groups.length>1&&groups[groups.length-1].split(" ").length===1)groups[groups.length-2]+=" "+groups.pop();
+ const weights=groups.map(part=>Math.max(1,part.replaceAll(" ","").length)+(".!?…".includes(part.slice(-1))?5:",;:".includes(part.slice(-1))?2:0));
+ const total=weights.reduce((sum,value)=>sum+value,0);let cursor=0;
+ return groups.map((part,index)=>{const start=cursor;cursor=index===groups.length-1?duration:cursor+duration*weights[index]/total;return {start:Number(start.toFixed(2)),end:Number(cursor.toFixed(2)),text:part};}).filter(cue=>cue.end>cue.start);
+}
 function parseSubtitleTime(value){
  const parts=String(value||"").trim().replace(",",".").split(":");
  let seconds=0,tail;
@@ -531,21 +538,16 @@ function parseSubtitleFile(raw){
  });
  return cues.sort((a,b)=>a.start-b.start);
 }
-$("captionFile").addEventListener("change",async()=>{
- const file=$("captionFile").files&&$("captionFile").files[0];if(!file)return;
- try{$("captionImport").value=await file.text();$("captionStatus").textContent="Archivo cargado. Pulsa Cargar subtítulos para revisar y editar sus tiempos.";}
- catch(error){$("captionStatus").textContent="No se pudo leer el archivo seleccionado.";}
-});
-$("importCaptions").addEventListener("click",()=>{
- const cues=parseSubtitleFile($("captionImport").value);
- if(!cues.length){$("captionStatus").textContent="No se encontraron subtítulos válidos. Comprueba que el archivo use tiempos SRT o VTT.";return;}
- captionCues=cues;renderCaptionEditor();$("downloadSrt").disabled=false;
- $("captionStatus").textContent=cues.length+" subtítulos importados con sus tiempos originales. Edita texto, inicio o fin; aparecerán sobre el vídeo al renderizar.";
-});
 $("downloadSrt").addEventListener("click",()=>{
  const stamp=value=>{const ms=Math.max(0,Math.round(value*1000)),hours=Math.floor(ms/3600000),minutes=Math.floor(ms%3600000/60000),seconds=Math.floor(ms%60000/1000),millis=ms%1000;return String(hours).padStart(2,"0")+":"+String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0")+","+String(millis).padStart(3,"0");};
  const body=captionCues.slice().sort((a,b)=>a.start-b.start).map((cue,index)=>(index+1)+"\\n"+stamp(cue.start)+" --> "+stamp(cue.end)+"\\n"+cue.text).join("\\n\\n");
  const url=URL.createObjectURL(new Blob([body],{type:"text/plain;charset=utf-8"})),link=document.createElement("a");link.href=url;link.download="jai-subtitulos-editados.srt";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+$("generateCaptions").addEventListener("click",()=>{
+ const script=cleanNarrationText($("script").textContent);
+ if(!kokoroAudioDuration){$("captionStatus").textContent="Primero genera la narración para conocer la duración real del audio.";return;}
+ captionCues=buildEstimatedCaptionCues(script,kokoroAudioDuration);renderCaptionEditor();$("downloadSrt").disabled=!captionCues.length;
+ $("captionStatus").textContent=captionCues.length+" subtítulos regenerados con sincronización estimada. Puedes editar texto y tiempos antes de exportar.";
 });
 $("addCaptionCue").addEventListener("click",()=>{
  const last=captionCues[captionCues.length-1],start=last?last.end:0;
@@ -565,9 +567,9 @@ $("generateNarration").addEventListener("click",async()=>{
   if(!data.audioBase64)throw new Error("El servicio no devolvió audio.");
   kokoroSampleRate=data.sampleRate||24000;
   kokoroAudioBlob=makePcmWavBlob(data.audioBase64,kokoroSampleRate);
-  captionCues=[];$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("captionImport").value="";$("captionFile").value="";
-  $("captionStatus").textContent="La narración cambió. Importa subtítulos con los nuevos tiempos o crea los tuyos antes de exportar.";
   kokoroAudioDuration=(kokoroAudioBlob.size-44)/(kokoroSampleRate*2);
+  captionCues=buildEstimatedCaptionCues(text,kokoroAudioDuration);renderCaptionEditor();$("downloadSrt").disabled=!captionCues.length;$("generateCaptions").disabled=false;
+  $("captionStatus").textContent=captionCues.length+" subtítulos creados automáticamente con sincronización estimada sobre "+kokoroAudioDuration.toFixed(1)+" s de audio. Revisa y ajusta los tiempos si hace falta.";
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
   kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);
   $("kokoroAudio").src=kokoroAudioUrl;$("kokoroAudio").style.display="block";
