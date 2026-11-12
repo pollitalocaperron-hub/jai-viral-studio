@@ -86,8 +86,10 @@ ${safeNotes}
           contents: [{ role: "user", parts: [{ text: prompt }] }],
           generationConfig: {
             responseMimeType: "application/json",
-            temperature: 0.75,
-            maxOutputTokens: 3500
+            temperature: 0.55,
+            // El mapa de retención requiere 15–20 bloques para 45–60 s.
+            // 3500 tokens podía cortar el JSON antes de cerrar el objeto.
+            maxOutputTokens: 7000
           }
         })
       }
@@ -130,10 +132,58 @@ ${safeNotes}
 
     let plan;
     try {
-      plan = JSON.parse(output);
+      // Primero intenta la respuesta íntegra. Después tolera fences Markdown,
+      // texto incidental y comas finales sin alterar el contenido editorial.
+      const candidates = [output];
+      const unfenced = output
+        .replace(/^\uFEFF/, "")
+        .replace(/^\s*```(?:json)?\s*/i, "")
+        .replace(/\s*```\s*$/, "")
+        .trim();
+      if (unfenced !== output) candidates.push(unfenced);
+
+      for (const candidate of candidates) {
+        try {
+          plan = JSON.parse(candidate);
+          break;
+        } catch {}
+        const first = candidate.indexOf("{");
+        if (first < 0) continue;
+        let depth = 0, inString = false, escaped = false, end = -1;
+        for (let i = first; i < candidate.length; i++) {
+          const ch = candidate[i];
+          if (inString) {
+            if (escaped) escaped = false;
+            else if (ch === "\\\\") escaped = true;
+            else if (ch === '"') inString = false;
+            continue;
+          }
+          if (ch === '"') inString = true;
+          else if (ch === "{") depth++;
+          else if (ch === "}") {
+            depth--;
+            if (depth === 0) { end = i + 1; break; }
+          }
+        }
+        if (end > first) {
+          const jsonText = candidate.slice(first, end).replace(/,\s*([}\]])/g, "$1");
+          try { plan = JSON.parse(jsonText); break; } catch {}
+        }
+      }
+      if (!plan || typeof plan !== "object" || Array.isArray(plan)) {
+        throw new Error("No se encontró un objeto JSON completo.");
+      }
     } catch (parseError) {
-      console.error("[JAI][Gemini] El modelo no devolvió JSON válido:", parseError.message, "Contenido:", output.slice(0, 500));
-      return res.status(502).json({ error: "Gemini generó contenido, pero el formato no fue válido. Podemos ajustar el formato automáticamente.", diagnosticCode: "INVALID_MODEL_JSON" });
+      const finishReason = data.candidates?.[0]?.finishReason || "unknown";
+      console.error("[JAI][Gemini] No se pudo recuperar el JSON:", parseError.message, "finishReason:", finishReason, "Contenido:", output.slice(0, 700));
+      const incomplete = finishReason === "MAX_TOKENS";
+      return res.status(502).json({
+        error: incomplete
+          ? "Gemini cortó la respuesta por su límite de longitud. J.A.I. necesita volver a generar el plan con una salida más compacta."
+          : "Gemini devolvió un formato que J.A.I. no pudo recuperar. Intenta generar el plan otra vez.",
+        diagnosticCode: incomplete ? "INCOMPLETE_MODEL_JSON" : "INVALID_MODEL_JSON",
+        finishReason
+      });
     }
 
     console.info("[JAI][Gemini] Plan generado correctamente.");
