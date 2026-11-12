@@ -41,7 +41,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <section class="card"><h3 class="section-title">Proyectos guardados</h3><div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div></section>
 <footer>J.A.I. Viral Studio · Producción editorial con Gemini · Exportación MP4 en desarrollo.</footer></div>
 <script>
-const $=id=>document.getElementById(id);let currentPlan="";
+const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[];
 function readable(value){
  if(value===null||value===undefined)return "No especificado";
  if(typeof value==="string"||typeof value==="number"||typeof value==="boolean")return String(value);
@@ -138,9 +138,21 @@ function renderTimeline(){
 }
 function buildTimeline(){
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("timelineStatus").textContent="Primero genera un plan con storyboard.";return;}
- timelineState.items=currentScenes.map(scene=>({...scene,seconds:sceneSeconds(scene)}));
+ if(Array.isArray(currentRetentionMap)&&currentRetentionMap.length){
+  const parseStart=time=>{const m=String(time||"").match(/(\\d{1,2}):(\\d{2})/);return m?Number(m[1])*60+Number(m[2]):0;};
+  const parseRange=time=>{const m=String(time||"").match(/(\\d{1,2}):(\\d{2})\\s*[-–—]\\s*(\\d{1,2}):(\\d{2})/);return m?{start:Number(m[1])*60+Number(m[2]),end:Number(m[3])*60+Number(m[4])}:null;};
+  timelineState.items=currentRetentionMap.map((beat,index)=>{
+   const range=parseRange(beat.time),start=range?range.start:parseStart(beat.time),end=range?range.end:start+3;
+   const sceneIndex=currentScenes.findIndex(scene=>{const r=parseRange(scene.time);return r&&start<r.end&&end>r.start;});
+   const scene=currentScenes[Math.max(0,sceneIndex)]||currentScenes[0];
+   return {...scene,time:beat.time||"Bloque "+(index+1),seconds:Math.max(1,end-start),sceneIndex:Math.max(0,sceneIndex),segmentLabel:"BLOQUE "+(index+1)+" / "+currentRetentionMap.length,on_screen_text:beat.narrative_advance||beat.curiosity||scene.on_screen_text,objective:beat.narrative_advance||scene.objective,visual:String(scene.visual||"")+"; "+String(beat.new_stimulus||""),retentionStimulus:beat.new_stimulus||"",curiosity:beat.curiosity||""};
+  });
+  $("timelineStatus").textContent="Línea de tiempo dividida en bloques de retención de máximo 3 segundos.";
+ }else{
+  timelineState.items=currentScenes.map((scene,index)=>({...scene,seconds:sceneSeconds(scene),sceneIndex:index,segmentLabel:"ESCENA "+(index+1)}));
+  $("timelineStatus").textContent="No llegó el mapa de retención; se preparó la línea de tiempo por escenas.";
+ }
  renderTimeline();
- $("timelineStatus").textContent="Línea de tiempo preparada. Revisa el orden y las duraciones estimadas.";
 }
 function previewTimeline(){
  if(!timelineState.items.length)return;
@@ -203,7 +215,7 @@ function drawVideoScene(item,index,progress){
  words.forEach(word=>{const test=line?line+" "+word:word;if(ctx.measureText(test).width>620&&line){lines.push(line);line=word;}else line=test;});
  if(line)lines.push(line);
  const startY=850-(lines.length-1)*28;lines.slice(0,3).forEach((txt,i)=>ctx.fillText(txt,cx,startY+i*58));
- ctx.fillStyle="#b8c9e5";ctx.font="24px Arial";ctx.fillText("ESCENA "+(index+1)+" / "+timelineState.items.length,cx,1085);
+ ctx.fillStyle="#b8c9e5";ctx.font="24px Arial";ctx.fillText(item.segmentLabel||("ESCENA "+(index+1)+" / "+timelineState.items.length),cx,1085);
  ctx.fillStyle="rgba(255,255,255,.2)";ctx.fillRect(60,1165,600,12);
  const grad=ctx.createLinearGradient(60,0,660,0);grad.addColorStop(0,"#4de0a1");grad.addColorStop(1,"#69d9ef");
  ctx.fillStyle=grad;ctx.fillRect(60,1165,600*Math.max(0,Math.min(1,progress)),12);
@@ -253,7 +265,7 @@ async function makePlan(){
   const data=await response.json();if(!response.ok)throw new Error(data.error||"No se pudo generar el plan.");
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Gemini</span><span class="tag">Motion graphics 2D</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
-  renderStory(data.story||"Storyboard pendiente.");renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];$("visualScenes").replaceChildren();$("visualStatus").textContent=currentScenes.length+" escenas listas. Pulsa Generar escenas visuales 2D.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.");
+  renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];$("visualScenes").replaceChildren();$("visualStatus").textContent=currentScenes.length+" escenas listas. Pulsa Generar escenas visuales 2D.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.");
   currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
   $("output").classList.add("show");$("status").textContent="¡Plan generado! Revisa las escenas, verificaciones y control de calidad antes de producir."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
  }catch(error){$("status").textContent=error.message||"Ocurrió un error al generar el plan.";}finally{$("create").disabled=false;}
