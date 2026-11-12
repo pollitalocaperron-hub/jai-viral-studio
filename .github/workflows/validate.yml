@@ -29,5 +29,5 @@ jobs:
             .filter(source => source.trim());
           if (!scripts.length) throw new Error('No inline JavaScript found in index.html');
           scripts.forEach((source, index) => new vm.Script(source, { filename: "index.html:inline-script-" + (index + 1) }));
-          console.log(\`Validated \${scripts.length} inline script(s).\`);
+          console.log("Validated " + scripts.length + " inline script(s).");
           NODE
