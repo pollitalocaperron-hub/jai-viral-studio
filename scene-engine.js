@@ -44,6 +44,13 @@ function draw(ctx,canvas,item,index,progress){
  else if(/filtro|colador/.test(beat))mode="filter";
  else if(/superficie|plano general|oceano completo|mar abierto/.test(beat))mode="ocean";
  else if(/rayo|haz de luz|luz blanca|sol/.test(beat))mode="rays";
+ // Fallback editorial determinista para el documental del océano:
+ // nunca permitir que una descripción ambigua deje todos los bloques en el mismo plano genérico.
+ const oceanColorTopic=/oceano|mar/.test(all)&&/agua|azul|luz|color/.test(all);
+ if(oceanColorTopic){
+  const oceanSequence=["paradox","sunbeam","spectrum","molecules","absorb","bluepath","scatter","depth","compare","skytest","drop","finalblue"];
+  mode=oceanSequence[((Number(index)||0)%oceanSequence.length)];
+ }
  else if(/vaso|vidrio|cristal/.test(sceneText))mode="glass";
  else if(/espectro|bandas de colores/.test(sceneText))mode="spectrum";
  else if(/absor|rojo|naranja/.test(sceneText))mode="absorb";
@@ -51,13 +58,21 @@ function draw(ctx,canvas,item,index,progress){
  else if(/compar/.test(sceneText))mode="compare";
  ctx.save();
  if(mode==="paradox"){
-  // Opening hero shot: a clear glass on one side, an expansive ocean on the other.
-  ocean(710);panel(35,300,300,470,"rgba(245,250,255,.96)");panel(385,300,300,470,"rgba(3,29,62,.30)");
-  ctx.save();ctx.translate(185,0);ctx.strokeStyle="#b9eefa";ctx.lineWidth=10;ctx.fillStyle="rgba(66,190,224,.18)";
-  ctx.beginPath();ctx.moveTo(-75,420);ctx.lineTo(75,420);ctx.lineTo(60,675);ctx.quadraticCurveTo(0,705,-60,675);ctx.closePath();ctx.fill();ctx.stroke();
-  ctx.fillStyle="rgba(61,184,222,.32)";ctx.fillRect(-65,530,130,135);ctx.restore();
-  for(let k=0;k<5;k++){ctx.beginPath();ctx.ellipse(535+k*8,470+k*65,115-k*10,18,0,0,Math.PI*2);ctx.strokeStyle="rgba(147,235,255,.7)";ctx.lineWidth=5;ctx.stroke();}
-  label("UN VASO",185,830,26,"#18344d");label("UN OCÉANO",535,830,26);arrow(340,575,380,575);
+  // Apertura con objetos reconocibles: vaso realista en primer plano y horizonte oceánico.
+  ctx.fillStyle="#d9e8f2";ctx.fillRect(0,0,w,390);
+  ctx.fillStyle="#f8d98a";ctx.beginPath();ctx.arc(565,245,62,0,Math.PI*2);ctx.fill();
+  ocean(430);
+  // mesa clara para separar visualmente el vaso del mar
+  ctx.fillStyle="#c9d7df";ctx.fillRect(0,850,w,42);
+  ctx.fillStyle="rgba(20,38,54,.18)";ctx.fillRect(75,892,260,18);
+  ctx.save();ctx.translate(205,0);
+  ctx.fillStyle="rgba(151,229,245,.18)";ctx.strokeStyle="#f4fdff";ctx.lineWidth=13;
+  ctx.beginPath();ctx.moveTo(-95,450);ctx.lineTo(95,450);ctx.lineTo(78,835);ctx.quadraticCurveTo(0,885,-78,835);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle="rgba(51,177,220,.38)";ctx.beginPath();ctx.moveTo(-82,610);ctx.lineTo(82,610);ctx.lineTo(76,825);ctx.quadraticCurveTo(0,865,-76,825);ctx.closePath();ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,.9)";ctx.lineWidth=8;ctx.beginPath();ctx.ellipse(0,450,95,18,0,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+  label("POCA AGUA",205,960,25);label("EL OCÉANO",535,960,25);
+  label("¿POR QUÉ SE VEN DISTINTOS?",cx,330,27);
  }else if(mode==="sunbeam"){
   // Dramatic sun entering the ocean; moving beam sweeps diagonally through water.
   ocean(420);const sx=545-p*120;ctx.fillStyle="#ffe18b";ctx.beginPath();ctx.arc(sx,260,76,0,Math.PI*2);ctx.fill();
