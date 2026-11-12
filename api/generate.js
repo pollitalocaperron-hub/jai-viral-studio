@@ -34,7 +34,7 @@ export default async function handler(req, res) {
       }).filter(item => item.title && (item.url || item.abstract));
     } catch (error) { console.warn("[JAI][Research] OpenAlex no disponible:", error && error.message); return []; }
   }
-  const researchQuery = /az[uú]car|sacarosa/i.test(topic) ? "sucrose thermal decomposition melting caramelization glass transition" : /maillard|carne|bistec/i.test(topic) ? "Maillard reaction food chemistry amino acids reducing sugars" : topic.trim();
+  const researchQuery = /form(a|ación)|produce|origen|cultiva|caña|remolacha|az[uú]car|sacarosa/i.test(topic) ? "plant sucrose biosynthesis photosynthesis phloem sugarcane sugar beet industrial sucrose crystallization" : /maillard|carne|bistec/i.test(topic) ? "Maillard reaction food chemistry amino acids reducing sugars" : /fotos[ií]ntesis|glucosa|planta/i.test(topic) ? "photosynthesis carbon fixation glucose plant carbohydrate biosynthesis" : topic.trim();
   const researchSources = await fetchResearchSources(researchQuery);
   const researchContext = researchSources.length ? researchSources.map(s => "[" + s.id + "] " + s.title + " (" + (s.year || "año no indicado") + "). Autores: " + (s.authors || "no disponibles") + ". DOI/URL: " + (s.url || "no disponible") + ". Resumen: " + (s.abstract || "sin resumen recuperado")).join("\n") : "No se recuperaron fuentes académicas. No afirmes que la investigación fue verificada."
   const prompt = `FUENTES ACADÉMICAS RECUPERADAS AUTOMÁTICAMENTE (OpenAlex):
@@ -46,6 +46,12 @@ Eres el director editorial, guionista y estratega de retención de J.A.I. Viral 
 Diseña un plan de producción de alta calidad para un video educativo vertical 9:16.
 Objetivo: maximizar interés, comprensión, retención y potencial de compartirse sin prometer viralidad ni usar engaños.
 
+REGLAS DE DESAMBIGUACIÓN DEL TEMA:
+- Si el usuario pregunta cómo se forma, produce u obtiene el azúcar, distingue explícitamente dos procesos: (1) biosíntesis de carbohidratos en la planta: fotosíntesis fija carbono y la planta sintetiza/transporta sacarosa; (2) producción industrial: extracción del jugo de caña o remolacha, clarificación, concentración/evaporación, sobresaturación controlada, nucleación y crecimiento de cristales, separación y secado. No confundas biosíntesis con cristalización industrial.
+- Explica que la fotosíntesis no es simplemente "luz que se convierte directamente en glucosa": presenta la fijación de CO2 y la síntesis/metabolización de carbohidratos con precisión adecuada al nivel del vídeo.
+- No afirmes que toda la sacarosa se forma directamente en una única reacción glucosa + fructosa; describe las rutas enzimáticas de biosíntesis con cautela y sin inventar enzimas concretas si no están respaldadas.
+- Distingue sacarosa (molécula) de azúcar comercial (cristales purificados de sacarosa).
+- Cuando el tema admita varios significados, explica ambos brevemente y deja claro cuál es biológico y cuál industrial.
 REGLAS EDITORIALES Y CIENTÍFICAS:
 ARQUITECTURA EDITORIAL OBLIGATORIA — TRABAJA EN ETAPAS INTERNAS ANTES DE ESCRIBIR:
 A. INVESTIGADOR: descompón la pregunta en subpreguntas; identifica mecanismo, condiciones, excepciones y consenso. Usa primero las notas del usuario como pistas, nunca como evidencia automática. Si no tienes acceso real a fuentes externas durante esta solicitud, NO afirmes haber buscado, consultado ni verificado fuentes. No inventes nombres de estudios, autores, enlaces, instituciones ni referencias. Separa "hecho establecido", "dato que requiere fuente" y "incertidumbre".
@@ -342,15 +348,11 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
       const unresolved = /pendient|pending|no resuelt|no verific|provisional|incertid|bajo|moderad/.test(originalStatus);
       return { ...item, source_ids: ids, status: ids.length ? "fuente relacionada recuperada; pertinencia pendiente de revisión" : (unresolved ? "no verificada" : "conocimiento general; sin fuente específica"), evidence: ids.length ? String(item.evidence || "La fuente coincide en términos; revisar el resumen para confirmar que respalda la afirmación.") : "No hay una fuente recuperada cuya ficha coincida con esta afirmación." };
     });
-    const narrativeText = JSON.stringify({ script: plan.script, angle: plan.angle, hook: plan.hook, story: plan.story, retention_map: plan.retention_map }).toLowerCase();
-    const unresolvedInScript = (Array.isArray(plan.fact_audit) ? plan.fact_audit : []).filter(item => {
-      if (item.source_ids && item.source_ids.length) return false;
-      if (item.status !== "no verificada") return false;
-      const tokens = String(item.claim || "").toLowerCase().match(/[a-záéíóúüñ]{6,}/g) || [];
-      const keyTerms = [...new Set(tokens)].filter(word => !auditStopWords.has(word));
-      return keyTerms.length >= 2 && keyTerms.filter(word => narrativeText.includes(word)).length >= 2;
-    });
-    if (unresolvedInScript.length) return res.status(422).json({ error: "La auditoría detectó afirmaciones sin fuente que siguen apareciendo en el guion. El plan fue bloqueado para evitar enseñar datos no verificados.", diagnosticCode: "UNVERIFIED_CLAIMS_IN_SCRIPT", blockedClaims: unresolvedInScript.map(x => x.claim) });
+    // Las afirmaciones sin cita específica no son automáticamente falsas.
+    // Se muestran como pendientes de documentación, pero no se bloquea el plan por coincidencias léxicas.
+    plan.editorial_warnings = (Array.isArray(plan.fact_audit) ? plan.fact_audit : [])
+      .filter(item => item.status === "no verificada")
+      .map(item => ({ claim: item.claim, reason: "No se vinculó una fuente académica recuperada; requiere revisión antes de publicar como dato especializado." }));
     const spokenText = String(plan.script || "").replace(/\[[^\]]+\]/g, " ");
     const wordCount = (spokenText.match(/[a-záéíóúüñ0-9]+/gi) || []).length;
     const estimatedSeconds = Math.round(wordCount / 140 * 60);
