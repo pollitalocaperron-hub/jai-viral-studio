@@ -31,9 +31,9 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <section class="hero"><div class="eyebrow">Creative intelligence studio</div><h2>Convirtamos una idea<br>en un vídeo que explique.</h2><p>Escribe el tema y añade tu investigación. J.A.I. organizará el concepto, el enfoque y el plan visual para un vídeo educativo 9:16.</p></section>
 <section class="card">
 <label for="topic">¿Qué vídeo quieres crear?</label><input id="topic" maxlength="160" placeholder="Ej. ¿Por qué se sella la carne?"><div class="hint">Escribe una pregunta, un dato o una idea concreta.</div><div style="height:16px"></div>
-<label for="research">Tu investigación o indicaciones (opcional)</label><textarea id="research" placeholder="Pega aquí tus notas, fuentes, datos que quieras incluir o el enfoque que imaginas..."></textarea><div class="hint">Tus notas se enviarán de forma segura a Gemini para preparar el plan. No incluyas información sensible.</div><div style="height:16px"></div>
+<label for="research">Tu investigación o indicaciones (opcional)</label><textarea id="research" placeholder="Pega aquí tus notas, fuentes, datos que quieras incluir o el enfoque que imaginas..."></textarea><div class="hint">Tus notas se enviarán al motor editorial de J.A.I. para preparar el plan. No incluyas información sensible.</div><div style="height:16px"></div>
 <div class="grid"><div><label for="duration">Duración objetivo</label><select id="duration"><option>30–45 segundos</option><option>45–60 segundos</option><option>60–90 segundos</option></select></div><div><label for="platform">Destino principal</label><select id="platform"><option>Reels</option><option>YouTube Shorts</option><option>TikTok</option><option>Multiplataforma</option></select></div></div>
-<button class="primary" id="create">Crear plan de producción con IA</button><div class="hint status" id="status">Motor editorial con Gemini · MP4 y animación completa: siguientes etapas de desarrollo.</div></section>
+<button class="primary" id="create">Crear plan de producción con IA</button><div class="hint status" id="status">Motor editorial Groq + Gemini de respaldo · MP4 y animación completa: siguientes etapas de desarrollo.</div><div class="hint" id="memoryStatus">Memoria editorial: preparando historial de aprendizaje…</div></section>
 <section class="card output" id="output"><div class="row" style="justify-content:space-between"><h3 class="section-title">Plan de producción</h3><span class="tag">9:16 · 1080 × 1920</span></div><div id="category" style="margin-bottom:10px"></div>
 <label>Enfoque recomendado</label><div class="result" id="angle"></div><div style="height:13px"></div><label>Hook inicial</label><div class="result" id="hook"></div><div style="height:13px"></div><label>Guion base</label><div class="result" id="script"></div><div style="height:13px"></div>
 <section class="card" id="voiceStudio" style="display:none" aria-hidden="true">
@@ -64,7 +64,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <div class="steps"><div class="step"><b>01 · Investigación</b><span>Verificar afirmaciones y fuentes.</span></div><div class="step"><b>02 · Dirección visual</b><span>Objetos, diagramas y movimiento.</span></div><div class="step"><b>03 · Voz</b><span>Narración y sincronización.</span></div><div class="step"><b>04 · Montaje</b><span>Ritmo, subtítulos y sonido.</span></div><div class="step"><b>05 · Revisión</b><span>Exactitud y originalidad.</span></div><div class="step"><b>06 · Exportación</b><span>MP4 vertical 9:16.</span></div></div>
 <div class="row" style="margin-top:14px"><button class="secondary" id="copy">Copiar plan</button><button class="secondary" id="save">Guardar proyecto</button></div></section>
 <section class="card"><h3 class="section-title">Proyectos guardados</h3><div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div></section>
-<footer>J.A.I. Viral Studio · Producción editorial con Gemini · Exportación MP4 en desarrollo.</footer></div>
+<footer>J.A.I. Viral Studio · Memoria editorial acumulativa · Exportación MP4 en desarrollo.</footer></div>
 
 <script>
 const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[],currentTopic="";
@@ -399,16 +399,45 @@ $("renderVideo").addEventListener("click",renderVideo);
 $("buildTimeline").addEventListener("click",buildTimeline);
 $("previewTimeline").addEventListener("click",previewTimeline);
 
+const JAI_MEMORY_KEY="jaiEditorialMemoryV1";
+function getLearningMemory(){
+ try{const items=JSON.parse(localStorage.getItem(JAI_MEMORY_KEY)||"[]");return Array.isArray(items)?items:[];}catch(e){return[];}
+}
+function buildLearningMemoryContext(){
+ return getLearningMemory().slice(0,8).map((item,index)=>[
+  "PLAN ANTERIOR "+(index+1),
+  "Tema: "+item.topic,
+  "Ángulo: "+item.angle,
+  "Hook usado: "+item.hook,
+  "Escenas y recursos visuales: "+(item.visuals||[]).join(" | "),
+  "Revelaciones/estímulos: "+(item.beats||[]).join(" | ")
+ ].join("\n")).join("\n\n").slice(0,8500);
+}
+function rememberGeneratedPlan(topic,data){
+ const visuals=Array.isArray(data.story)?data.story.slice(0,8).map(s=>String(s.visual||s.objective||"").slice(0,180)).filter(Boolean):[];
+ const beats=Array.isArray(data.retention_map)?data.retention_map.slice(0,14).map(b=>String(b.new_stimulus||b.narrative_advance||"").slice(0,130)).filter(Boolean):[];
+ const entry={topic:String(topic).slice(0,180),angle:String(data.angle||"").slice(0,350),hook:String(data.hook||"").slice(0,250),visuals,beats,date:new Date().toISOString()};
+ try{
+  const previous=getLearningMemory().filter(x=>String(x.topic||"").toLocaleLowerCase("es")!==entry.topic.toLocaleLowerCase("es"));
+  localStorage.setItem(JAI_MEMORY_KEY,JSON.stringify([entry,...previous].slice(0,24)));
+  updateLearningMemoryStatus();
+ }catch(e){$("memoryStatus").textContent="Memoria editorial: no se pudo guardar en este navegador.";}
+}
+function updateLearningMemoryStatus(){
+ const count=getLearningMemory().length;
+ const node=$("memoryStatus");
+ if(node)node.textContent="Memoria editorial activa: "+count+" planes aprendidos en este navegador. J.A.I. los usará para evitar repetir enfoques y recursos.";
+}
 async function makePlan(){
  const topic=$("topic").value.trim(),notes=$("research").value.trim();if(!topic){$("topic").focus();$("status").textContent="Primero escribe el tema del vídeo.";return;}
  $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";
  try{
-  const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value})});
+  const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,learning_memory:buildLearningMemoryContext()})});
   const data=await readJsonResponse(response,"Generador del plan");if(!response.ok)throw new Error(data.error||"No se pudo generar el plan.");
-  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Gemini</span><span class="tag">Dirección visual CGI</span>';
+  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual CGI</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.");
-  currentTopic=topic;jaiSceneImages=[];currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
+  rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
   buildTimeline();
   const normalizedRetention=timelineState.items.map(item=>({time:item.time,new_stimulus:item.retentionStimulus,narrative_advance:item.narrativeAdvance||item.visualAction,curiosity:item.curiosity,visual_action:item.visualAction,on_screen_text:item.on_screen_text}));
   renderRetentionMap(normalizedRetention);
