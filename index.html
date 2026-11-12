@@ -16,7 +16,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 
 .visual-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .visual-card{overflow:hidden;background:#0b1424;border:1px solid #263754;border-radius:14px}
-.visual-card svg{display:block;width:100%;height:auto;aspect-ratio:9/12}
+.visual-card svg,.visual-card canvas{display:block;width:100%;height:auto;aspect-ratio:9/16}
 .visual-meta{padding:11px}.visual-meta b{font-size:12px;color:var(--green)}.visual-meta p{font-size:12px;color:var(--muted);line-height:1.4;margin:6px 0 0}
 .visual-art .float{animation:visualFloat 5s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
 .visual-art .pulse{animation:visualPulse 3s ease-in-out infinite}
@@ -129,13 +129,28 @@ function renderVisualScenes(){
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Genera primero un plan con storyboard.";return;}
  currentScenes.forEach((scene,index)=>{
   const card=document.createElement("article");card.className="visual-card";
-  const wrap=document.createElement("div");wrap.innerHTML=visualSvg(scene,index);card.appendChild(wrap.firstElementChild);
+  if(window.JAIStoryEngine&&typeof window.JAIStoryEngine.draw==="function"){
+   const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
+   canvas.setAttribute("role","img");canvas.setAttribute("aria-label",String(scene?.on_screen_text||scene?.objective||("Escena "+(index+1))));
+   const ctx=canvas.getContext("2d");
+   const previewItem={
+    ...scene,
+    visualAction:scene?.animation||scene?.visual_action||"",
+    retentionStimulus:scene?.objective||"",
+    on_screen_text:scene?.on_screen_text||scene?.objective||("Escena "+(index+1)),
+    segmentLabel:"VISTA PREVIA · ESCENA "+(index+1)
+   };
+   window.JAIStoryEngine.draw(ctx,canvas,previewItem,index,.58);
+   card.appendChild(canvas);
+  }else{
+   const wrap=document.createElement("div");wrap.innerHTML=visualSvg(scene,index);card.appendChild(wrap.firstElementChild);
+  }
   const meta=document.createElement("div");meta.className="visual-meta";
   const heading=document.createElement("b");heading.textContent="ESCENA "+(index+1)+" · "+String(scene?.time||"Tiempo por definir");
   const desc=document.createElement("p");desc.textContent=String(scene?.visual||scene?.objective||"Composición educativa 2D");
   meta.append(heading,desc);card.appendChild(meta);root.appendChild(card);
  });
- $("visualStatus").textContent=currentScenes.length+" composiciones 2D creadas en este navegador. Son artes base editables; aún falta animación de línea de tiempo y exportación MP4.";
+ $("visualStatus").textContent=currentScenes.length+" vistas previas creadas con el mismo motor que renderiza el video. La animación completa se aprecia en la secuencia exportada.";
 }
 $("makeVisuals").addEventListener("click",renderVisualScenes);
 
