@@ -173,8 +173,9 @@ let renderFrame=0,renderRecording=false;
 function drawEarthScene(item,index,progress){
  const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height;
  const p=Math.max(0,Math.min(1,progress)),cx=w/2;
- const stage=Math.max(0,Math.min(5,Number(item.sceneIndex??Math.floor(index/2))));
- const title=String(item.on_screen_text||item.objective||"La Tierra y su movimiento");
+ // Cada bloque de retención obtiene un plano distinto, aunque pertenezca a la misma escena maestra.
+ const stage=((Number.isFinite(Number(index))?Number(index):0)%6+6)%6;
+ const title=String(item.on_screen_text||"La Tierra y su movimiento");
  const visual=String(item.visual||"").toLowerCase();
  const stimulus=String(item.retentionStimulus||"").toLowerCase();
  const bg=ctx.createLinearGradient(0,0,w,h);
@@ -186,6 +187,11 @@ function drawEarthScene(item,index,progress){
   ctx.fillStyle="#d8f4ff";ctx.beginPath();ctx.arc(x,y,i%5===0?2:1,0,Math.PI*2);ctx.fill();
  }
  ctx.globalAlpha=1;
+ // Movimiento de cámara editorial: acercamiento suave y paneo alternado entre planos.
+ ctx.save();
+ const cameraZoom=1.015+0.035*Math.sin(p*Math.PI);
+ const cameraPan=((index%2===0)?-1:1)*14*Math.sin(p*Math.PI);
+ ctx.translate(cx+cameraPan,640);ctx.scale(cameraZoom,cameraZoom);ctx.translate(-cx,-640);
  const earth=(x,y,r,rotation=0)=>{
   ctx.save();ctx.translate(x,y);ctx.rotate(rotation);
   const ocean=ctx.createRadialGradient(-r*.35,-r*.42,r*.05,0,0,r*1.2);
@@ -275,7 +281,9 @@ function drawEarthScene(item,index,progress){
   label("LA TIERRA SIGUE GIRANDO",205,27);
   label("Y NOSOTROS VIAJAMOS CON ELLA",960,23);
  }
- // Texto de apoyo breve: la narración no se sustituye por descripciones internas del storyboard.
+ // Restablecer cámara para mantener títulos y rótulos perfectamente legibles.
+ ctx.restore();
+ // Texto de apoyo breve: solo copy dirigido al espectador.
  const clean=title.length>72?title.slice(0,69).replace(/\s+\S*$/,"")+"…":title;
  ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 34px Arial";
  const words=clean.split(/\s+/),lines=[];let line="";
