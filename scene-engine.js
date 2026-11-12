@@ -64,7 +64,7 @@ function draw(ctx,canvas,item,index,progress){
   else if(/dora|color marron|color cafe|superficie marron|costra|cambio de color|se tuesta|pardeamiento/.test(beat))mode="food_browning";
   else if(/sarten|plancha|aceite|chisporrote|contacto con el calor|entra en la sarten|cae sobre|cocinar|calor intenso|temperatura/.test(beat))mode="food_pan";
   else if(/carne cruda|bistec crudo|filete crudo|antes de cocinar|alimento crudo|superficie rosada|pieza de carne/.test(beat))mode="food_raw";
-  else mode="food_raw";
+  else mode=["food_raw","food_pan","food_browning","food_chemistry","food_result"][((Number(index)||0)%5)];
  }
  // Specific beat actions win over broad scene descriptions. The same parent scene
  // can therefore produce a different composition every three-second beat.
@@ -107,12 +107,16 @@ function draw(ctx,canvas,item,index,progress){
   else if(/reaccion quimica|aminoacido|azucar|molecula|compuestos de aroma|compuestos de sabor|reaccion de maillard|a nivel molecular/.test(beat))mode="food_chemistry";
   else if(/dora|color marron|color cafe|superficie marron|costra|cambio de color|se tuesta|pardeamiento/.test(beat))mode="food_browning";
   else if(/sarten|plancha|aceite|chisporrote|contacto con el calor|calor|temperatura|cocinar|entra en la sarten|cae sobre/.test(beat))mode="food_pan";
-  else mode="food_raw";
+  else mode=["food_raw","food_pan","food_browning","food_chemistry","food_result"][((Number(index)||0)%5)];
  }
  ctx.save();
  if(mode==="food_raw"){
-  panel(55,430,610,520,"#594039");ctx.fillStyle="#bd6b62";ctx.beginPath();ctx.ellipse(350,690,230,145,-.12,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle="#f3c4a0";ctx.lineWidth=13;ctx.beginPath();ctx.moveTo(190,665);ctx.bezierCurveTo(280,570,355,790,510,660);ctx.stroke();
+  // Gentle camera drift and moving specular highlight keep even the raw-meat shot alive.
+  const drift=Math.sin(p*Math.PI*2)*18,breath=1+Math.sin(p*Math.PI*2)*.018;
+  panel(55,430,610,520,"#594039");ctx.save();ctx.translate(drift,Math.sin(p*Math.PI*2)*7);ctx.translate(350,690);ctx.scale(breath,breath);ctx.translate(-350,-690);
+  ctx.fillStyle="#bd6b62";ctx.beginPath();ctx.ellipse(350,690,230,145,-.12,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#f3c4a0";ctx.lineWidth=13;ctx.beginPath();ctx.moveTo(190,665);ctx.bezierCurveTo(280,570,355,790,510,660);ctx.stroke();ctx.restore();
+  const shineX=180+((p*360)%360);ctx.strokeStyle="rgba(255,226,205,.55)";ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(shineX,570);ctx.quadraticCurveTo(shineX+35,610,shineX+10,650);ctx.stroke();
   label("ANTES DEL CALOR",cx,330,30);label("SUPERFICIE ROSADA",cx,900,23);
  }else if(mode==="food_pan"){
   ctx.fillStyle="#303b49";ctx.beginPath();ctx.ellipse(350,760,290,185,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#9eabb7";ctx.lineWidth=17;ctx.stroke();
@@ -126,11 +130,14 @@ function draw(ctx,canvas,item,index,progress){
  }else if(mode==="food_chemistry"){
   panel(35,470,290,360,"#263e55");panel(395,470,290,360,"#493b2b");label("AMINOÁCIDO",180,430,22);label("AZÚCAR",540,430,22);
   dot(150,625,42,"#f0c66d");dot(220,625,27,"#78c9e8");line(178,625,194,625,"#fff",8);
-  dot(500,625,42,"#e6a15b");dot(560,590,24,"#f5d77c");dot(560,660,24,"#f5d77c");arrow(330,650,390,650,"#f8e4a5",9);
+  dot(500,625,42,"#e6a15b");dot(560,590,24,"#f5d77c");dot(560,660,24,"#f5d77c");
+  const reactionX=330+Math.sin(p*Math.PI*2)*18;arrow(reactionX,650,390+Math.sin(p*Math.PI*2)*18,650,"#f8e4a5",9);
+  for(let k=0;k<5;k++){const pulse=(p*2+k*.2)%1;dot(350+pulse*35,590+k*42,5+7*Math.sin(pulse*Math.PI),"rgba(255,224,138,.85)");}
   panel(95,900,530,130,"#244c43");label("NUEVOS COMPUESTOS",cx,960,25);label("AROMA Y SABOR",cx,1005,23);label("CALOR + REACCIÓN QUÍMICA",cx,300,26);
  }else if(mode==="food_result"){
   panel(55,455,610,510,"#303944");ctx.fillStyle="#8f482c";ctx.beginPath();ctx.ellipse(350,700,235,155,-.08,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#d99b70";ctx.beginPath();ctx.ellipse(350,700,195,112,-.08,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#f0c18b";ctx.lineWidth=18;ctx.beginPath();ctx.ellipse(350,700,225,145,-.08,0,Math.PI*2);ctx.stroke();
+  const glint=120+((p*500)%500);ctx.strokeStyle="rgba(255,226,170,.72)";ctx.lineWidth=10;ctx.beginPath();ctx.ellipse(glint,650,34,13,-.25,0,Math.PI*2);ctx.stroke();
   label("EL DORADO QUE DA SABOR",cx,330,28);label("REACCIÓN DE MAILLARD",cx,1015,24);
  }else if(mode==="editorial"){
   panel(45,360,630,650,"#24384f");const subject=String(item.visualAction||item.visual||item.objective||"Idea principal").slice(0,72);
