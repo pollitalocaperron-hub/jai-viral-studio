@@ -356,12 +356,12 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     const parseClock = value => {
       if (typeof value === "number" && Number.isFinite(value)) return value;
       const text = String(value || "").trim();
-      if (/^\\d+(?:\\.\\d+)?$/.test(text)) return Number(text);
-      const match = text.match(/(\\d+):(\\d{2})/);
+      if (/^\d+(?:\.\d+)?$/.test(text)) return Number(text);
+      const match = text.match(/(\d+):(\d{2})/);
       return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
     };
     const parseRange = value => {
-      const match = String(value || "").match(/(\\d+):(\\d{2})\\s*[-–—]\\s*(\\d+):(\\d{2})/);
+      const match = String(value || "").match(/(\d+):(\d{2})\s*[-–—]\s*(\d+):(\d{2})/);
       return match ? { start: Number(match[1]) * 60 + Number(match[2]), end: Number(match[3]) * 60 + Number(match[4]) } : null;
     };
     const scenes = Array.isArray(plan.story) ? plan.story : [];
