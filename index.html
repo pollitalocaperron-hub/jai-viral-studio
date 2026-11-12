@@ -44,14 +44,16 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <div class="hint" id="voiceStatus" aria-live="polite">Genera un guion para habilitar la narración de prueba.</div>
 </section>
 <section class="card" id="kokoroStudio">
- <div class="row" style="justify-content:space-between"><h3 class="section-title">Narración neuronal Kokoro</h3><span class="tag">Motor local · Sin API</span></div>
- <p class="hint">Genera la narración con el motor neuronal local. La primera vez descarga el modelo (puede ocupar cientos de MB); después puede reutilizarse desde la caché del navegador.</p>
+ <div class="row" style="justify-content:space-between"><h3 class="section-title">Narración neuronal Gemini</h3><span class="tag">Nivel gratuito · Sin tarjeta</span></div>
+ <p class="hint">Genera una voz neuronal en español con Gemini. Usa el nivel gratuito disponible de la API; está sujeto a límites de uso y disponibilidad.</p>
  <label for="kokoroVoice">Voz de narración</label>
  <select id="kokoroVoice">
-  <option value="am_santa">Santa · Masculina</option>
+  <option value="Kore">Kore · Femenina clara</option>
+  <option value="Puck">Puck · Masculina natural</option>
+  <option value="Charon">Charon · Masculina grave</option>
  </select>
  <div class="row" style="margin-top:12px">
-  <button class="primary" id="generateNarration" type="button">Generar narración Kokoro</button>
+  <button class="primary" id="generateNarration" type="button">Generar narración</button>
   <button class="secondary" id="stopKokoro" type="button">Detener audio</button>
  </div>
  <div class="hint" id="kokoroStatus" aria-live="polite">Primero genera el guion y después crea la narración neuronal.</div>
@@ -552,25 +554,14 @@ async function makePlan(){
  }catch(error){$("status").textContent=error.message||"Ocurrió un error al generar el plan.";}finally{$("create").disabled=false;}
 }
 
-let kokoroEngine=null,kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioData=null,kokoroSampleRate=24000,kokoroLoading=null,kokoroSource=null,kokoroAudioContext=null;
-async function getKokoro(){
- if(kokoroEngine)return kokoroEngine;
- if(kokoroLoading)return kokoroLoading;
- kokoroLoading=(async()=>{
-  $("kokoroStatus").textContent="Cargando motor Kokoro en su versión optimizada para navegador…";
-  const mod=await import("https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js");
-  $("kokoroStatus").textContent="Descargando el modelo neuronal de español. La primera carga puede tardar…";
-  kokoroEngine=await mod.KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX",{dtype:"q8",device:"wasm"});
-  return kokoroEngine;
- })();
- try{return await kokoroLoading;}catch(error){kokoroLoading=null;throw error;}
-}
-function makeWavBlob(samples,sampleRate){
- const data=samples instanceof Float32Array?samples:new Float32Array(samples);
- const buffer=new ArrayBuffer(44+data.length*2),view=new DataView(buffer);
+let kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioDuration=0,kokoroSampleRate=24000,kokoroSource=null,kokoroAudioContext=null;
+function makePcmWavBlob(base64,sampleRate){
+ const binary=atob(base64),pcm=new Uint8Array(binary.length);
+ for(let i=0;i<binary.length;i++)pcm[i]=binary.charCodeAt(i);
+ const buffer=new ArrayBuffer(44+pcm.length),view=new DataView(buffer);
  const write=(offset,str)=>{for(let i=0;i<str.length;i++)view.setUint8(offset+i,str.charCodeAt(i));};
- write(0,"RIFF");view.setUint32(4,36+data.length*2,true);write(8,"WAVE");write(12,"fmt ");view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,sampleRate,true);view.setUint32(28,sampleRate*2,true);view.setUint16(32,2,true);view.setUint16(34,16,true);write(36,"data");view.setUint32(40,data.length*2,true);
- for(let i=0;i<data.length;i++){const v=Math.max(-1,Math.min(1,data[i]));view.setInt16(44+i*2,v<0?v*32768:v*32767,true);}
+ write(0,"RIFF");view.setUint32(4,36+pcm.length,true);write(8,"WAVE");write(12,"fmt ");view.setUint32(16,16,true);view.setUint16(20,1,true);view.setUint16(22,1,true);view.setUint32(24,sampleRate,true);view.setUint32(28,sampleRate*2,true);view.setUint16(32,2,true);view.setUint16(34,16,true);write(36,"data");view.setUint32(40,pcm.length,true);
+ new Uint8Array(buffer,44).set(pcm);
  return new Blob([buffer],{type:"audio/wav"});
 }
 $("generateNarration").addEventListener("click",async()=>{
@@ -578,22 +569,23 @@ $("generateNarration").addEventListener("click",async()=>{
  if(!text||text==="Guion pendiente."){$("kokoroStatus").textContent="Primero genera el guion editorial.";return;}
  const button=$("generateNarration");button.disabled=true;$("downloadNarration").hidden=true;
  try{
-  const engine=await getKokoro();
-  $("kokoroStatus").textContent="Sintetizando la narración completa…";
-  const result=await engine.generate(text,{voice:$("kokoroVoice").value,speed:1});
-  const samples=result.audio;
-  if(!(samples instanceof Float32Array)&&!ArrayBuffer.isView(samples))throw new Error("El motor no devolvió muestras de audio compatibles.");
-  kokoroSampleRate=result.sampling_rate||24000;kokoroAudioData=new Float32Array(samples);
-  kokoroAudioBlob=makeWavBlob(kokoroAudioData,kokoroSampleRate);
+  $("kokoroStatus").textContent="Conectando con Gemini y generando la narración en español…";
+  const response=await fetch("/api/narrate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voice:$("kokoroVoice").value})});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||"No se pudo generar la narración.");
+  if(!data.audioBase64)throw new Error("El servicio no devolvió audio.");
+  kokoroSampleRate=data.sampleRate||24000;
+  kokoroAudioBlob=makePcmWavBlob(data.audioBase64,kokoroSampleRate);
+  kokoroAudioDuration=(kokoroAudioBlob.size-44)/(kokoroSampleRate*2);
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
   kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);
   $("kokoroAudio").src=kokoroAudioUrl;$("kokoroAudio").style.display="block";
   $("downloadNarration").href=kokoroAudioUrl;$("downloadNarration").hidden=false;
-  $("kokoroStatus").textContent="Narración lista: "+(kokoroAudioData.length/kokoroSampleRate).toFixed(1)+" segundos. Ya puede escucharse y mezclarse en el render de vídeo.";
- }catch(error){$("kokoroStatus").textContent="No se pudo generar la voz: "+(error.message||"error desconocido")+". Comprueba la conexión y vuelve a intentarlo.";}
+  $("kokoroStatus").textContent="Narración lista: "+kokoroAudioDuration.toFixed(1)+" segundos. Ya puedes escucharla, descargarla e integrarla en el render WebM.";
+ }catch(error){$("kokoroStatus").textContent="No se pudo generar la voz: "+(error.message||"error desconocido");}
  finally{button.disabled=false;}
 });
-$("stopKokoro").addEventListener("click",()=>{if(kokoroSource){try{kokoroSource.stop();}catch(e){}kokoroSource=null;}$("kokoroAudio").pause();});
+$("stopKokoro").addEventListener("click",()=>{$("kokoroAudio").pause();if(kokoroSource){try{kokoroSource.stop();}catch(e){}kokoroSource=null;}});
 function cleanNarrationText(raw){
  return String(raw||"")
   .replace(/\\[(?:HOOK|PROMESA|CONTEXTO|EXPLICACIÓN|REVELACIÓN|CIERRE)\\]/gi," ")
