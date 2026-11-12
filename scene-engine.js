@@ -187,24 +187,38 @@ function draw(ctx,canvas,item,index,progress){
   line(35,625,cx-r-8,625,"#fff1b5",16);line(cx-r,625,cx+r,625,"#fff1b5",13);line(cx+r+8,625,w-35,625,"#fff1b5",16);
   dot(120,625,12,"#fff");dot(580,625,12,"#fff");label("LA LUZ CRUZA CASI INTACTA",cx,270,27);
  }else if(mode==="spectrum"){
-  // A physical glass prism refracts a moving white beam into a fan of seven colors.
-  const cols=["#ff5b55","#ff9d52","#ffe16b","#6bdc8b","#51c9ef","#7187ff","#b68cff"];
-  const py=640+Math.sin(p*Math.PI*2)*12;
-  ctx.save();
-  const beam=ctx.createLinearGradient(35,py,285,py);beam.addColorStop(0,"rgba(255,255,255,0)");beam.addColorStop(1,"#fffef0");
-  ctx.strokeStyle=beam;ctx.lineWidth=22;ctx.beginPath();ctx.moveTo(35,py);ctx.lineTo(290,py);ctx.stroke();
-  // Glass prism with highlights and visible refraction edges.
-  ctx.fillStyle="rgba(166,235,255,.18)";ctx.strokeStyle="rgba(230,251,255,.95)";ctx.lineWidth=9;
-  ctx.beginPath();ctx.moveTo(300,430);ctx.lineTo(520,820);ctx.lineTo(165,820);ctx.closePath();ctx.fill();ctx.stroke();
-  ctx.strokeStyle="rgba(255,255,255,.45)";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(300,450);ctx.lineTo(485,790);ctx.stroke();
-  cols.forEach((color,k)=>{
-   const y1=py+(k-3)*2,y2=500+k*88;
-   ctx.strokeStyle=color;ctx.lineWidth=17;ctx.globalAlpha=.94;
-   ctx.beginPath();ctx.moveTo(495,py+(k-3)*5);ctx.quadraticCurveTo(560,y1+(k-3)*25,680,y2);ctx.stroke();
-   ctx.globalAlpha=1;
-  });
+  // Cinematic underwater dispersion: no triangle, no chart-like straight bars.
+  // A soft white sunbeam enters the sea and separates into flowing volumetric color ribbons.
+  ocean(420);
+  const sunX=545,sunY=250;
+  const halo=ctx.createRadialGradient(sunX,sunY,12,sunX,sunY,210);
+  halo.addColorStop(0,"rgba(255,246,204,.72)");halo.addColorStop(1,"rgba(255,246,204,0)");
+  ctx.fillStyle=halo;ctx.fillRect(300,40,390,390);
+  ctx.fillStyle="#ffe7a6";ctx.beginPath();ctx.arc(sunX,sunY,48,0,Math.PI*2);ctx.fill();
+  // A broad white beam dissolves into colored light beneath the surface.
+  ctx.save();ctx.globalAlpha=.34;
+  const shaft=ctx.createLinearGradient(475,390,330,1040);
+  shaft.addColorStop(0,"rgba(255,250,220,.9)");shaft.addColorStop(.42,"rgba(180,237,255,.28)");shaft.addColorStop(1,"rgba(120,215,255,0)");
+  ctx.fillStyle=shaft;ctx.beginPath();ctx.moveTo(455,390);ctx.lineTo(535,390);ctx.lineTo(500,1030);ctx.lineTo(150,1030);ctx.closePath();ctx.fill();
   ctx.restore();
-  label("LA LUZ BLANCA SE DESCOMPONE",cx,280,26);
+  const cols=["#ff6b67","#ffad62","#ffe68a","#8ce5a6","#62d8ec","#7e9dff","#c2a0ff"];
+  cols.forEach((color,k)=>{
+   const offset=(k-3)*22,phase=p*2.4+k*.42;
+   ctx.save();ctx.globalAlpha=.78;
+   ctx.shadowColor=color;ctx.shadowBlur=18;
+   ctx.strokeStyle=color;ctx.lineWidth=12+(k%3)*2;
+   ctx.beginPath();
+   ctx.moveTo(475+offset*.18,430);
+   ctx.bezierCurveTo(420+offset+Math.sin(phase)*22,570,250+offset+Math.cos(phase)*28,690,345+offset*1.8+Math.sin(phase)*36,990);
+   ctx.stroke();
+   ctx.restore();
+  });
+  // Suspended illuminated particles give the light volume and scale.
+  for(let k=0;k<26;k++){
+   const x=205+((k*67+p*23)%360),y=505+((k*83)%480);
+   dot(x,y,2+(k%3),"rgba(221,249,255,.48)");
+  }
+  label("LA LUZ SE ABRE EN COLORES",cx,285,27);
 }else if(mode==="absorb"){
   ocean(390);panel(65,470,590,560,"rgba(1,15,38,.62)");
   const cols=["#ff5c55","#ff9d55","#ffe36e","#65db9a","#55caff"];
