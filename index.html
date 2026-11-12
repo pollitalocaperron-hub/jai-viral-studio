@@ -153,7 +153,11 @@ function renderVisualScenes(){
   const heading=document.createElement("b");heading.textContent="ESCENA "+String(index+1).padStart(2,"0")+" · "+String(scene.time||"Tiempo por definir");
   const desc=document.createElement("p");desc.textContent=String(scene.visual_subject||scene.visual||scene.objective||"Visualización científica");
   const proof=document.createElement("p");proof.className="hint";proof.textContent="Demostración: "+String(scene.visual_proof||scene.teaching_point||"Pendiente de definir");
-  meta.append(heading,desc,proof);card.appendChild(meta);root.appendChild(card);
+  meta.append(heading,desc,proof);
+  const promptDetails=document.createElement("details");promptDetails.style.cssText="margin-top:8px;font-size:12px;color:#b8c9dc";
+  const promptSummary=document.createElement("summary");promptSummary.textContent="Ver dirección visual usada";
+  const promptText=document.createElement("p");promptText.style.cssText="white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere";promptText.textContent=String(generated?.prompt||scene.visual_prompt_en||"El plan no entregó un prompt visual específico para esta escena.");
+  promptDetails.append(promptSummary,promptText);meta.appendChild(promptDetails);card.appendChild(meta);root.appendChild(card);
  });
  const ready=jaiSceneImages.filter(Boolean).length;
  $("visualStatus").textContent=ready+" de "+currentScenes.length+" escenas visuales únicas listas. Una imagen acompaña cada escena completa; los bloques de 3 segundos ya no disparan imágenes nuevas.";
@@ -206,7 +210,7 @@ async function generateAIVisuals(){
    if(!b64)throw new Error("El generador no devolvió una imagen para la escena "+(i+1)+".");
    const src="data:image/png;base64,"+b64,img=new Image();img.src=src;
    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error("No se pudo abrir la imagen de la escena "+(i+1)+"."));});
-   jaiSceneImages[i]={src,image:img,shot:scene.visual_subject||scene.visualAction||scene.objective,time:scene.time,sceneIndex:i};
+   jaiSceneImages[i]={src,image:img,shot:scene.visual_subject||scene.visualAction||scene.objective,time:scene.time,sceneIndex:i,prompt};
    generatedCount++;renderVisualScenes();
   }
   $("visualStatus").textContent="Producción visual lista: "+generatedCount+" escenas únicas. El vídeo reutiliza cada fotograma durante su escena completa con movimiento continuo, no una imagen nueva cada 3 segundos.";
