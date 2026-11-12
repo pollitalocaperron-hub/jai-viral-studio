@@ -1,92 +1,107 @@
-/* J.A.I. Narrative Scene Engine — deterministic 2D action renderer.
-   No paid assets, network calls, or external runtime dependencies. */
+/* J.A.I. Narrative Scene Engine — semantic 2D scene renderer.
+   Each retention beat is classified from its own physical action before broad scene context. */
 (function(){
 "use strict";
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 function draw(ctx,canvas,item,index,progress){
- const w=canvas.width,h=canvas.height,p=clamp(Number(progress)||0,0,1),cx=w/2;
- const all=norm([item.visualAction,item.visual,item.retentionStimulus,item.objective,item.on_screen_text].join(" "));
- const isWater=/oceano|agua|mar|agua/.test(all),isLight=/luz|rayo|solar|color|espectro|fot(on|ones)/.test(all);
- const action=norm(item.visualAction||item.visual||"");
+ const w=canvas.width,h=canvas.height,cx=w/2,p=clamp(Number(progress)||0,0,1);
+ const beat=norm([item.visualAction,item.retentionStimulus,item.new_stimulus,item.visual_action,item.on_screen_text].join(" "));
+ const sceneText=norm([item.visual,item.animation,item.objective].join(" "));
+ const all=beat+" "+sceneText;
+ const water=/oceano|agua|mar|gota|vaso|profund|columna/.test(all);
  const title=String(item.on_screen_text||"").slice(0,58);
- const label=(s,x,y,size=27,color="#f5fbff")=>{ctx.fillStyle=color;ctx.font="700 "+size+"px Arial";ctx.textAlign="center";ctx.fillText(s,x,y);};
+ const label=(s,x,y,size=28,color="#f5fbff")=>{ctx.fillStyle=color;ctx.font="700 "+size+"px Arial";ctx.textAlign="center";ctx.fillText(s,x,y);};
  const line=(x1,y1,x2,y2,color,width=8)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();};
  const dot=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();};
- const arrow=(x1,y1,x2,y2,color,width=8)=>{line(x1,y1,x2,y2,color,width);const a=Math.atan2(y2-y1,x2-x1);ctx.save();ctx.translate(x2,y2);ctx.rotate(a);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-23,-13);ctx.lineTo(-23,13);ctx.closePath();ctx.fill();ctx.restore();};
- const panel=(x,y,ww,hh,color)=>{ctx.fillStyle=color;ctx.beginPath();if(typeof ctx.roundRect==="function"){ctx.roundRect(x,y,ww,hh,20);}else{const r=Math.min(20,ww/2,hh/2);ctx.moveTo(x+r,y);ctx.arcTo(x+ww,y,x+ww,y+hh,r);ctx.arcTo(x+ww,y+hh,x,y+hh,r);ctx.arcTo(x,y+hh,x,y,r);ctx.arcTo(x,y,x+ww,y,r);ctx.closePath();}ctx.fill();};
- const ocean=(surface=410)=>{const g=ctx.createLinearGradient(0,surface,0,h);g.addColorStop(0,"#1595b8");g.addColorStop(.35,"#08658f");g.addColorStop(1,"#031a3e");ctx.fillStyle=g;ctx.fillRect(0,surface,w,h-surface);ctx.fillStyle="#56d8e5";ctx.fillRect(0,surface-7,w,8);};
- const rays=(x,y,len,alpha=1)=>{ctx.save();ctx.globalAlpha=alpha;ctx.lineCap="round";const cols=["#fff1a6","#ff8268","#64dfff","#b9a0ff"];cols.forEach((c,k)=>{ctx.strokeStyle=c;ctx.lineWidth=k===0?13:8;ctx.beginPath();ctx.moveTo(x+k*10,y);ctx.lineTo(x+len+k*9,y+len*.75);ctx.stroke();});ctx.restore();};
- const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,"#07152c");bg.addColorStop(1,isWater?"#073b5b":"#18294b");ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
- // Choose the physical action, not the beat number. Distinct actions get distinct compositions.
- let scene="general";
- if(isWater&&(/absor|rojo|longitud de onda|desaparec/.test(all)))scene="absorption";
- else if(isWater&&(/dispers|rebota|rebote|particula|particulas/.test(all)))scene="scatter";
- else if(isWater&&(/profund|penetr|desciend|atravies|vertical/.test(all)))scene="depth";
- else if(isWater&&(/superficie|reflej|cielo|compar/.test(all)))scene="reflection";
- else if(isWater&&(/entra|incide|rayo|sol|luz/.test(all)))scene="sunlight";
- else if(isLight&&(/absor|pierde|desaparec/.test(all)))scene="absorption";
- else if(isLight&&(/dispers|separa|espectro|longitud/.test(all)))scene="spectrum";
- else if(/compar|contrasta|antes y despues|lado a lado/.test(all))scene="compare";
- else if(/corte|interior|revela|abre/.test(all))scene="reveal";
- else if(/orbita|gira alrededor/.test(all))scene="orbit";
- else if(/impact|choca|golpea|rompe/.test(all))scene="impact";
- else if(/acerc|macro|detalle|zoom/.test(all))scene="macro";
- else if(/fluye|corriente|desplaza|viaja|avanza|recorre/.test(all))scene="flow";
+ const panel=(x,y,ww,hh,color)=>{ctx.fillStyle=color;ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,ww,hh,22);else{ctx.rect(x,y,ww,hh);}ctx.fill();};
+ const arrow=(x1,y1,x2,y2,color="#ffe08a",width=8)=>{line(x1,y1,x2,y2,color,width);const a=Math.atan2(y2-y1,x2-x1);ctx.save();ctx.translate(x2,y2);ctx.rotate(a);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-22,-12);ctx.lineTo(-22,12);ctx.closePath();ctx.fill();ctx.restore();};
+ const ocean=(top=430)=>{const g=ctx.createLinearGradient(0,top,0,h);g.addColorStop(0,"#28b8d0");g.addColorStop(.28,"#087fa7");g.addColorStop(1,"#031a3d");ctx.fillStyle=g;ctx.fillRect(0,top,w,h-top);ctx.fillStyle="#8cf1ef";ctx.fillRect(0,top-8,w,9);};
+ const rays=(x,y,len,alpha=1)=>{ctx.save();ctx.globalAlpha=alpha;["#fff3bd","#ff9a70","#ffdf77","#70dcff","#9c9aff"].forEach((c,k)=>{ctx.strokeStyle=c;ctx.lineWidth=k===0?13:8;ctx.beginPath();ctx.moveTo(x,y+k*12);ctx.lineTo(x+len,y+len*.58+k*9);ctx.stroke();});ctx.restore();};
+ const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,"#07162c");bg.addColorStop(1,water?"#06435e":"#18294b");ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+ // Beat-level action has priority. Broad words such as "comparación" in the scene objective
+ // must never override the concrete object/action requested for this three-second beat.
+ let mode="ocean";
+ if(/vaso|vidrio|cristal/.test(beat))mode="glass";
+ else if(/gota|macro|lupa/.test(beat))mode="drop";
+ else if(/arcoiris|espectro|franjas de colores|bandas de colores/.test(beat))mode="spectrum";
+ else if(/particula|suspension|dispers/.test(beat))mode="particles";
+ else if(/absor|rojo|naranja|amarillo|se apaga|desvanec/.test(beat))mode="absorb";
+ else if(/columna|profund|desciend|capa delgada/.test(beat))mode="column";
+ else if(/mirando hacia arriba|observador|sale desde el fondo|perspectiva submarina/.test(beat))mode="observer";
+ else if(/compar|lado a lado|dos estados|contraste/.test(beat))mode="compare";
+ else if(/rayo|haz de luz|luz blanca|entra desde arriba|sol/.test(beat))mode="rays";
+ else if(/superficie|plano general|oceano completo|mar abierto/.test(beat))mode="ocean";
+ else if(/vaso|vidrio|cristal/.test(sceneText))mode="glass";
+ else if(/gota/.test(sceneText))mode="drop";
+ else if(/arcoiris|espectro|bandas de colores/.test(sceneText))mode="spectrum";
+ else if(/particula|dispers/.test(sceneText))mode="particles";
+ else if(/absor|rojo|naranja/.test(sceneText))mode="absorb";
+ else if(/columna|profund/.test(sceneText))mode="column";
+ else if(/compar/.test(sceneText))mode="compare";
  ctx.save();
- if(scene==="sunlight"){
-  ocean();dot(555,235,76,"#ffd36b");rays(205,245,310,1);
-  for(let k=0;k<5;k++){const y=470+k*115;ctx.globalAlpha=.2+k*.12;line(0,y,w,y,"#a9edff",2);}ctx.globalAlpha=1;
-  const x=250+p*220;dot(x,420+p*360,13,"#fff5bb");label("LA LUZ ENTRA AL AGUA",cx,180,30);
- }else if(scene==="absorption"){
-  ocean();panel(65,500,590,360,"rgba(3,20,47,.58)");
-  const cols=["#ff655e","#ffb65c","#fff0a0","#65d9ff"];cols.forEach((c,k)=>{const y=565+k*72;line(105,y,Math.max(115,580-p*360*(k===0?1:.22)),y,c,14);dot(Math.max(115,580-p*360*(k===0?1:.22)),y,12,c);});
-  label("LOS ROJOS SE ABSORBEN",cx,420,29);label("EL ROJO PIERDE INTENSIDAD",cx,950,23,"#ffd0c8");
- }else if(scene==="scatter"){
-  ocean();rays(90,350,210,.9);
-  for(let k=0;k<14;k++){const x=250+((k*61+p*170)%300),y=560+((k*89)%490);dot(x,y,5+(k%3)*2,"#8beaff");}
-  for(let k=0;k<7;k++){const y=520+k*76;arrow(350,y,230+Math.sin(p*5+k)*70,y-45,"#70ddff",4);}
-  label("LA LUZ AZUL SE DISPERSA",cx,220,29);
- }else if(scene==="depth"){
-  ocean();rays(180,240,350,.95);
-  for(let k=0;k<6;k++){const y=460+k*115;ctx.globalAlpha=.8-k*.12;line(0,y,w,y,"#9cecff",2);}ctx.globalAlpha=1;
-  const beam=ctx.createLinearGradient(190,300,500,1050);beam.addColorStop(0,"rgba(255,244,180,.65)");beam.addColorStop(1,"rgba(66,191,255,.03)");ctx.fillStyle=beam;ctx.beginPath();ctx.moveTo(190,300);ctx.lineTo(480,300);ctx.lineTo(400,1100);ctx.lineTo(270,1100);ctx.closePath();ctx.fill();
-  label("CAMBIA CON LA PROFUNDIDAD",cx,180,27);
- }else if(scene==="reflection"){
-  ocean(560);ctx.fillStyle="#ffd16a";ctx.beginPath();ctx.arc(535,300,65,0,Math.PI*2);ctx.fill();
-  line(0,552,w,552,"#a7f1ff",5);arrow(520,370,610,530,"#ffd36b",9);
-  panel(55,760,610,220,"rgba(3,17,40,.68)");label("EL CIELO TAMBIÉN INFLUYE",cx,835,26);label("PERO NO LO EXPLICA TODO",cx,900,29,"#75e5f0");
- }else if(scene==="compare"){
-  panel(42,360,305,540,"#124e70");panel(373,360,305,540,"#092b50");
-  label("ANTES",195,320,27);label("DESPUÉS",525,320,27);
-  rays(75,470,210,.9);ocean(680);ctx.save();ctx.beginPath();ctx.rect(373,360,305,540);ctx.clip();ocean(610);ctx.restore();
-  arrow(340,620,380,620,"#ffd36b",8);
- }else if(scene==="reveal"){
-  ocean();panel(75,390,570,490,"rgba(4,20,44,.65)");
-  ctx.save();ctx.beginPath();ctx.rect(75,390,570*(.12+.88*p),490);ctx.clip();
-  for(let k=0;k<4;k++)rays(120,470+k*75,420,.8);
-  ctx.restore();label("MIRA LO QUE OCURRE",cx,310,29);
- }else if(scene==="orbit"){
-  dot(cx,650,145,"#147eaf");ctx.strokeStyle="#ffd36b";ctx.lineWidth=7;ctx.beginPath();ctx.ellipse(cx,650,285,120,0,0,Math.PI*2);ctx.stroke();
-  const a=p*Math.PI*2;dot(cx+285*Math.cos(a),650+120*Math.sin(a),24,"#e8f5ff");label("UNA TRAYECTORIA COMPLETA",cx,330,28);
- }else if(scene==="impact"){
-  const x=120+p*400;dot(x,590,48,"#ffbd65");dot(620-p*400,590,48,"#73ddf2");const q=Math.abs(.5-p);
-  for(let k=0;k<9;k++){const a=k*Math.PI*2/9;line(cx,590,cx+Math.cos(a)*(30+q*180),590+Math.sin(a)*(30+q*180),"#ffd36b",5);}label("EL CHOQUE CAMBIA EL MOVIMIENTO",cx,340,25);
- }else if(scene==="macro"){
-  dot(cx,620,250,"rgba(93,211,238,.18)");ctx.strokeStyle="#8cecff";ctx.lineWidth=7;ctx.beginPath();ctx.arc(cx,620,180+45*p,0,Math.PI*2);ctx.stroke();
-  for(let k=0;k<18;k++)dot(cx+Math.cos(k*2.4+p)*((k*17)%145),620+Math.sin(k*2.4+p)*((k*17)%145),7,"#9af1ff");label("OBSERVA EL DETALLE",cx,300,29);
- }else if(scene==="flow"){
-  ocean();for(let k=0;k<8;k++){const y=500+k*75;const x=30+p*390+(k%2)*70;arrow(x,y,x+110,y+Math.sin(p*5+k)*22,"#8cecff",5);}label("EL AGUA TRANSPORTA LA LUZ",cx,250,27);
+ if(mode==="glass"){
+  // Large transparent tumbler, waterline, refracted highlight; it slides into frame.
+  const x=115+(1-p)*180;ctx.save();ctx.translate(x,0);
+  ctx.fillStyle="rgba(117,226,245,.10)";ctx.strokeStyle="#d5fbff";ctx.lineWidth=10;
+  ctx.beginPath();ctx.moveTo(35,390);ctx.lineTo(285,390);ctx.lineTo(260,865);ctx.quadraticCurveTo(160,930,60,865);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle="rgba(42,178,220,.35)";ctx.beginPath();ctx.moveTo(48,590);ctx.lineTo(273,590);ctx.lineTo(260,850);ctx.quadraticCurveTo(160,900,60,850);ctx.closePath();ctx.fill();
+  ctx.strokeStyle="#ffffff";ctx.lineWidth=7;ctx.beginPath();ctx.ellipse(160,390,125,22,0,0,Math.PI*2);ctx.stroke();
+  line(82,430,110,790,"rgba(255,255,255,.65)",8);ctx.restore();
+  ocean(960);label("UNA MUESTRA PEQUEÑA",cx,280,28);
+ }else if(mode==="drop"){
+  // Macro droplet with a white beam passing through and emerging unchanged.
+  const r=205;ctx.fillStyle="rgba(74,190,230,.17)";ctx.strokeStyle="#a7efff";ctx.lineWidth=9;
+  ctx.beginPath();ctx.moveTo(cx,360);ctx.bezierCurveTo(cx+205,535,cx+175,825,cx,890);ctx.bezierCurveTo(cx-175,825,cx-205,535,cx,360);ctx.fill();ctx.stroke();
+  line(35,625,cx-r-8,625,"#fff1b5",16);line(cx-r,625,cx+r,625,"#fff1b5",13);line(cx+r+8,625,w-35,625,"#fff1b5",16);
+  dot(120,625,12,"#fff");dot(580,625,12,"#fff");label("LA LUZ CRUZA CASI INTACTA",cx,270,27);
+ }else if(mode==="spectrum"){
+  // Distinct full-width spectrum entering a water column.
+  const cols=["#ff5e58","#ff9d55","#ffe36e","#65db9a","#55caff","#718cff","#b18cff"];
+  cols.forEach((c,k)=>{const y=430+k*65;line(70,y,650,y,c,19);});
+  panel(250,385,210,525,"rgba(8,35,69,.48)");
+  for(let k=0;k<7;k++){const y=430+k*65;line(80,y,240,y,cols[k],18);line(470,y,650,y,cols[k],18);}
+  label("LA LUZ BLANCA SE DESCOMPONE",cx,270,26);
+ }else if(mode==="absorb"){
+  ocean(390);panel(65,470,590,560,"rgba(1,15,38,.62)");
+  const cols=["#ff5c55","#ff9d55","#ffe36e","#65db9a","#55caff"];
+  cols.forEach((c,k)=>{const y=550+k*90;const end= k<3 ? 150+(1-p)*380 : 620;line(100,y,end,y,c,18);if(k<3)for(let q=0;q<4;q++)dot(end-q*15,y,6,c);});
+  label("ROJO, NARANJA Y AMARILLO",cx,340,25);label("PIERDEN INTENSIDAD",cx,1090,27,"#ffd1c4");
+ }else if(mode==="column"){
+  ocean(370);panel(235,405,250,650,"rgba(2,22,49,.52)");
+  for(let k=0;k<5;k++){const y=455+k*105;line(265,y,455,y,"#8cecff",3);}
+  const beam=ctx.createLinearGradient(360,400,360,1050);beam.addColorStop(0,"rgba(255,240,174,.85)");beam.addColorStop(.5,"rgba(90,215,255,.35)");beam.addColorStop(1,"rgba(60,170,255,.03)");
+  ctx.fillStyle=beam;ctx.beginPath();ctx.moveTo(310,400);ctx.lineTo(410,400);ctx.lineTo(430,1030);ctx.lineTo(290,1030);ctx.closePath();ctx.fill();
+  label("MÁS AGUA, MÁS FILTRO",cx,285,29);
+ }else if(mode==="particles"){
+  ocean(390);rays(70,430,230,.75);
+  for(let k=0;k<24;k++){const x=90+((k*79+p*180)%540),y=520+((k*97)%510);dot(x,y,5+(k%4)*2,"#b9f4ff");}
+  for(let k=0;k<8;k++){const x=140+k*62;arrow(x,730+Math.sin(p*5+k)*30,x+65,680+Math.sin(p*5+k)*30,"#8cecff",4);}
+  label("PARTÍCULAS DISPERSAN LUZ",cx,275,28);
+ }else if(mode==="observer"){
+  ocean(390);ctx.fillStyle="#ffd56e";ctx.beginPath();ctx.arc(cx,290,60,0,Math.PI*2);ctx.fill();
+  for(let k=0;k<7;k++){const x=70+k*95;line(cx,420,x,690,"rgba(180,239,255,.45)",3);}
+  const diverX=cx+Math.sin(p*Math.PI*2)*18;dot(diverX,980,42,"#f4c27c");panel(diverX-48,1018,96,80,"#e3a75f");
+  label("DESDE EL FONDO DEL MAR",cx,220,28);
+ }else if(mode==="compare"){
+  panel(40,420,300,530,"#0b5577");panel(380,420,300,530,"#082a50");
+  label("POCA AGUA",190,370,26);label("MUCHA AGUA",530,370,26);
+  // Left: clear glass. Right: deep blue column.
+  ctx.strokeStyle="#d8faff";ctx.lineWidth=8;ctx.strokeRect(115,535,150,260);ctx.fillStyle="rgba(100,220,245,.22)";ctx.fillRect(123,650,134,137);
+  ctx.fillStyle="#168db8";ctx.fillRect(425,490,210,400);ctx.fillStyle="#05264a";ctx.fillRect(425,740,210,150);
+  arrow(340,680,380,680);
+ }else if(mode==="rays"){
+  ocean(430);ctx.fillStyle="#ffd66e";ctx.beginPath();ctx.arc(555,260,68,0,Math.PI*2);ctx.fill();rays(110,330,420,.8);
+  const bx=210+p*210;line(bx,430,bx+85,900,"#fff1b1",13);label("LA LUZ DEL SOL ENTRA",cx,235,29);
  }else{
-  // Generic semantic fallback: stage the named subject and animate its stated direction.
-  panel(70,430,580,420,"rgba(10,48,76,.8)");const x=120+p*450;
-  dot(x,640,75,isLight?"#ffd36b":isWater?"#36b9dc":"#7be0c9");
-  arrow(130,800,590,800,"#ffd36b",9);label("ACCIÓN Y RESULTADO",cx,340,30);
+  ocean(430);
+  for(let k=0;k<7;k++){const y=520+k*75;const x=35+((k*97+p*160)%620);ctx.beginPath();ctx.ellipse(x,y,55,9,0,0,Math.PI*2);ctx.strokeStyle="rgba(171,242,255,.7)";ctx.lineWidth=4;ctx.stroke();}
+  label("EL OCÉANO EN GRAN ESCALA",cx,260,29);
  }
  ctx.restore();
- // Stable editorial overlay; visual area remains uncluttered.
- panel(28,54,664,112,"rgba(2,10,24,.78)");label(title,cx,122,title.length>36?23:30);
- label(item.segmentLabel||("BLOQUE "+(index+1)),cx,1150,21,"#b9d9ec");
+ // Editorial overlay and persistent progress indicator.
+ panel(28,54,664,112,"rgba(2,10,24,.82)");label(title,cx,122,title.length>36?23:30);
+ label(item.segmentLabel||("BLOQUE "+(index+1)),cx,1150,21,"#c6e5f4");
  ctx.fillStyle="rgba(255,255,255,.2)";ctx.fillRect(55,1190,610,8);ctx.fillStyle="#63e4c1";ctx.fillRect(55,1190,610*p,8);
 }
 window.JAIStoryEngine={draw};
