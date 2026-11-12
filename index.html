@@ -67,7 +67,14 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <footer>J.A.I. Viral Studio · Producción editorial con Gemini · Exportación MP4 en desarrollo.</footer></div>
 
 <script>
-const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[],currentTopic="";
+const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[],currentTopic="";\nasync function readJsonResponse(response,label){
+ const raw=await response.text();
+ try{return JSON.parse(raw);}catch(error){
+  const detail=raw.replace(/\\s+/g," ").trim().slice(0,260)||"respuesta vacía";
+  throw new Error(label+" devolvió una respuesta que no es JSON (HTTP "+response.status+", "+(response.headers.get("content-type")||"tipo desconocido")+"): "+detail);
+ }
+}
+
 function readable(value){
  if(value===null||value===undefined)return "No especificado";
  if(typeof value==="string"||typeof value==="number"||typeof value==="boolean")return String(value);
@@ -396,7 +403,7 @@ async function makePlan(){
  $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";
  try{
   const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value})});
-  const data=await response.json();if(!response.ok)throw new Error(data.error||"No se pudo generar el plan.");
+  const data=await readJsonResponse(response,"Generador del plan");if(!response.ok)throw new Error(data.error||"No se pudo generar el plan.");
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Gemini</span><span class="tag">Dirección visual CGI</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.");
