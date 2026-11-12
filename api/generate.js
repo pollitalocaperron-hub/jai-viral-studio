@@ -355,8 +355,14 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     const estimatedSeconds = Math.round(wordCount / 140 * 60);
     const starts = Array.isArray(plan.story) ? plan.story.map(scene => { const value = scene && scene.time; if (typeof value === "number") return value; if (typeof value === "string" && /^\d+$/.test(value)) return Number(value); const match = String(value || "").match(/(\d+):(\d{2})/); return match ? Number(match[1]) * 60 + Number(match[2]) : NaN; }).filter(Number.isFinite) : [];
     const storyboardSeconds = starts.length ? Math.max(...starts) + 6 : 0;
-    plan.duration_validation = { script_word_count: wordCount, estimated_narration_seconds: estimatedSeconds, storyboard_seconds: storyboardSeconds, within_tolerance: storyboardSeconds > 0 && Math.abs(estimatedSeconds - storyboardSeconds) <= Math.max(5, storyboardSeconds * 0.15) };
-    if (!plan.duration_validation.within_tolerance) return res.status(422).json({ error: "La duración estimada del guion no coincide con el storyboard. El plan fue bloqueado para evitar una falsa sincronización.", diagnosticCode: "SCRIPT_TIMELINE_MISMATCH", duration_validation: plan.duration_validation });
+    const mapBlocks = Array.isArray(plan.retention_map) ? plan.retention_map : [];
+    const mapRanges = mapBlocks.map(beat => {
+      const match = String(beat.time || "").match(/(\\d+):(\\d{2})\\s*-\\s*(\\d+):(\\d{2})/);
+      return match ? { start: Number(match[1]) * 60 + Number(match[2]), end: Number(match[3]) * 60 + Number(match[4]) } : null;
+    });
+    const mapCoverageValid = mapBlocks.length === Math.ceil(storyboardSeconds / 3) && mapRanges.every((range, index) => range && range.end - range.start > 0 && range.end - range.start <= 3 && (index === 0 ? range.start === 0 : range.start === mapRanges[index - 1].end)) && mapRanges.length > 0 && mapRanges[mapRanges.length - 1].end === storyboardSeconds;
+    plan.duration_validation = { script_word_count: wordCount, estimated_narration_seconds: estimatedSeconds, storyboard_seconds: storyboardSeconds, retention_blocks: mapBlocks.length, retention_map_valid: mapCoverageValid, within_tolerance: storyboardSeconds > 0 && Math.abs(estimatedSeconds - storyboardSeconds) <= Math.max(5, storyboardSeconds * 0.15) && mapCoverageValid };
+    if (!plan.duration_validation.within_tolerance) return res.status(422).json({ error: "La duración estimada del guion, el storyboard y el mapa de retención no coinciden. El plan fue bloqueado para evitar una falsa sincronización.", diagnosticCode: "SCRIPT_TIMELINE_MISMATCH", duration_validation: plan.duration_validation });
     console.info("[JAI] Plan generado y validado con", providerUsed);
     return res.status(200).json(plan);
   } catch (error) {
