@@ -87,7 +87,7 @@ ${safeNotes}
     // Respaldo automático: si el modelo principal está saturado (503/504),
     // espera brevemente y prueba otros modelos Flash con la misma API key.
     // No se cambia a proveedores de pago ni se requiere otra clave.
-    const modelFallbacks = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
+    const modelFallbacks = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
     const requestBody = JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
