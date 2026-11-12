@@ -649,7 +649,6 @@ function renderProjects(){
   actions.append(copyButton,deleteButton);card.append(title,date,actions);root.appendChild(card);
  });
 }
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 $("save").addEventListener("click",()=>{
  const topic=currentTopic||$("topic").value.trim();
  if(!topic||!currentPlan||!currentPlanData){$("status").textContent="Primero genera un plan completo antes de guardarlo.";return;}
@@ -658,5 +657,5 @@ $("save").addEventListener("click",()=>{
  try{localStorage.setItem("jaiProjects",JSON.stringify(projects.slice(0,10)));renderProjects();$("status").textContent="Proyecto completo guardado en este navegador.";}
  catch(e){$("status").textContent="No se pudo guardar el proyecto completo. El almacenamiento del navegador puede estar lleno.";}
 });
-$("status").textContent="Proyecto guardado en este navegador.";}catch(e){$("status").textContent="No se pudo guardar. Comprueba el almacenamiento del navegador.";}});renderProjects();
+renderProjects();
 </script></body></html>
