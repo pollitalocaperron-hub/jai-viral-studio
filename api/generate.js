@@ -76,6 +76,9 @@ H. PERTINENCIA DE EVIDENCIA: una fuente encontrada por búsqueda temática o coi
 - DURACIÓN Y FORMATO DE TIEMPOS: para cada escena story.time escribe SIEMPRE un intervalo explícito "0:00 - 0:06", nunca solo un segundo inicial. Las escenas deben cubrir exactamente el mismo intervalo total que retention_map. retention_map usa bloques consecutivos de máximo 3 segundos y su último bloque termina exactamente al final de la última escena. Para 30–45 s, guion de 75–90 palabras y duración final concreta de 36–42 s; no declares 30 s si el texto hablado requiere más.
 
 - No inventes microgotas, diámetros, escalas, termómetros, temperaturas, porcentajes o tiempos microscópicos ("0.5 mm", etc.) sin respaldo explícito. Usa escalas cualitativas si no hay evidencia.
+- CONTROL DE COMPLETITUD DEL MECANISMO: si el tema describe un proceso, reconstruye sus etapas reales desde la materia o condición inicial hasta el producto/resultado. No saltes etapas que expliquen el cambio; distingue preparación, transformación principal, enfriamiento/separación/acabado cuando correspondan. Explica qué cambia físicamente o químicamente y por qué. No confundas una descripción visual del resultado con la explicación de su mecanismo.
+- CONTROL DE GUION: para el objetivo 30–45 segundos, entrega entre 75 y 90 palabras realmente narradas, excluyendo las etiquetas [HOOK], [PROMESA], [CONTEXTO], [EXPLICACIÓN], [REVELACIÓN] y [CIERRE]. Cuenta las palabras antes de responder; si excede, recorta contenido secundario, no el mecanismo esencial.
+- CONTROL DE ESCENAS: story debe contener intervalos explícitos, consecutivos, sin huecos ni solapamientos, comenzar en 0:00 y terminar exactamente donde termina retention_map. Cada intervalo de escena debe tener inicio y fin válidos.
 - CONTROL DE DURACIÓN: la duración declarada debe coincidir entre guion, storyboard y mapa. Estima el guion hablado a 130–145 palabras/minuto en español. Si la duración objetivo es 30–45 s, apunta a 75–90 palabras narradas y elige una duración final de 36–42 segundos y storyboard/mapa deben cubrir esa misma duración. No declares 36 s si el guion narrado requiere 48.5 s. Si la locución generada luego dura más, la interfaz debe adaptar el montaje o advertirlo sin afirmar sincronía exacta.
 - Antes de devolver JSON, realiza una auditoría cruzada: cualquier dato marcado pendiente no debe reaparecer como certeza en el guion ni en los visuales; comprueba duración estimada y cronología; comprueba que cada visual_proof sea demostrable y no un detalle inventado.
 - No afirmes que verificaste fuentes externas si no se proporcionaron fuentes en las notas.
@@ -350,62 +353,62 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     plan.editorial_warnings = (Array.isArray(plan.fact_audit) ? plan.fact_audit : [])
       .filter(item => item.status === "no verificada")
       .map(item => ({ claim: item.claim, reason: "No se vinculó una fuente académica recuperada; requiere revisión antes de publicar como dato especializado." }));
-    const spokenText = String(plan.script || "").replace(/\\[[^\\]]+\\]/g, " ");
+    const spokenText = String(plan.script || "").replace(/\[[^\]]+\]/g, " ");
     const wordCount = (spokenText.match(/[a-záéíóúüñ0-9]+/gi) || []).length;
     const estimatedSeconds = Math.round(wordCount / 140 * 60);
-    const parseClock = value => {
-      if (typeof value === "number" && Number.isFinite(value)) return value;
-      const text = String(value || "").trim();
-      if (/^\d+(?:\.\d+)?$/.test(text)) return Number(text);
-      const match = text.match(/(\d+):(\d{2})/);
-      return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
-    };
     const parseRange = value => {
       const match = String(value || "").match(/(\d+):(\d{2})\s*[-–—]\s*(\d+):(\d{2})/);
-      return match ? { start: Number(match[1]) * 60 + Number(match[2]), end: Number(match[3]) * 60 + Number(match[4]) } : null;
+      if (!match) return null;
+      const start = Number(match[1]) * 60 + Number(match[2]);
+      const end = Number(match[3]) * 60 + Number(match[4]);
+      return end > start ? { start, end } : null;
     };
     const scenes = Array.isArray(plan.story) ? plan.story : [];
-    const parsedScenes = scenes.map(scene => {
-      const range = parseRange(scene && scene.time);
-      return range || { start: parseClock(scene && scene.time), end: NaN };
-    }).filter(scene => Number.isFinite(scene.start)).sort((a,b) => a.start-b.start);
+    const sceneRanges = scenes.map(scene => parseRange(scene && scene.time));
+    const sceneCoverageValid = sceneRanges.length > 0 &&
+      sceneRanges.every((range, index) => range &&
+        (index === 0 ? range.start === 0 : range.start === sceneRanges[index - 1].end));
+    const storyboardSeconds = sceneCoverageValid ? sceneRanges[sceneRanges.length - 1].end : 0;
     const mapBlocks = Array.isArray(plan.retention_map) ? plan.retention_map : [];
     const mapRanges = mapBlocks.map(beat => parseRange(beat && beat.time));
-    const mapEnd = mapRanges.length && mapRanges.every(Boolean) ? mapRanges[mapRanges.length - 1].end : 0;
-    const inferredSceneEnds = parsedScenes.map((scene,index) => {
-      if (Number.isFinite(scene.end) && scene.end > scene.start) return scene.end;
-      const next = parsedScenes[index+1];
-      return next && next.start > scene.start ? next.start : (mapEnd > scene.start ? mapEnd : scene.start + 6);
-    });
-    const storyboardSeconds = parsedScenes.length
-      ? Math.max(...inferredSceneEnds)
-      : mapEnd;
     const mapCoverageValid = mapRanges.length > 0 &&
-      mapRanges.every((range, index) => range && range.end > range.start && range.end - range.start <= 3 &&
+      mapRanges.every((range, index) => range && range.end - range.start <= 3 &&
         (index === 0 ? range.start === 0 : range.start === mapRanges[index - 1].end)) &&
-      mapEnd === storyboardSeconds;
+      storyboardSeconds > 0 && mapRanges[mapRanges.length - 1].end === storyboardSeconds;
     const narrationDifference = Math.abs(estimatedSeconds - storyboardSeconds);
     const narrationWithinTolerance = storyboardSeconds > 0 &&
-      narrationDifference <= Math.max(8, storyboardSeconds * 0.25);
-    const durationConsistent = storyboardSeconds > 0 && mapCoverageValid && narrationWithinTolerance;
+      narrationDifference <= Math.max(5, storyboardSeconds * 0.15);
+    const targetIs30To45 = /30\s*[-–—]\s*45/.test(String(duration));
+    const wordCountWithinTarget = !targetIs30To45 || (wordCount >= 75 && wordCount <= 90);
+    const durationConsistent = storyboardSeconds > 0 && sceneCoverageValid &&
+      mapCoverageValid && narrationWithinTolerance && wordCountWithinTarget;
     plan.duration_validation = {
       script_word_count: wordCount,
       estimated_narration_seconds: estimatedSeconds,
       storyboard_seconds: storyboardSeconds,
+      scene_count: scenes.length,
+      scene_coverage_valid: sceneCoverageValid,
       retention_blocks: mapBlocks.length,
       retention_map_valid: mapCoverageValid,
       narration_within_tolerance: narrationWithinTolerance,
+      word_count_within_target: wordCountWithinTarget,
       within_tolerance: durationConsistent,
-      status: durationConsistent ? "duración estimada coherente; confirmar con el audio real" : "requiere ajuste de montaje o locución",
-      warning: durationConsistent ? "" : "El plan se muestra para revisión. La duración hablada es una estimación; ajusta los tiempos al audio real antes de exportar."
+      status: durationConsistent ? "duración y cronología coherentes; confirmar con el audio real" : "requiere ajuste editorial antes de producir",
+      warning: durationConsistent ? "" : "El plan necesita corrección: revisa cantidad de palabras, intervalos de escenas, mapa de ritmo y duración estimada antes de producir."
     };
-    if (!mapCoverageValid) {
-      plan.editorial_warnings = [...(Array.isArray(plan.editorial_warnings) ? plan.editorial_warnings : []),
-        { claim: "Cronología del mapa de retención", reason: "Los bloques no cubren la duración del storyboard en intervalos consecutivos de hasta 3 segundos; revisar antes de producir." }];
+    const warnings = Array.isArray(plan.editorial_warnings) ? plan.editorial_warnings : [];
+    const unsupportedClaims = (Array.isArray(plan.fact_audit) ? plan.fact_audit : [])
+      .filter(item => !Array.isArray(item.source_ids) || item.source_ids.length === 0)
+      .map(item => ({ claim: item.claim, reason: "No hay una fuente recuperada que respalde directamente esta afirmación; se conserva como conocimiento general pendiente de documentación, no como verificación académica." }));
+    plan.editorial_warnings = [...warnings, ...unsupportedClaims];
+    if (!sceneCoverageValid) {
+      plan.editorial_warnings.push({ claim: "Cronología del storyboard", reason: "Las escenas deben tener intervalos explícitos, consecutivos, comenzar en 0:00 y no contener huecos ni solapamientos." });
     }
-    if (!narrationWithinTolerance) {
-      plan.editorial_warnings = [...(Array.isArray(plan.editorial_warnings) ? plan.editorial_warnings : []),
-        { claim: "Duración de la narración", reason: "La estimación por número de palabras difiere del montaje previsto; ajustar la locución o el montaje usando la duración del audio real." }];
+    if (!mapCoverageValid) {
+      plan.editorial_warnings.push({ claim: "Cronología del mapa de ritmo", reason: "Los bloques deben cubrir el storyboard completo en intervalos consecutivos de máximo 3 segundos." });
+    }
+    if (!narrationWithinTolerance || !wordCountWithinTarget) {
+      plan.editorial_warnings.push({ claim: "Duración de la narración", reason: "La cantidad de palabras y la duración estimada no coinciden con el montaje objetivo; ajustar el guion antes de producir." });
     }
     console.info("[JAI] Plan generado y validado con", providerUsed);
     return res.status(200).json(plan);
