@@ -139,20 +139,44 @@ function renderTimeline(){
 }
 function buildTimeline(){
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("timelineStatus").textContent="Primero genera un plan con storyboard.";return;}
- if(Array.isArray(currentRetentionMap)&&currentRetentionMap.length){
-  const parseStart=time=>{const m=String(time||"").match(/(\d{1,2}):(\d{2})/);return m?Number(m[1])*60+Number(m[2]):0;};
-  const parseRange=time=>{const m=String(time||"").match(/(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})/);return m?{start:Number(m[1])*60+Number(m[2]),end:Number(m[3])*60+Number(m[4])}:null;};
-  timelineState.items=currentRetentionMap.map((beat,index)=>{
-   const range=parseRange(beat.time),start=range?range.start:parseStart(beat.time),end=range?range.end:start+3;
-   const sceneIndex=currentScenes.findIndex(scene=>{const r=parseRange(scene.time);return r&&start<r.end&&end>r.start;});
-   const scene=currentScenes[Math.max(0,sceneIndex)]||currentScenes[0];
-   return {...scene,time:beat.time||"Bloque "+(index+1),seconds:Math.max(1,end-start),sceneIndex:Math.max(0,sceneIndex),segmentLabel:"BLOQUE "+(index+1)+" / "+currentRetentionMap.length,on_screen_text:beat.on_screen_text||scene.on_screen_text,objective:scene.objective,visual:String(scene.visual||"")+"; "+String(beat.visual_action||beat.new_stimulus||""),visualAction:beat.visual_action||"",retentionStimulus:beat.new_stimulus||"",curiosity:beat.curiosity||""};
-  });
-  $("timelineStatus").textContent="Línea de tiempo dividida en bloques de retención de máximo 3 segundos.";
- }else{
-  timelineState.items=currentScenes.map((scene,index)=>({...scene,seconds:sceneSeconds(scene),sceneIndex:index,segmentLabel:"ESCENA "+(index+1)}));
-  $("timelineStatus").textContent="No llegó el mapa de retención; se preparó la línea de tiempo por escenas.";
- }
+ const parseTime=value=>{
+  const v=String(value||"").trim();
+  const mmss=v.match(/^(\d{1,2}):(\d{2})$/);
+  if(mmss)return Number(mmss[1])*60+Number(mmss[2]);
+  const seconds=v.match(/^(\d+(?:\.\d+)?)\s*s?$/i);
+  return seconds?Number(seconds[1]):null;
+ };
+ const parseRange=value=>{
+  const v=String(value||"").replace(/[–—]/g,"-");
+  const m=v.match(/(\d{1,2}:\d{2}|\d+(?:\.\d+)?\s*s?)\s*-\s*(\d{1,2}:\d{2}|\d+(?:\.\d+)?\s*s?)/i);
+  if(!m)return null;
+  const a=parseTime(m[1]),b=parseTime(m[2]);
+  return a===null||b===null||b<=a?null:{start:a,end:b};
+ };
+ const sceneRanges=currentScenes.map((scene,index)=>{
+  const r=parseRange(scene.time);
+  return r?{...r,index}:{start:index*6,end:(index+1)*6,index};
+ });
+ const beatRanges=(Array.isArray(currentRetentionMap)?currentRetentionMap:[]).map((beat,index)=>{
+  const r=parseRange(beat.time);
+  if(r)return {...r,beat,index};
+  const start=parseTime(beat.time);
+  return {...(start===null?{start:index*3,end:index*3+3}:{start,end:start+3}),beat,index};
+ });
+ const storyEnd=Math.max(...sceneRanges.map(r=>r.end),0);
+ const mapEnd=Math.max(...beatRanges.map(r=>r.end),0);
+ const totalSeconds=Math.max(storyEnd,mapEnd);
+ const count=Math.ceil(totalSeconds/3);
+ timelineState.items=Array.from({length:count},(_,index)=>{
+  const start=index*3,end=Math.min(start+3,totalSeconds);
+  const beatRange=beatRanges.find(r=>start<r.end&&end>r.start);
+  const sceneRange=sceneRanges.find(r=>start<r.end&&end>r.start)||sceneRanges[sceneRanges.length-1];
+  const scene=currentScenes[sceneRange.index]||currentScenes[0];
+  const beat=beatRange&&beatRange.beat;
+  const visualAction=beat?(beat.visual_action||beat.new_stimulus||""):"Composición: "+(scene.visual||"plano temático")+". Acción: "+(scene.animation||"revelar el siguiente detalle visual");
+  return {...scene,time:Math.floor(start/60)+":"+String(start%60).padStart(2,"0")+" - "+Math.floor(end/60)+":"+String(end%60).padStart(2,"0"),seconds:end-start,sceneIndex:sceneRange.index,segmentLabel:"BLOQUE "+(index+1)+" / "+count,on_screen_text:(beat&&beat.on_screen_text)||scene.on_screen_text,objective:scene.objective,visual:String(scene.visual||"")+"; "+String(visualAction),visualAction,retentionStimulus:beat?(beat.new_stimulus||""):"",curiosity:beat?(beat.curiosity||""):""};
+ });
+ $("timelineStatus").textContent="Línea de tiempo sincronizada con el storyboard: "+totalSeconds+" segundos, en bloques de máximo 3 segundos.";
  renderTimeline();
 }
 function previewTimeline(){
