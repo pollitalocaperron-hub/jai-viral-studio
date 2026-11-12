@@ -334,7 +334,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
       const ids = (Array.isArray(item.source_ids) ? item.source_ids : []).filter(id => {
         const source = researchSources.find(entry => entry.id === id);
         if (!source) return false;
-        const sourceText = (source.title + " " + source.abstract).toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
+        const sourceText = (source.title + " " + source.abstract).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         return expandedTerms.filter(word => sourceText.includes(word)).length >= 2;
       });
       const originalStatus = String(item.status || "").toLowerCase();
