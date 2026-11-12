@@ -29,6 +29,7 @@ function draw(ctx,canvas,item,index,progress){
  else if(/absor|rojo|naranja|amarillo|se apaga|desvanec/.test(beat))mode="absorb";
  else if(/columna|profund|desciend|capa delgada/.test(beat))mode="column";
  else if(/mirando hacia arriba|observador|sale desde el fondo|perspectiva submarina/.test(beat))mode="observer";
+ else if(/filtro|colador|no tine|no crea el color|rechaza los demas/.test(beat))mode="filter";
  else if(/compar|lado a lado|dos estados|contraste/.test(beat))mode="compare";
  else if(/rayo|haz de luz|luz blanca|entra desde arriba|sol/.test(beat))mode="rays";
  else if(/superficie|plano general|oceano completo|mar abierto/.test(beat))mode="ocean";
@@ -38,6 +39,7 @@ function draw(ctx,canvas,item,index,progress){
  else if(/particula|dispers/.test(sceneText))mode="particles";
  else if(/absor|rojo|naranja/.test(sceneText))mode="absorb";
  else if(/columna|profund/.test(sceneText))mode="column";
+ else if(/filtro|colador/.test(sceneText))mode="filter";
  else if(/compar/.test(sceneText))mode="compare";
  ctx.save();
  if(mode==="glass"){
@@ -83,6 +85,12 @@ function draw(ctx,canvas,item,index,progress){
   for(let k=0;k<7;k++){const x=70+k*95;line(cx,420,x,690,"rgba(180,239,255,.45)",3);}
   const diverX=cx+Math.sin(p*Math.PI*2)*18;dot(diverX,980,42,"#f4c27c");panel(diverX-48,1018,96,80,"#e3a75f");
   label("DESDE EL FONDO DEL MAR",cx,220,28);
+ }else if(mode==="filter"){
+  ocean(400);panel(160,485,400,420,"rgba(3,20,48,.72)");
+  // A literal editorial filter: warm wavelengths fade inside the water while blue continues through.
+  const bands=["#ff625d","#ffab59","#ffe36d","#65d9a0","#59cfff"];
+  bands.forEach((color,k)=>{const y=560+k*72;line(55,y,300,y,color,15);if(k<3){for(let q=0;q<5;q++)dot(315+q*18,y,6,color);}else line(320,y,650,y,color,15);});
+  label("EL AGUA ACTÚA COMO FILTRO",cx,300,27);
  }else if(mode==="compare"){
   panel(40,420,300,530,"#0b5577");panel(380,420,300,530,"#082a50");
   label("POCA AGUA",190,370,26);label("MUCHA AGUA",530,370,26);
