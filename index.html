@@ -388,7 +388,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
    ctx.textBaseline="alphabetic";
   }
  }
- ctx.fillStyle="rgba(255,255,255,.82)";ctx.font="700 17px Arial";ctx.textAlign="center";ctx.fillText(item.segmentLabel||("TOMA "+(index+1)),w/2,h-62);
+ ctx.fillStyle="rgba(255,255,255,.82)";ctx.font="700 17px Arial";ctx.textAlign="center";ctx.fillText("ESCENA "+String(index+1).padStart(2,"0")+" / "+String(currentScenes.length),w/2,h-62);
  ctx.fillStyle="rgba(255,255,255,.25)";ctx.fillRect(55,h-34,610,6);ctx.fillStyle="#72e5d0";ctx.fillRect(55,h-34,610*p,6);
 }
 async function renderVideo(){
