@@ -548,11 +548,21 @@ function drawStoryBeat(item,index,progress){
  ctx.fillStyle="rgba(255,255,255,.18)";ctx.fillRect(55,1170,610,9);ctx.fillStyle="#65e0bd";ctx.fillRect(55,1170,610*p,9);
 }
 function drawVideoScene(item,index,progress){
- const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height;
- ctx.fillStyle="#07101e";ctx.fillRect(0,0,w,h);
- ctx.fillStyle="#f5fbff";ctx.textAlign="center";ctx.font="700 28px Arial";
- ctx.fillText("FOTOGRAMA NO DISPONIBLE",w/2,h/2);
- ctx.font="18px Arial";ctx.fillStyle="#a9c4d9";ctx.fillText("Genera todas las imágenes antes de renderizar",w/2,h/2+42);
+ const imageIndex=Number.isInteger(item?.visualIndex)?item.visualIndex:index;
+ const generated=jaiSceneImages[imageIndex];
+ const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height,p=Math.max(0,Math.min(1,Number(progress)||0));
+ ctx.clearRect(0,0,w,h);
+ if(!generated||!generated.image){
+  ctx.fillStyle="#07101e";ctx.fillRect(0,0,w,h);ctx.fillStyle="#f5fbff";ctx.textAlign="center";ctx.font="700 28px Arial";ctx.fillText("FOTOGRAMA NO DISPONIBLE",w/2,h/2);return;
+ }
+ const img=generated.image,scale=Math.max(w/img.width,h/img.height)*(1.035+p*.095),dw=img.width*scale,dh=img.height*scale;
+ const dx=(w-dw)/2-Math.sin(p*Math.PI)*18,dy=(h-dh)/2+Math.cos(p*Math.PI)*12;
+ ctx.drawImage(img,dx,dy,dw,dh);
+ const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,"rgba(2,8,18,.10)");shade.addColorStop(.68,"rgba(2,8,18,.04)");shade.addColorStop(1,"rgba(2,8,18,.72)");ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
+ const title=String(item.on_screen_text||"").slice(0,62);
+ if(title){ctx.fillStyle="#fff";ctx.font="800 36px Arial";ctx.textAlign="center";ctx.shadowColor="#000";ctx.shadowBlur=12;ctx.fillText(title,w/2,h-150);ctx.shadowBlur=0;}
+ ctx.fillStyle="rgba(255,255,255,.82)";ctx.font="700 17px Arial";ctx.textAlign="center";ctx.fillText(item.segmentLabel||("TOMA "+(index+1)),w/2,h-62);
+ ctx.fillStyle="rgba(255,255,255,.25)";ctx.fillRect(55,h-34,610,6);ctx.fillStyle="#72e5d0";ctx.fillRect(55,h-34,610*p,6);
 }
 async function renderVideo(){
  if(renderRecording||!timelineState.items.length)return;\n if(jaiSceneImages.length!==timelineState.items.length||timelineState.items.some((item,i)=>!jaiSceneImages[i]?.image)){ $("renderStatus").textContent="Primero genera y revisa todos los fotogramas cinematográficos. No se usarán dibujos de respaldo.";return;}
