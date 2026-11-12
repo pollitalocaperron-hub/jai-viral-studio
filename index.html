@@ -507,13 +507,13 @@ function parseSubtitleTime(value){
  return seconds+tail;
 }
 function parseSubtitleFile(raw){
- const blocks=String(raw||"").replace(/^\\uFEFF/,"").replace(/\\r/g,"").split(/\\n\\s*\\n/),cues=[];
+ const blocks=String(raw||"").replace(/^\uFEFF/,"").replace(/\r/g,"").split(/\n\s*\n/),cues=[];
  blocks.forEach(block=>{
-  const lines=block.split("\\n").map(line=>line.trim()).filter(Boolean);
+  const lines=block.split("\n").map(line=>line.trim()).filter(Boolean);
   const timing=lines.findIndex(line=>line.includes("-->"));if(timing<0)return;
-  const match=lines[timing].match(/(\\d{1,2}:)?\\d{2}:\\d{2}[,.]\\d{1,3}\\s*-->\\s*(?:\\d{1,2}:)?\\d{2}:\\d{2}[,.]\\d{1,3}/);
+  const match=lines[timing].match(/(\d{1,2}:)?\d{2}:\d{2}[,.]\d{1,3}\s*-->\s*(?:\d{1,2}:)?\d{2}:\d{2}[,.]\d{1,3}/);
   if(!match)return;
-  const pair=match[0].split("-->"),start=parseSubtitleTime(pair[0]),end=parseSubtitleTime(pair[1].trim().split(/\\s+/)[0]);
+  const pair=match[0].split("-->"),start=parseSubtitleTime(pair[0]),end=parseSubtitleTime(pair[1].trim().split(/\s+/)[0]);
   const text=lines.slice(timing+1).join(" ").trim();
   if(Number.isFinite(start)&&Number.isFinite(end)&&end>start&&text)cues.push({start,end,text});
  });
