@@ -67,7 +67,8 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <footer>J.A.I. Viral Studio · Producción editorial con Gemini · Exportación MP4 en desarrollo.</footer></div>
 
 <script>
-const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[],currentTopic="";\nasync function readJsonResponse(response,label){
+const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[],currentTopic="";
+async function readJsonResponse(response,label){
  const raw=await response.text();
  try{return JSON.parse(raw);}catch(error){
   const detail=raw.replace(/\\s+/g," ").trim().slice(0,260)||"respuesta vacía";
