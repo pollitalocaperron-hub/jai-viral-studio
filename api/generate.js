@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   async function fetchResearchSources(query) {
     try {
       const url = "https://api.openalex.org/works?search=" + encodeURIComponent(query) + "&filter=type:article,from_publication_date:2000-01-01&sort=relevance_score:desc&per-page=6&select=id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count";
-      const response = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { "Accept": "application/json" } });
+      const response = await fetch(url, { signal: AbortSignal.timeout(3500), headers: { "Accept": "application/json" } });
       if (!response.ok) throw new Error("OpenAlex HTTP " + response.status);
       const body = await response.json();
       return (body.results || []).slice(0, 6).map((work, index) => {
@@ -178,7 +178,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
             temperature: 0.55,
             max_completion_tokens: 7000
           }),
-          signal: AbortSignal.timeout(36000)
+          signal: AbortSignal.timeout(26000)
         });
         const groqBody = await groqResponse.text();
         let groqData;
@@ -233,7 +233,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
                 maxOutputTokens: 7000
               }
             }),
-            signal: AbortSignal.timeout(12000)
+            signal: AbortSignal.timeout(20000)
           }
         );
       } catch (error) {
