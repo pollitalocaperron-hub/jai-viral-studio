@@ -100,6 +100,15 @@ function draw(ctx,canvas,item,index,progress){
  else if(/absor|rojo|naranja/.test(sceneText))mode="absorb";
  else if(/columna|profund/.test(sceneText))mode="column";
  else if(/compar/.test(sceneText))mode="compare";
+ // Reafirma la clasificación alimentaria al final: las reglas heredadas del océano
+ // no pueden sobrescribir una escena de cocina por palabras como "calor" o "reacción".
+ if(foodTopic){
+  if(/resultado|costra dorada|carne dorada|bistec cocido|filete cocido|plato terminado|aspecto final|crujiente/.test(beat))mode="food_result";
+  else if(/reaccion quimica|aminoacido|azucar|molecula|compuestos de aroma|compuestos de sabor|reaccion de maillard|a nivel molecular/.test(beat))mode="food_chemistry";
+  else if(/dora|color marron|color cafe|superficie marron|costra|cambio de color|se tuesta|pardeamiento/.test(beat))mode="food_browning";
+  else if(/sarten|plancha|aceite|chisporrote|contacto con el calor|calor|temperatura|cocinar|entra en la sarten|cae sobre/.test(beat))mode="food_pan";
+  else mode="food_raw";
+ }
  ctx.save();
  if(mode==="food_raw"){
   panel(55,430,610,520,"#594039");ctx.fillStyle="#bd6b62";ctx.beginPath();ctx.ellipse(350,690,230,145,-.12,0,Math.PI*2);ctx.fill();
