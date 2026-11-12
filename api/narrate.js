@@ -43,7 +43,7 @@ export default async function handler(req, res) {
               }
             }
           }
-        })
+        }),
         signal: AbortSignal.timeout(45000)
       }
     );
