@@ -178,7 +178,7 @@ async function generateAIVisuals(){
    const context=[item.visual,item.objective,item.retentionStimulus,item.narrativeAdvance].filter(Boolean).join(". ").slice(0,1500);
    const prompt=visualBible+" Actúa como director de arte y artista conceptual de un documental científico CGI 3D. TEMA: "+currentTopic+". FOTOGRAMA "+(i+1)+" DE "+items.length+"; instante narrativo "+item.time+". IDEA QUE DEBE EXPLICAR LA IMAGEN: "+context+". INTERPRETA la idea y conviértela en una escena visual potente, clara y hermosa: elige el sujeto físico más importante, colócalo en un entorno pertinente y muestra el fenómeno mediante una composición tridimensional cinematográfica. No ilustres literalmente instrucciones de producción, verbos como 'observar', 'mostrar', 'acercar', 'revelar' ni movimientos de cámara. La cámara NUNCA debe aparecer como objeto; no dibujes cámaras, lentes, trípodes, operadores, pantallas, claquetas ni equipo de filmación. Si el texto menciona un movimiento de cámara, úsalo solo para elegir el punto de vista; representa el fenómeno y su resultado, no el aparato ni la instrucción. La imagen debe parecer un fotograma final de una película científica de alto presupuesto, no una captura del proceso de grabación ni un esquema literal. Diseña una composición con sujeto protagonista reconocible, escala dramática, profundidad, materiales realistas y detalles científicos pertinentes. Cada toma debe cambiar de sujeto, escala o composición cuando el contenido lo permita, sin abandonar la misma dirección de arte. Vertical 9:16, sujeto grande y legible. Sin seres humanos, personajes, equipo de filmación, letras, rótulos, números ni marcas.";
    $("visualStatus").textContent="Generando toma científica "+(i+1)+" de "+items.length+"…";
-   const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,negative_prompt:negative,size:"1024x1024"})});
+   const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,negative_prompt:negative,size:"1024x1024"}),signal:AbortSignal.timeout(90000)});
    const raw=await response.text();
    if(!response.ok)throw new Error("El generador respondió HTTP "+response.status+" en la toma "+(i+1)+". "+raw.slice(0,220));
    const data=JSON.parse(raw),b64=data&&data.data&&data.data[0]&&data.data[0].b64_json;
@@ -458,7 +458,7 @@ async function makePlan(){
  const topic=$("topic").value.trim(),notes=$("research").value.trim();if(!topic){planningInProgress=false;$("topic").focus();$("status").textContent="Primero escribe el tema del vídeo.";return;}
  $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";
  try{
-  const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,learning_memory:buildLearningMemoryContext()})});
+  const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,learning_memory:buildLearningMemoryContext()}),signal:AbortSignal.timeout(65000)});
   const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;throw failure;}
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
   kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;captionCues=[];
@@ -474,7 +474,7 @@ async function makePlan(){
   renderRetentionMap(normalizedRetention);
   currentPlan=currentPlan.replace(readable(data.retention_map),readable(normalizedRetention));
   $("output").classList.add("show");const durationOk=!!(data.duration_validation&&data.duration_validation.within_tolerance);$("status").textContent=durationOk?"¡Plan generado! Revisa las escenas, verificaciones y control de calidad antes de producir.":"Plan generado, pero la validación editorial detectó problemas de duración o cronología. Corrige el guion y los tiempos antes de producir."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
- }catch(error){const networkFailure=error&&((error.name==="TypeError")||/failed to fetch|networkerror|load failed/i.test(error.message||""));$("status").textContent=networkFailure?"No se pudo conectar con el motor de generación de J.A.I. La solicitud no devolvió el guion. Recarga la página e inténtalo una vez más; si persiste, revisaremos el servicio de Vercel.":(error.message||"Ocurrió un error al generar el plan.");if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{planningInProgress=false;$("create").disabled=false;}
+ }catch(error){const timedOut=error&&(error.name==="TimeoutError"||error.name==="AbortError");const networkFailure=error&&((error.name==="TypeError")||/failed to fetch|networkerror|load failed/i.test(error.message||""));$("status").textContent=timedOut?"La generación superó el tiempo de espera. El motor pudo quedar saturado; inténtalo una vez más.":networkFailure?"No se pudo conectar con el motor de generación de J.A.I. La solicitud no devolvió el guion. Recarga la página e inténtalo una vez más; si persiste, revisaremos el servicio de Vercel.":(error.message||"Ocurrió un error al generar el plan.");if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{planningInProgress=false;$("create").disabled=false;}
 }
 
 let kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioDuration=0,kokoroSampleRate=24000,kokoroSource=null,kokoroAudioContext=null;
@@ -562,7 +562,7 @@ $("generateNarration").addEventListener("click",async()=>{
  const button=$("generateNarration");narrationGenerating=true;button.disabled=true;$("downloadNarration").hidden=true;
  try{
   $("kokoroStatus").textContent="Conectando con Gemini y generando la narración en español…";
-  const response=await fetch("/api/narrate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voice:$("kokoroVoice").value})});
+  const response=await fetch("/api/narrate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voice:$("kokoroVoice").value}),signal:AbortSignal.timeout(50000)});
   const data=await readJsonResponse(response,"Generador de voz Gemini");
   if(!response.ok)throw new Error(data.error||"No se pudo generar la narración.");
   if(!data.audioBase64)throw new Error("El servicio no devolvió audio.");
