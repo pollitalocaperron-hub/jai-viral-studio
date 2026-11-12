@@ -129,7 +129,9 @@ function renderVisualScenes(){
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Genera primero un plan con storyboard.";return;}
  currentScenes.forEach((scene,index)=>{
   const card=document.createElement("article");card.className="visual-card";
-  if(window.JAIStoryEngine&&typeof window.JAIStoryEngine.draw==="function"){
+  if(jaiSceneImages[index]&&jaiSceneImages[index].src){
+   const img=document.createElement("img");img.src=jaiSceneImages[index].src;img.alt=String(scene?.visual||scene?.objective||"Escena generada por IA");img.style.cssText="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:12px;display:block";card.appendChild(img);
+  }else if(window.JAIStoryEngine&&typeof window.JAIStoryEngine.draw==="function"){
    const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
    canvas.setAttribute("role","img");canvas.setAttribute("aria-label",String(scene?.on_screen_text||scene?.objective||("Escena "+(index+1))));
    const ctx=canvas.getContext("2d");
@@ -469,6 +471,18 @@ function drawStoryBeat(item,index,progress){
  ctx.fillStyle="rgba(255,255,255,.18)";ctx.fillRect(55,1170,610,9);ctx.fillStyle="#65e0bd";ctx.fillRect(55,1170,610*p,9);
 }
 function drawVideoScene(item,index,progress){
+ const imageIndex=Number.isInteger(item?.sceneIndex)?item.sceneIndex:index;
+ const generated=jaiSceneImages[imageIndex];
+ if(generated&&generated.image){
+  const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height,p=Math.max(0,Math.min(1,Number(progress)||0)),img=generated.image;
+  const scale=Math.max(w/img.width,h/img.height)*(1.05+p*.13),dw=img.width*scale,dh=img.height*scale;
+  const dx=(w-dw)/2-Math.sin(p*Math.PI)*22,dy=(h-dh)/2+Math.cos(p*Math.PI)*9;
+  ctx.clearRect(0,0,w,h);ctx.drawImage(img,dx,dy,dw,dh);
+  const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,"rgba(0,0,0,.20)");shade.addColorStop(.62,"rgba(0,0,0,0)");shade.addColorStop(1,"rgba(0,0,0,.62)");ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
+  const title=String(item.on_screen_text||"").slice(0,65);if(title){ctx.fillStyle="#fff";ctx.font="800 36px Arial";ctx.textAlign="center";ctx.shadowColor="#000";ctx.shadowBlur=10;ctx.fillText(title,w/2,h-155);ctx.shadowBlur=0;}
+  ctx.fillStyle="rgba(255,255,255,.85)";ctx.font="700 19px Arial";ctx.textAlign="center";ctx.fillText(item.segmentLabel||("ESCENA "+(index+1)),w/2,h-65);
+  ctx.fillStyle="rgba(255,255,255,.28)";ctx.fillRect(55,h-35,610,6);ctx.fillStyle="#8ce3d0";ctx.fillRect(55,h-35,610*p,6);return;
+ }
  if(window.JAIStoryEngine){window.JAIStoryEngine.draw(renderCtx,renderCanvas,item,index,progress);return;}
  drawStoryBeat(item,index,progress);return;
  const visual=String(item.visual||item.objective||"").toLowerCase();
