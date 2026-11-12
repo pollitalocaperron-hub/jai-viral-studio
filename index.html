@@ -145,7 +145,7 @@ function buildTimeline(){
    const range=parseRange(beat.time),start=range?range.start:parseStart(beat.time),end=range?range.end:start+3;
    const sceneIndex=currentScenes.findIndex(scene=>{const r=parseRange(scene.time);return r&&start<r.end&&end>r.start;});
    const scene=currentScenes[Math.max(0,sceneIndex)]||currentScenes[0];
-   return {...scene,time:beat.time||"Bloque "+(index+1),seconds:Math.max(1,end-start),sceneIndex:Math.max(0,sceneIndex),segmentLabel:"BLOQUE "+(index+1)+" / "+currentRetentionMap.length,on_screen_text:beat.narrative_advance||beat.curiosity||scene.on_screen_text,objective:beat.narrative_advance||scene.objective,visual:String(scene.visual||"")+"; "+String(beat.new_stimulus||""),retentionStimulus:beat.new_stimulus||"",curiosity:beat.curiosity||""};
+   return {...scene,time:beat.time||"Bloque "+(index+1),seconds:Math.max(1,end-start),sceneIndex:Math.max(0,sceneIndex),segmentLabel:"BLOQUE "+(index+1)+" / "+currentRetentionMap.length,on_screen_text:beat.on_screen_text||scene.on_screen_text,objective:scene.objective,visual:String(scene.visual||"")+"; "+String(beat.visual_action||beat.new_stimulus||""),visualAction:beat.visual_action||"",retentionStimulus:beat.new_stimulus||"",curiosity:beat.curiosity||""};
   });
   $("timelineStatus").textContent="Línea de tiempo dividida en bloques de retención de máximo 3 segundos.";
  }else{
