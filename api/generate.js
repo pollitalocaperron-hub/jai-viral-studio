@@ -357,7 +357,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     const storyboardSeconds = starts.length ? Math.max(...starts) + 6 : 0;
     const mapBlocks = Array.isArray(plan.retention_map) ? plan.retention_map : [];
     const mapRanges = mapBlocks.map(beat => {
-      const match = String(beat.time || "").match(/(\\d+):(\\d{2})\\s*-\\s*(\\d+):(\\d{2})/);
+      const match = String(beat.time || "").match(/(\d+):(\d{2})\s*-\s*(\d+):(\d{2})/);
       return match ? { start: Number(match[1]) * 60 + Number(match[2]), end: Number(match[3]) * 60 + Number(match[4]) } : null;
     });
     const mapCoverageValid = mapBlocks.length === Math.ceil(storyboardSeconds / 3) && mapRanges.every((range, index) => range && range.end - range.start > 0 && range.end - range.start <= 3 && (index === 0 ? range.start === 0 : range.start === mapRanges[index - 1].end)) && mapRanges.length > 0 && mapRanges[mapRanges.length - 1].end === storyboardSeconds;
