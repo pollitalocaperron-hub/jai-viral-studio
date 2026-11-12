@@ -74,7 +74,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <footer>J.A.I. Viral Studio · Memoria editorial acumulativa · Exportación MP4 en desarrollo.</footer></div>
 
 <script>
-const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[],currentTopic="";
+const $=id=>document.getElementById(id);let currentPlan="",currentPlanData=null,currentRetentionMap=[],currentTopic="";
 async function readJsonResponse(response,label){
  const raw=await response.text();
  try{return JSON.parse(raw);}catch(error){
@@ -468,7 +468,7 @@ async function makePlan(){
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual CGI</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
-  rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
+  rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
   buildTimeline();
   const normalizedRetention=timelineState.items.map(item=>({time:item.time,new_stimulus:item.retentionStimulus,narrative_advance:item.narrativeAdvance||item.visualAction,curiosity:item.curiosity,visual_action:item.visualAction,on_screen_text:item.on_screen_text}));
   renderRetentionMap(normalizedRetention);
@@ -625,8 +625,38 @@ $("stopScript").addEventListener("click",()=>{if("speechSynthesis" in window)spe
 
 $("create").addEventListener("click",makePlan);
 $("copy").addEventListener("click",async()=>{if(!currentPlan)return;try{await navigator.clipboard.writeText(currentPlan);$("status").textContent="Plan copiado.";}catch(e){$("status").textContent="No se pudo copiar automáticamente. Selecciona el texto para copiarlo.";}});
-function getProjects(){try{return JSON.parse(localStorage.getItem("jaiProjects")||"[]")}catch(e){return[]}}
-function renderProjects(){const p=getProjects();$("projects").innerHTML=p.length?p.map(x=>'<div style="padding:9px 0;border-bottom:1px solid #273653"><b>'+escapeHtml(x.topic)+'</b><div class="hint">'+escapeHtml(x.date)+'</div></div>').join(""):"Todavía no hay proyectos guardados en este dispositivo."}
+function getProjects(){try{const value=JSON.parse(localStorage.getItem("jaiProjects")||"[]");return Array.isArray(value)?value:[]}catch(e){return[]}}
+function renderProjects(){
+ const root=$("projects");root.replaceChildren();const projects=getProjects();
+ if(!projects.length){root.textContent="Todavía no hay proyectos guardados en este dispositivo.";return;}
+ projects.forEach((project,index)=>{
+  const card=document.createElement("div");card.style.cssText="padding:12px 0;border-bottom:1px solid #273653;display:grid;gap:8px";
+  const title=document.createElement("b");title.textContent=String(project.topic||"Proyecto sin título");
+  const date=document.createElement("div");date.className="hint";date.textContent=String(project.date||"Fecha no disponible");
+  const actions=document.createElement("div");actions.className="row";
+  const copyButton=document.createElement("button");copyButton.type="button";copyButton.className="secondary";copyButton.textContent="Copiar plan";
+  copyButton.addEventListener("click",async()=>{
+   const content=String(project.plan||JSON.stringify(project.data||{},null,2));
+   try{await navigator.clipboard.writeText(content);$("status").textContent="Plan guardado copiado al portapapeles.";}
+   catch(e){$("status").textContent="No se pudo copiar automáticamente este proyecto.";}
+  });
+  const deleteButton=document.createElement("button");deleteButton.type="button";deleteButton.className="secondary";deleteButton.textContent="Eliminar";
+  deleteButton.addEventListener("click",()=>{
+   const latest=getProjects();latest.splice(index,1);
+   try{localStorage.setItem("jaiProjects",JSON.stringify(latest));renderProjects();$("status").textContent="Proyecto eliminado de este dispositivo.";}
+   catch(e){$("status").textContent="No se pudo actualizar el almacenamiento.";}
+  });
+  actions.append(copyButton,deleteButton);card.append(title,date,actions);root.appendChild(card);
+ });
+}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-$("save").addEventListener("click",()=>{const topic=$("topic").value.trim();if(!topic){$("status").textContent="Escribe un tema antes de guardar.";return;}const p=getProjects();p.unshift({topic,date:new Date().toLocaleString("es-MX"),notes:$("research").value});try{localStorage.setItem("jaiProjects",JSON.stringify(p.slice(0,30)));renderProjects();$("status").textContent="Proyecto guardado en este navegador.";}catch(e){$("status").textContent="No se pudo guardar. Comprueba el almacenamiento del navegador.";}});renderProjects();
+$("save").addEventListener("click",()=>{
+ const topic=currentTopic||$("topic").value.trim();
+ if(!topic||!currentPlan||!currentPlanData){$("status").textContent="Primero genera un plan completo antes de guardarlo.";return;}
+ const projects=getProjects();
+ projects.unshift({topic,date:new Date().toLocaleString("es-MX"),notes:$("research").value,plan:currentPlan,data:currentPlanData});
+ try{localStorage.setItem("jaiProjects",JSON.stringify(projects.slice(0,10)));renderProjects();$("status").textContent="Proyecto completo guardado en este navegador.";}
+ catch(e){$("status").textContent="No se pudo guardar el proyecto completo. El almacenamiento del navegador puede estar lleno.";}
+});
+$("status").textContent="Proyecto guardado en este navegador.";}catch(e){$("status").textContent="No se pudo guardar. Comprueba el almacenamiento del navegador.";}});renderProjects();
 </script></body></html>
