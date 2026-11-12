@@ -135,9 +135,10 @@ function renderVisualScenes(){
    const ctx=canvas.getContext("2d");
    const previewItem={
     ...scene,
-    visualAction:scene?.animation||scene?.visual_action||"",
-    retentionStimulus:scene?.objective||"",
-    on_screen_text:scene?.on_screen_text||scene?.objective||("Escena "+(index+1)),
+    // La ilustración se decide por la descripción visual y la acción, no por el rótulo.
+    visualAction:scene?.visual_action||scene?.animation||"",
+    retentionStimulus:"",
+    on_screen_text:scene?.on_screen_text||"",
     segmentLabel:"VISTA PREVIA · ESCENA "+(index+1)
    };
    window.JAIStoryEngine.draw(ctx,canvas,previewItem,index,.58);
