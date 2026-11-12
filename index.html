@@ -670,6 +670,7 @@ $("stopScript").addEventListener("click",()=>{if("speechSynthesis" in window)spe
 $("create").addEventListener("click",makePlan);
 $("copy").addEventListener("click",async()=>{if(!currentPlan)return;try{await navigator.clipboard.writeText(currentPlan);$("status").textContent="Plan copiado.";}catch(e){$("status").textContent="No se pudo copiar automáticamente. Selecciona el texto para copiarlo.";}});
 function getProjects(){try{const value=JSON.parse(localStorage.getItem("jaiProjects")||"[]");return Array.isArray(value)?value:[]}catch(e){return[]}}
+function escapeHtml(value){return String(value).replace(/[&<>"\']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[char]));}
 function loadSavedProject(project){
  if(!project||!project.data){$("status").textContent="Este registro antiguo no contiene un plan completo para restaurar.";return;}
  const data=project.data;
