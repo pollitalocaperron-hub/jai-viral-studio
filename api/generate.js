@@ -15,7 +15,32 @@ export default async function handler(req, res) {
 
   const safeNotes = typeof notes === "string" ? notes.slice(0, 6000) : "";
   const safeLearningMemory = typeof learning_memory === "string" ? learning_memory.slice(0, 9000) : "";
-  const prompt = `
+  // Investigación académica abierta mediante OpenAlex; no requiere clave ni tarjeta.
+  async function fetchResearchSources(query) {
+    try {
+      const url = "https://api.openalex.org/works?search=" + encodeURIComponent(query) + "&filter=type:article,from_publication_date:2000-01-01&sort=relevance_score:desc&per-page=6&select=id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count";
+      const response = await fetch(url, { signal: AbortSignal.timeout(9000), headers: { "Accept": "application/json" } });
+      if (!response.ok) throw new Error("OpenAlex HTTP " + response.status);
+      const body = await response.json();
+      return (body.results || []).slice(0, 6).map((work, index) => {
+        let abstract = "";
+        if (work.abstract_inverted_index && typeof work.abstract_inverted_index === "object") {
+          const words = [];
+          for (const [word, positions] of Object.entries(work.abstract_inverted_index)) for (const position of positions || []) words[position] = word;
+          abstract = words.filter(Boolean).join(" ").slice(0, 1100);
+        }
+        const authors = (work.authorships || []).slice(0, 3).map(a => a.author && a.author.display_name).filter(Boolean).join(", ");
+        return { id: "S" + (index + 1), title: work.title || "Título no disponible", year: work.publication_year || null, authors, doi: work.doi || "", url: (work.primary_location && work.primary_location.landing_page_url) || work.doi || "", cited_by_count: work.cited_by_count || 0, abstract };
+      }).filter(item => item.title && (item.url || item.abstract));
+    } catch (error) { console.warn("[JAI][Research] OpenAlex no disponible:", error && error.message); return []; }
+  }
+  const researchSources = await fetchResearchSources(topic.trim());
+  const researchContext = researchSources.length ? researchSources.map(s => "[" + s.id + "] " + s.title + " (" + (s.year || "año no indicado") + "). Autores: " + (s.authors || "no disponibles") + ". DOI/URL: " + (s.url || "no disponible") + ". Resumen: " + (s.abstract || "sin resumen recuperado")).join("\n") : "No se recuperaron fuentes académicas. No afirmes que la investigación fue verificada."
+  const prompt = `FUENTES ACADÉMICAS RECUPERADAS AUTOMÁTICAMENTE (OpenAlex):
+${researchContext}
+REGLAS DE FUENTES: solo cita IDs [S1], [S2], etc. que aparezcan en esta lista. Nunca inventes títulos, autores, DOI ni enlaces. Cada afirmación central de fact_audit debe incluir source_ids (array) y evidence. Si ninguna fuente respalda directamente la afirmación, source_ids=[] y no la presentes como verificada. Añade research_sources al JSON copiando únicamente las fuentes listadas. Descarta resultados irrelevantes.
+
+
 Eres el director editorial, guionista y estratega de retención de J.A.I. Viral Studio.
 Diseña un plan de producción de alta calidad para un video educativo vertical 9:16.
 Objetivo: maximizar interés, comprensión, retención y potencial de compartirse sin prometer viralidad ni usar engaños.
@@ -33,7 +58,7 @@ E. EDITOR: comprueba que la narración realmente explica el tema completo dentro
 - En temas con cambio de estado, distingue claramente cambio físico de transformación química; no asumas que todos los materiales tienen un punto de fusión simple ni que el material permanece químicamente intacto.
 - Para cada idea central, responde "¿por qué ocurre?" y "¿qué observaríamos si no ocurriera?". Incluye límites relevantes cuando cambien la conclusión.
 - No presentes la lista verification como evidencia ya consultada. Cada elemento debe declarar afirmación, estado ("respaldada por notas", "conocimiento general pendiente de fuente" o "no resuelta"), evidencia concreta disponible y qué falta. Si no hay fuente aportada, dilo claramente.
-- Añade research_brief (4–7 puntos), causal_chain (pasos ordenados), concept_explanations (término + explicación sencilla + función en el fenómeno) y fact_audit (afirmación + estado + justificación + tratamiento editorial).
+- Añade research_brief (4–7 puntos), causal_chain (pasos ordenados), concept_explanations (término + explicación sencilla + función en el fenómeno) y fact_audit (afirmación + estado + justificación + tratamiento editorial + source_ids + evidence).
 - Guion: explica mecanismos con ejemplos concretos; no encadenes frases grandilocuentes. Incluye al menos dos capas de explicación: intuición cotidiana y mecanismo real. La narración debe poder enseñarse sin imágenes.
 - STORYBOARD DIDÁCTICO: cada escena debe responder a una frase concreta del guion. Añade en cada escena "teaching_point" (qué aprende el espectador) y "visual_proof" (qué elemento visible demuestra o aclara esa idea). Prohíbe termómetros, cifras, etiquetas o instrumentos si el dato no está respaldado.
 - RETENTION MAP: estímulo nuevo no significa solo cambio visual; cada bloque debe avanzar la comprensión. En visual_action indica qué mecanismo o contraste se hace visible, no solo un movimiento decorativo.
@@ -96,7 +121,7 @@ ${/oceano|mar|agua azul|color del agua/i.test(topic) ? `- PRECISIÓN SOBRE EL CO
 - En el ejemplo del océano, termina con una comparación física entre una pequeña cantidad de agua y una gran columna de agua, no con kilómetros de agua que acumulan luz azul.` : ""}
 
 Devuelve SOLAMENTE JSON válido con estas claves:
-category, research_brief, causal_chain, concept_explanations, fact_audit, angle, hook, script, story, retention_map, verification, quality_check.
+category, research_sources, research_brief, causal_chain, concept_explanations, fact_audit, angle, hook, script, story, retention_map, verification, quality_check.
 category: categoría breve.
 angle: enfoque editorial en 2-3 frases.
 hook: hook inicial.
