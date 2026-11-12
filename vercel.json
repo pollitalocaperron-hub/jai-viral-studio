@@ -6,6 +6,9 @@
     },
     "api/narrate.js": {
       "maxDuration": 60
+    },
+    "api/inspect-visual.js": {
+      "maxDuration": 45
     }
   }
 }
