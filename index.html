@@ -60,14 +60,14 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <audio id="kokoroAudio" controls style="display:none;width:100%;margin-top:12px"></audio>
  <a id="downloadNarration" class="secondary" hidden download="jai-narracion.wav">Descargar narración WAV</a>
 </section>
-<div style="height:13px"></div><label>Storyboard visual 2D</label><div id="story"></div><div style="height:13px"></div><label>Mapa de retención · estímulo nuevo cada 3 segundos</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director Visual IA</h3><span class="tag">Estilo cinematográfico J.A.I.</span></div><p class="hint">Crea un fotograma cinematográfico por escena y después lo anima. Estilo visual fijo: documental educativo fotorrealista, sin personas salvo que la escena las necesite; siempre vestidas y con rostros definidos. Servicio sujeto a disponibilidad y límites gratuitos.</p><button class="primary" id="makeVisuals" type="button">Generar imágenes visuales con IA</button><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Editor de escenas · Línea de tiempo</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza las escenas del storyboard en orden. Esta etapa prepara la secuencia y sus tiempos; todavía no exporta el MP4.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Revisar secuencia</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar video de prueba</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video WebM</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Kokoro, se mezclará dentro del WebM. La exportación MP4 sigue pendiente.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
+<div style="height:13px"></div><label>Storyboard visual 2D</label><div id="story"></div><div style="height:13px"></div><label>Mapa de retención · estímulo nuevo cada 3 segundos</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director Visual 2D</h3><span class="tag">Canvas · Sin coste</span></div><p class="hint">Prepara una composición y acción distintas para cada bloque de retención con ilustraciones 2D editoriales. El motor dibuja localmente en el navegador, sin servicios externos ni consumo de créditos.</p><button class="primary" id="makeVisuals" type="button">Crear composiciones 2D por bloque</button><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Editor de escenas · Línea de tiempo</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza las escenas del storyboard en orden. Esta etapa prepara la secuencia y sus tiempos; todavía no exporta el MP4.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Revisar secuencia</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar video de prueba</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video WebM</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Kokoro, se mezclará dentro del WebM. La exportación MP4 sigue pendiente.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
 <div class="steps"><div class="step"><b>01 · Investigación</b><span>Verificar afirmaciones y fuentes.</span></div><div class="step"><b>02 · Diseño 2D</b><span>Objetos, diagramas y movimiento.</span></div><div class="step"><b>03 · Voz</b><span>Narración y sincronización.</span></div><div class="step"><b>04 · Montaje</b><span>Ritmo, subtítulos y sonido.</span></div><div class="step"><b>05 · Revisión</b><span>Exactitud y originalidad.</span></div><div class="step"><b>06 · Exportación</b><span>MP4 vertical 9:16.</span></div></div>
 <div class="row" style="margin-top:14px"><button class="secondary" id="copy">Copiar plan</button><button class="secondary" id="save">Guardar proyecto</button></div></section>
 <section class="card"><h3 class="section-title">Proyectos guardados</h3><div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div></section>
 <footer>J.A.I. Viral Studio · Producción editorial con Gemini · Exportación MP4 en desarrollo.</footer></div>
 <script src="/scene-engine.js"></script>
 <script>
-const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[],currentTopic="",jaiSceneImages=[];
+const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[],currentTopic="";
 function readable(value){
  if(value===null||value===undefined)return "No especificado";
  if(typeof value==="string"||typeof value==="number"||typeof value==="boolean")return String(value);
@@ -127,60 +127,87 @@ function visualSvg(scene,index){
 function renderVisualScenes(){
  const root=$("visualScenes");root.replaceChildren();
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Genera primero un plan con storyboard.";return;}
- currentScenes.forEach((scene,index)=>{
+ if(!timelineState.items.length)buildTimeline();
+ const items=timelineState.items;
+ if(!items.length){$("visualStatus").textContent="No hay bloques visuales para preparar.";return;}
+ items.forEach((item,index)=>{
   const card=document.createElement("article");card.className="visual-card";
-  if(jaiSceneImages[index]&&jaiSceneImages[index].src){
-   const img=document.createElement("img");img.src=jaiSceneImages[index].src;img.alt=String(scene?.visual||scene?.objective||"Escena generada por IA");img.style.cssText="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:12px;display:block";card.appendChild(img);
-  }else if(window.JAIStoryEngine&&typeof window.JAIStoryEngine.draw==="function"){
+  if(window.JAIStoryEngine&&typeof window.JAIStoryEngine.draw==="function"){
    const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
-   canvas.setAttribute("role","img");canvas.setAttribute("aria-label",String(scene?.on_screen_text||scene?.objective||("Escena "+(index+1))));
+   canvas.setAttribute("role","img");canvas.setAttribute("aria-label",String(item.on_screen_text||item.visualAction||("Bloque "+(index+1))));
    const ctx=canvas.getContext("2d");
-   const previewItem={
-    ...scene,
-    // La ilustración se decide por la descripción visual y la acción, no por el rótulo.
-    visualAction:scene?.visual_action||scene?.animation||"",
-    retentionStimulus:"",
-    on_screen_text:scene?.on_screen_text||"",
-    segmentLabel:"VISTA PREVIA · ESCENA "+(index+1)
-   };
+   const previewItem={...item,segmentLabel:"BLOQUE "+(index+1)+" / "+items.length};
    window.JAIStoryEngine.draw(ctx,canvas,previewItem,index,.58);
    card.appendChild(canvas);
   }else{
-   const wrap=document.createElement("div");wrap.innerHTML=visualSvg(scene,index);card.appendChild(wrap.firstElementChild);
+   const wrap=document.createElement("div");wrap.innerHTML=visualSvg(item,index);card.appendChild(wrap.firstElementChild);
   }
   const meta=document.createElement("div");meta.className="visual-meta";
-  const heading=document.createElement("b");heading.textContent="ESCENA "+(index+1)+" · "+String(scene?.time||"Tiempo por definir");
-  const desc=document.createElement("p");desc.textContent=String(scene?.visual||scene?.objective||"Composición educativa 2D");
+  const heading=document.createElement("b");heading.textContent="BLOQUE "+String(index+1).padStart(2,"0")+" · "+String(item.time||"Tiempo por definir");
+  const desc=document.createElement("p");desc.textContent=String(item.visualAction||item.visual||item.objective||"Composición educativa 2D");
   meta.append(heading,desc);card.appendChild(meta);root.appendChild(card);
  });
- $("visualStatus").textContent=currentScenes.length+" vistas previas creadas con el mismo motor que renderiza el video. La animación completa se aprecia en la secuencia exportada.";
+ $("visualStatus").textContent=items.length+" composiciones 2D editoriales preparadas localmente, una por bloque y sin servicios externos.";
 }
-async function generateAIVisuals(){
- if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Primero genera un plan con storyboard.";return;}
- const button=$("makeVisuals"),endpoint="https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations";
- button.disabled=true;jaiSceneImages=[];$("visualScenes").replaceChildren();
- const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
- try{
-  for(let i=0;i<currentScenes.length;i++){
-   if(i>0){for(let left=35;left>0;left--){$("visualStatus").textContent="Escena "+(i+1)+" de "+currentScenes.length+" · espera gratuita: "+left+" s";await wait(1000);}}
-   const scene=currentScenes[i],description=[scene.visual,scene.animation,scene.objective].filter(Boolean).join(". ").slice(0,1300);
-   const prompt="FIXED J.A.I. VISUAL STYLE: premium cinematic educational documentary frame, photorealistic live-action cinematography, physically accurate real-world subject, highly detailed textures, natural realistic lighting, intentional composition, rich but believable colors, shallow depth of field when appropriate. This is one coherent film frame, not an illustration. TOPIC: "+currentTopic+". EXACT SHOT TO DEPICT: "+description+". Show only objects, materials, food, nature, places or mechanisms that directly explain this exact shot. Do not add people unless a human is essential to the described action. If a person is essential, show one clearly adult, fully clothed person, with a natural anatomically correct body and a sharp, well-defined, realistic face; no nudity, no suggestive clothing. Maintain the same cinematic documentary look across every scene. Vertical-video framing with a clear main subject. No text, typography, labels, captions, logos, watermarks, diagrams, UI, abstract shapes, decorative particles, extra limbs, distorted hands, malformed faces, blurry faces, duplicated subjects, random people, nudity, or unrelated objects."; 
-   const negative_prompt="nudity, naked, nude, topless, underwear, lingerie, sexualized, suggestive, blurry face, faceless, deformed face, malformed anatomy, extra fingers, extra limbs, bad hands, duplicated person, crowd, random person, cartoon, anime, illustration, 3d render, abstract shapes, infographic, text, watermark, logo, low resolution, blurry, oversaturated";
-   $("visualStatus").textContent="Creando fotograma cinematográfico "+(i+1)+" de "+currentScenes.length+"…";
-   const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,negative_prompt,size:"1024x1024"})});
-   const raw=await response.text();if(!response.ok)throw new Error("OVHcloud HTTP "+response.status+" en escena "+(i+1)+": "+raw.slice(0,250));
-   const data=JSON.parse(raw),b64=data&&data.data&&data.data[0]&&data.data[0].b64_json;if(!b64)throw new Error("No llegó imagen para escena "+(i+1));
-   const src="data:image/png;base64,"+b64,img=new Image();img.src=src;await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject});
-   jaiSceneImages[i]={src:src,image:img};
-  }
-  renderVisualScenes();$("visualStatus").textContent="Listo: "+jaiSceneImages.length+" imágenes IA distintas. Se usarán en vista previa y render."; 
- }catch(error){$("visualStatus").textContent="La generación se detuvo: "+error.message;renderVisualScenes();}
- finally{button.disabled=false;}
-}
-$("makeVisuals").textContent="Generar imágenes visuales con IA";
-$("makeVisuals").addEventListener("click",generateAIVisuals);
+$("makeVisuals").textContent="Crear composiciones 2D por bloque";
+$("makeVisuals").addEventListener("click",()=>{if(!timelineState.items.length)buildTimeline();renderVisualScenes();});
 
-const timelineState={items:[],index:0,timer:null};
+const timelineState={items:[],index:0,timer:null,storyDuration:0,mapDuration:0};
+const WATER_MODE_SEQUENCE=["paradox","glass","sunbeam","spectrum","drop","particles","absorb","bluepath","scatter","depth","column","observer","compare","skytest","finalblue"];
+const FOOD_MODE_SEQUENCE=["food_raw","food_pan","food_browning","food_chemistry","food_result"];
+const GENERIC_MODE_SEQUENCE=["editorial","compare","drop","particles","spectrum","depth","filter","rays"];
+const WATER_MODE_ACTIONS={
+ paradox:"Composición: plano general dividido entre una mesa en primer término y el océano al fondo. Sujeto: un vaso pequeño junto al horizonte marino. Acción: la cámara se desplaza del vaso hacia el mar y compara ambos tonos azules. Resultado: queda visible el contraste entre poca agua y una gran masa de agua.",
+ glass:"Composición: primer plano lateral a la altura de la mesa. Sujeto: un vaso transparente medio lleno. Acción: el vaso entra desde la izquierda y se detiene mientras una franja de luz atraviesa el agua. Resultado: se distingue el agua casi transparente dentro del recipiente.",
+ sunbeam:"Composición: plano general desde encima de la superficie. Sujeto: el sol y un haz blanco que entra al océano. Acción: el haz cruza la superficie y desciende en diagonal. Resultado: aparece una columna luminosa bajo el agua.",
+ spectrum:"Composición: plano submarino oblicuo. Sujeto: un haz de luz blanca que se separa en bandas de color. Acción: las bandas se despliegan en curvas distintas al entrar al agua. Resultado: el espectro queda visible como cintas de luz.",
+ drop:"Composición: macro extremo sobre fondo azul oscuro. Sujeto: una gota esférica de agua suspendida. Acción: la cámara se acerca y una línea luminosa atraviesa la gota mientras aparecen reflejos curvos en su interior. Resultado: se revela la forma y la refracción dentro de la gota.",
+ particles:"Composición: macro submarino con profundidad de campo. Sujeto: partículas y organismos microscópicos suspendidos. Acción: la corriente los desplaza en direcciones distintas mientras destellos azules se dispersan entre ellos. Resultado: se ve cómo la luz cambia de dirección.",
+ absorb:"Composición: corte lateral de una columna de agua. Sujeto: bandas rojas, naranjas y azules. Acción: las bandas cálidas pierden intensidad antes que la azul a medida que avanzan. Resultado: el rojo y el naranja se atenúan primero.",
+ bluepath:"Composición: perspectiva submarina siguiendo un rayo azul. Sujeto: una banda azul dentro del agua. Acción: la banda azul avanza más lejos que las bandas cálidas. Resultado: queda clara su mayor penetración relativa.",
+ scatter:"Composición: plano macro alrededor de una partícula de agua. Sujeto: un punto iluminado por luz azul. Acción: la luz se dispersa en varios ángulos y una parte vuelve hacia la superficie. Resultado: se muestra el camino de la luz hacia el observador.",
+ depth:"Composición: corte vertical de una columna oceánica con escala lateral. Sujeto: capas de agua a distintas profundidades. Acción: la cámara desciende y las longitudes de onda cálidas se desvanecen antes. Resultado: el agua se ve progresivamente más azul y oscura.",
+ column:"Composición: plano frontal de una gran columna de agua. Sujeto: una columna profunda junto a una muestra pequeña en primer término. Acción: la cámara recorre la columna de arriba abajo y revela el trayecto más largo de la luz. Resultado: la gran masa de agua presenta un azul más intenso.",
+ observer:"Composición: perspectiva desde debajo de la superficie mirando hacia arriba. Sujeto: un observador submarino y luz azul dispersada. Acción: la luz cambia de dirección y llega desde el agua hacia el observador. Resultado: se entiende por qué parte de la luz azul regresa a la vista.",
+ compare:"Composición: comparación simultánea en dos paneles con perspectiva equivalente. Sujeto: un vaso con poca agua y una columna oceánica profunda. Acción: ambos reciben luz blanca al mismo tiempo y sus colores finales se comparan. Resultado: el vaso parece casi transparente y la columna se aprecia azul.",
+ skytest:"Composición: plano amplio del mar bajo un cielo gris. Sujeto: superficie oceánica y cielo nublado. Acción: la cámara baja desde el cielo hasta el agua y revela el color azul bajo la superficie. Resultado: queda claro que el cielo no explica por sí solo el azul del océano.",
+ finalblue:"Composición: plano general submarino de cierre. Sujeto: una columna azul profunda con rayos que se atenúan en la distancia. Acción: la cámara se aleja y deja visible toda la masa de agua. Resultado: aparece el océano azul como recompensa visual final."
+};
+const WATER_MODE_TITLES={paradox:"POCA AGUA, GRAN OCÉANO",glass:"UNA MUESTRA PEQUEÑA",sunbeam:"LA LUZ ENTRA AL AGUA",spectrum:"LA LUZ SE SEPARA",drop:"UNA GOTA POR DENTRO",particles:"LA LUZ CAMBIA DE RUMBO",absorb:"LOS TONOS CÁLIDOS SE APAGAN",bluepath:"EL AZUL LLEGA MÁS LEJOS",scatter:"EL AZUL SE DISPERSA",depth:"EL EFECTO DE LA PROFUNDIDAD",column:"UNA GRAN COLUMNA DE AGUA",observer:"LA LUZ REGRESA A LA VISTA",compare:"VASO FRENTE AL OCÉANO",skytest:"NO ES SOLO EL CIELO",finalblue:"EL AZUL DEL OCÉANO"};
+function normalizeVisualText(value){return String(value||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();}
+function chooseVisualMode(beat,scene,index,usedModes){
+ const beatText=normalizeVisualText([beat&&beat.visual_action,beat&&beat.new_stimulus].join(" "));
+ const sceneText=normalizeVisualText([currentTopic,scene&&scene.visual,scene&&scene.animation,scene&&scene.objective].join(" "));
+ const water=/agua|oceano|mar|gota|vaso|profund|columna|azul/.test(sceneText);
+ const food=/maillard|carne|bistec|filete|cocina|alimento/.test(sceneText);
+ const foodRules=[[/carne cruda|bistec crudo|filete crudo|antes de cocinar/,"food_raw"],[/sarten|plancha|aceite|contacto con el calor|calor intenso/,"food_pan"],[/dora|costra|pardeamiento|cambio de color/,"food_browning"],[/aminoacido|azucar reductor|reaccion quimica|compuestos de aroma/,"food_chemistry"],[/plato terminado|carne dorada|filete cocido|resultado final/,"food_result"]];
+ const waterRules=[[/vaso|vidrio|cristal|recipiente/,"glass"],[/gota|macro extremo|lupa/,"drop"],[/espectro|arcoiris|bandas de colores|separacion de colores/,"spectrum"],[/profundidad|metros bajo|capas de agua|escala vertical/,"depth"],[/particula|suspension|plancton|organismos microscopicos/,"particles"],[/absor|rojo|naranja|longitudes de onda calidas/,"absorb"],[/dispersion|dispersa|redirige la luz|vuelve hacia el observador/,"scatter"],[/rayo de sol|haz de luz|luz solar|sol entra/,"sunbeam"],[/columna de agua|gran masa de agua|volumen de agua/,"column"],[/observador|buzo|mirando hacia arriba|vista submarina/,"observer"],[/compar|lado a lado|poca agua y mucha agua/,"compare"],[/cielo gris|reflejo del cielo|no es el cielo/,"skytest"],[/azul penetra|azul llega mas lejos|luz azul avanza/,"bluepath"],[/recompensa final|cierre visual|titulo final|azul del oceano/,"finalblue"]];
+ const genericRules=[[/compar|contraste|lado a lado/,"compare"],[/gota|macro|detalle microscopico/,"drop"],[/particula|suspension|granulos/,"particles"],[/espectro|colores|arcoiris/,"spectrum"],[/profundidad|capas|corte transversal/,"depth"],[/filtro|se filtra|atraviesa una capa/,"filter"],[/rayo|haz de luz|iluminacion/,"rays"],[/orbita|gira alrededor|trayectoria circular/,"observer"],[/revela|interior|se abre/,"molecules"]];
+ const rules=food?foodRules:water?waterRules:genericRules;
+ let preferred=null;
+ for(const rule of rules){if(rule[0].test(beatText)){preferred=rule[1];break;}}
+ if(!preferred){for(const rule of rules){if(rule[0].test(sceneText)){preferred=rule[1];break;}}}
+ const sequence=food?FOOD_MODE_SEQUENCE:water?WATER_MODE_SEQUENCE:GENERIC_MODE_SEQUENCE;
+ if(preferred&&!usedModes.has(preferred)){usedModes.add(preferred);return preferred;}
+ const next=sequence.find(mode=>!usedModes.has(mode))||sequence[index%sequence.length];
+ usedModes.add(next);return next;
+}
+function fallbackVisualAction(mode,scene,index){
+ if(WATER_MODE_ACTIONS[mode])return WATER_MODE_ACTIONS[mode];
+ const generic={
+  editorial:"Composición: plano medio editorial con el sujeto principal en primer término. Sujeto: el objeto central del tema. Acción: el objeto se desplaza y revela un detalle interno. Resultado: aparece una nueva característica del fenómeno.",
+  compare:"Composición: comparación simultánea en dos paneles. Sujeto: dos estados del mismo objeto. Acción: ambos estados aparecen a la vez y se contrastan. Resultado: la diferencia queda visible.",
+  drop:"Composición: macro extremo. Sujeto: el elemento más pequeño del tema. Acción: la cámara se acerca y revela su estructura. Resultado: se distingue un detalle antes oculto.",
+  particles:"Composición: vista microscópica. Sujeto: elementos pequeños del fenómeno. Acción: los elementos se desplazan en distintas trayectorias. Resultado: se revela su interacción.",
+  spectrum:"Composición: primer plano de un proceso de separación. Sujeto: el elemento que se divide en componentes. Acción: los componentes se separan y ocupan posiciones distintas. Resultado: aparece la estructura interna.",
+  depth:"Composición: corte transversal en profundidad. Sujeto: las capas del fenómeno. Acción: la cámara desciende y muestra cada capa. Resultado: se distingue el cambio entre niveles.",
+  filter:"Composición: plano lateral de una capa transparente. Sujeto: el objeto que atraviesa la capa. Acción: una parte atraviesa y otra se atenúa. Resultado: queda visible el efecto del filtro.",
+  rays:"Composición: plano general con luz lateral. Sujeto: el objeto central y un haz de luz. Acción: el haz atraviesa el entorno y revela el objeto. Resultado: el mecanismo queda expuesto."
+ };
+ return generic[mode]||generic.editorial;
+}
+function fallbackVisualTitle(mode,scene,index){return WATER_MODE_TITLES[mode]||String(scene&&scene.on_screen_text||("DETALLE "+(index+1)));}
+
 function sceneSeconds(scene){
  const raw=String(scene?.time||"");
  const match=raw.match(/(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})/);
@@ -193,13 +220,15 @@ function renderTimeline(){
   const row=document.createElement("div");row.className="scene";row.style.display="grid";row.style.gridTemplateColumns="minmax(0,1fr) auto";row.style.alignItems="center";row.style.gap="10px";
   const info=document.createElement("div");
   const heading=document.createElement("h4");heading.textContent=String(index+1).padStart(2,"0")+" · "+(item.time||"Tiempo por definir");
-  const desc=document.createElement("p");desc.textContent=String(item.on_screen_text||item.objective||item.visual||"Escena visual");
+  const desc=document.createElement("p");desc.textContent=String(item.on_screen_text||item.objective||item.visualAction||"Escena visual");
   info.append(heading,desc);
   const duration=document.createElement("span");duration.className="tag";duration.textContent=item.seconds+" s";
   row.append(info,duration);row.dataset.sceneIndex=String(index);root.appendChild(row);
  });
  const total=timelineState.items.reduce((sum,item)=>sum+item.seconds,0);
- $("timelineSummary").textContent=timelineState.items.length+" escenas · "+total+" segundos estimados · formato vertical 9:16.";
+ const story=timelineState.storyDuration||total,map=timelineState.mapDuration||0;
+ const coverage=map===story?"storyboard y mapa coinciden":map<story?"mapa "+map+" s; "+(story-map)+" s completados":"mapa recortado al final del storyboard";
+ $("timelineSummary").textContent=timelineState.items.length+" bloques · "+total+" segundos · storyboard "+story+" s · "+coverage+".";
  $("previewTimeline").disabled=!timelineState.items.length;
  $("renderVideo").disabled=!timelineState.items.length;
 }
@@ -222,28 +251,37 @@ function buildTimeline(){
  const sceneRanges=currentScenes.map((scene,index)=>{
   const r=parseRange(scene.time);
   return r?{...r,index}:{start:index*6,end:(index+1)*6,index};
- });
+ }).sort((a,b)=>a.start-b.start);
  const beatRanges=(Array.isArray(currentRetentionMap)?currentRetentionMap:[]).map((beat,index)=>{
   const r=parseRange(beat.time);
   if(r)return {...r,beat,index};
   const start=parseTime(beat.time);
   return {...(start===null?{start:index*3,end:index*3+3}:{start,end:start+3}),beat,index};
- });
+ }).sort((a,b)=>a.start-b.start);
  const storyEnd=Math.max(...sceneRanges.map(r=>r.end),0);
  const mapEnd=Math.max(...beatRanges.map(r=>r.end),0);
- const totalSeconds=Math.max(storyEnd,mapEnd);
- const count=Math.ceil(totalSeconds/3);
+ // El storyboard es la fuente de verdad: el mapa nunca puede acortar ni alargar el montaje.
+ const totalSeconds=storyEnd>0?storyEnd:mapEnd;
+ const count=Math.ceil(totalSeconds/3),usedModes=new Set(),usedActions=new Set();
+ timelineState.storyDuration=totalSeconds;
+ timelineState.mapDuration=mapEnd;
  timelineState.items=Array.from({length:count},(_,index)=>{
-  const start=index*3,end=Math.min(start+3,totalSeconds);
-  const beatRange=beatRanges.find(r=>start<r.end&&end>r.start);
-  const sceneRange=sceneRanges.find(r=>start<r.end&&end>r.start)||sceneRanges[sceneRanges.length-1];
+  const start=index*3,end=Math.min(start+3,totalSeconds),mid=(start+end)/2;
+  const beatRange=beatRanges.find(r=>mid>=r.start&&mid<r.end);
+  const sceneRange=sceneRanges.find(r=>mid>=r.start&&mid<r.end)||sceneRanges[sceneRanges.length-1];
   const scene=currentScenes[sceneRange.index]||currentScenes[0];
   const beat=beatRange&&beatRange.beat;
-  const visualAction=beat?(beat.visual_action||beat.new_stimulus||""):"Composición: "+(scene.visual||"plano temático")+". Acción: "+(scene.animation||"revelar el siguiente detalle visual");
-  return {...scene,time:Math.floor(start/60)+":"+String(start%60).padStart(2,"0")+" - "+Math.floor(end/60)+":"+String(end%60).padStart(2,"0"),seconds:end-start,sceneIndex:sceneRange.index,segmentLabel:"BLOQUE "+(index+1)+" / "+count,on_screen_text:(beat&&beat.on_screen_text)||scene.on_screen_text,objective:scene.objective,visual:String(scene.visual||"")+"; "+String(visualAction),visualAction,retentionStimulus:beat?(beat.new_stimulus||""):"",curiosity:beat?(beat.curiosity||""):""};
+  const rawAction=beat?(beat.visual_action||beat.new_stimulus||""):"";
+  const visualMode=chooseVisualMode(beat||{},scene,index,usedModes);
+  const actionKey=normalizeVisualText(rawAction);
+  const visualAction=!rawAction||usedActions.has(actionKey)?fallbackVisualAction(visualMode,scene,index):rawAction;
+  usedActions.add(normalizeVisualText(visualAction));
+  const title=(beat&&beat.on_screen_text)||scene.on_screen_text||fallbackVisualTitle(visualMode,scene,index);
+  return {...scene,time:Math.floor(start/60)+":"+String(start%60).padStart(2,"0")+" - "+Math.floor(end/60)+":"+String(end%60).padStart(2,"0"),seconds:end-start,sceneIndex:sceneRange.index,visualMode,segmentLabel:"BLOQUE "+(index+1)+" / "+count,on_screen_text:title,objective:scene.objective,visual:String(scene.visual||"")+"; "+String(visualAction),visualAction,retentionStimulus:beat?(beat.new_stimulus||visualAction):visualAction,curiosity:beat?(beat.curiosity||""):""};
  });
- $("timelineStatus").textContent="Línea de tiempo sincronizada con el storyboard: "+totalSeconds+" segundos, en bloques de máximo 3 segundos.";
  renderTimeline();
+ const gap=Math.max(0,totalSeconds-mapEnd),overrun=Math.max(0,mapEnd-totalSeconds);
+ $("timelineStatus").textContent="Línea de tiempo sincronizada: "+totalSeconds+" segundos exactos del storyboard en "+count+" bloques. "+(gap?gap+" segundos faltantes del mapa se completaron con acciones 2D distintas.":overrun?overrun+" segundos sobrantes del mapa se recortaron para respetar el storyboard.":"Storyboard y mapa cubren la misma duración.");
 }
 function previewTimeline(){
  if(!timelineState.items.length)return;
@@ -472,71 +510,11 @@ function drawStoryBeat(item,index,progress){
  ctx.fillStyle="rgba(255,255,255,.18)";ctx.fillRect(55,1170,610,9);ctx.fillStyle="#65e0bd";ctx.fillRect(55,1170,610*p,9);
 }
 function drawVideoScene(item,index,progress){
- const imageIndex=Number.isInteger(item?.sceneIndex)?item.sceneIndex:index;
- const generated=jaiSceneImages[imageIndex];
- if(generated&&generated.image){
-  const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height,p=Math.max(0,Math.min(1,Number(progress)||0)),img=generated.image;
-  const scale=Math.max(w/img.width,h/img.height)*(1.05+p*.13),dw=img.width*scale,dh=img.height*scale;
-  const dx=(w-dw)/2-Math.sin(p*Math.PI)*22,dy=(h-dh)/2+Math.cos(p*Math.PI)*9;
-  ctx.clearRect(0,0,w,h);ctx.drawImage(img,dx,dy,dw,dh);
-  const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,"rgba(0,0,0,.20)");shade.addColorStop(.62,"rgba(0,0,0,0)");shade.addColorStop(1,"rgba(0,0,0,.62)");ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
-  const title=String(item.on_screen_text||"").slice(0,65);if(title){ctx.fillStyle="#fff";ctx.font="800 36px Arial";ctx.textAlign="center";ctx.shadowColor="#000";ctx.shadowBlur=10;ctx.fillText(title,w/2,h-155);ctx.shadowBlur=0;}
-  ctx.fillStyle="rgba(255,255,255,.85)";ctx.font="700 19px Arial";ctx.textAlign="center";ctx.fillText(item.segmentLabel||("ESCENA "+(index+1)),w/2,h-65);
-  ctx.fillStyle="rgba(255,255,255,.28)";ctx.fillRect(55,h-35,610,6);ctx.fillStyle="#8ce3d0";ctx.fillRect(55,h-35,610*p,6);return;
+ if(window.JAIStoryEngine&&typeof window.JAIStoryEngine.draw==="function"){
+  window.JAIStoryEngine.draw(renderCtx,renderCanvas,item,index,progress);
+  return;
  }
- if(window.JAIStoryEngine){window.JAIStoryEngine.draw(renderCtx,renderCanvas,item,index,progress);return;}
- drawStoryBeat(item,index,progress);return;
- const visual=String(item.visual||item.objective||"").toLowerCase();
- const title=String(item.on_screen_text||item.objective||"");
- if(/tierra|terrestre|planeta|globo|ecuador|rotaci[oó]n/.test(visual+" "+title)){
-  drawEarthScene(item,index,progress);return;
- }
- const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height;
- const water=/agua|mar|oc[eé]ano|olas|acu[aá]t|profund|azul/.test(visual);
- const light=/luz|sol|rayo|color|espectro|rojo|azul|absor|dispers/.test(visual);
- const glass=/vaso|vidrio|cristal/.test(visual);
- const hue=water?202:light?42:glass?184:(index*47+205)%360;
- const gradient=ctx.createLinearGradient(0,0,w,h);
- gradient.addColorStop(0,water?"#061b36":"#08152d");
- gradient.addColorStop(1,"hsl("+hue+" 52% 24%)");
- ctx.fillStyle=gradient;ctx.fillRect(0,0,w,h);
- const cx=w/2,cy=470+Math.sin(progress*Math.PI*2)*12;
- ctx.save();
- if(water){
-  for(let layer=0;layer<4;layer++){
-   const y=270+layer*115;ctx.beginPath();ctx.moveTo(0,y);
-   for(let x=0;x<=w;x+=12)ctx.lineTo(x,y+Math.sin(x/48+progress*6+layer)*17);
-   ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();
-   ctx.fillStyle=["#167ca1","#105b86","#0b3d68","#07294e"][layer];ctx.globalAlpha=.82;ctx.fill();
-  }
-  ctx.globalAlpha=1;ctx.strokeStyle="#8beaff";ctx.lineWidth=5;
-  for(let j=0;j<4;j++){ctx.beginPath();for(let x=35;x<w-35;x+=8){const y=310+j*78+Math.sin(x/42+progress*5+j)*10;if(x===35)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();}
- }else if(light){
-  ctx.translate(cx,cy);ctx.rotate(-.12);
-  ["#fff0a3","#ff8668","#78ddff","#b5a4ff"].forEach((color,j)=>{ctx.strokeStyle=color;ctx.lineWidth=18-j*2;ctx.globalAlpha=.85;ctx.beginPath();ctx.moveTo(-250,-145+j*42);ctx.lineTo(240,45+j*42);ctx.stroke();});
-  ctx.globalAlpha=1;for(let j=0;j<5;j++){ctx.beginPath();ctx.arc(160+j*24,90+j*15,9-j,0,Math.PI*2);ctx.fillStyle="#a8edff";ctx.fill();}
- }else if(glass){
-  ctx.translate(cx,cy);ctx.fillStyle="rgba(117,225,245,.16)";ctx.strokeStyle="#c2f6ff";ctx.lineWidth=9;
-  ctx.beginPath();ctx.moveTo(-120,-190);ctx.lineTo(120,-190);ctx.lineTo(96,170);ctx.quadraticCurveTo(0,230,-96,170);ctx.closePath();ctx.fill();ctx.stroke();
-  ctx.fillStyle="rgba(68,193,230,.42)";ctx.beginPath();ctx.moveTo(-108,-20);ctx.lineTo(108,-20);ctx.lineTo(96,165);ctx.quadraticCurveTo(0,215,-96,165);ctx.closePath();ctx.fill();
-  ctx.strokeStyle="#efffff";ctx.lineWidth=5;ctx.beginPath();ctx.ellipse(0,-190,120,18,0,0,Math.PI*2);ctx.stroke();
- }else{
-  ctx.translate(cx,cy);ctx.strokeStyle="#8be9df";ctx.lineWidth=8;ctx.fillStyle="rgba(103,224,208,.15)";
-  ctx.beginPath();ctx.arc(0,0,150,0,Math.PI*2);ctx.fill();ctx.stroke();
-  ctx.fillStyle="#285b83";ctx.fillRect(-105,-70,210,140);ctx.strokeRect(-105,-70,210,140);
-  ctx.strokeStyle="#b5f4e7";ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(-65,45);ctx.lineTo(-15,-12);ctx.lineTo(28,24);ctx.lineTo(78,-42);ctx.stroke();
- }
- ctx.restore();
- ctx.fillStyle="#9debdc";ctx.font="600 25px Arial";ctx.textAlign="center";ctx.fillText("J.A.I. VIRAL STUDIO",cx,115);
- ctx.fillStyle="#fff";ctx.font="bold 43px Arial";
- const words=title.split(/\s+/),lines=[];let line="";
- words.forEach(word=>{const test=line?line+" "+word:word;if(ctx.measureText(test).width>620&&line){lines.push(line);line=word;}else line=test;});
- if(line)lines.push(line);
- const startY=850-(lines.length-1)*28;lines.slice(0,3).forEach((txt,i)=>ctx.fillText(txt,cx,startY+i*58));
- ctx.fillStyle="#b8c9e5";ctx.font="24px Arial";ctx.fillText(item.segmentLabel||("ESCENA "+(index+1)+" / "+timelineState.items.length),cx,1085);
- ctx.fillStyle="rgba(255,255,255,.2)";ctx.fillRect(60,1165,600,12);
- const grad=ctx.createLinearGradient(60,0,660,0);grad.addColorStop(0,"#4de0a1");grad.addColorStop(1,"#69d9ef");
- ctx.fillStyle=grad;ctx.fillRect(60,1165,600*Math.max(0,Math.min(1,progress)),12);
+ drawStoryBeat(item,index,progress);
 }
 async function renderVideo(){
  if(renderRecording||!timelineState.items.length)return;
@@ -601,8 +579,9 @@ async function makePlan(){
   const data=await response.json();if(!response.ok)throw new Error(data.error||"No se pudo generar el plan.");
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Gemini</span><span class="tag">Motion graphics 2D</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
-  renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];$("visualScenes").replaceChildren();$("visualStatus").textContent=currentScenes.length+" escenas listas. Pulsa Generar escenas visuales 2D.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.");
-  currentTopic=topic;jaiSceneImages=[];currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
+  renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se preparará una composición distinta por cada bloque.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.");
+  currentTopic=topic;currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
+  buildTimeline();
   $("output").classList.add("show");$("status").textContent="¡Plan generado! Revisa las escenas, verificaciones y control de calidad antes de producir."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
  }catch(error){$("status").textContent=error.message||"Ocurrió un error al generar el plan.";}finally{$("create").disabled=false;}
 }
