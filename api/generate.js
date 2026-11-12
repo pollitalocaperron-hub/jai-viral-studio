@@ -32,15 +32,17 @@ REGLAS EDITORIALES Y CIENTÍFICAS:
 - En CADA bloque debe ocurrir un estímulo nuevo y perceptible que haga querer seguir viendo: una nueva imagen o composición, movimiento significativo, pregunta concreta, dato sorprendente verificado, demostración visual, cambio de escala/perspectiva, contraste o avance de la explicación. No cuenta como estímulo suficiente cambiar únicamente el color, mover una barra o repetir el mismo plano.
 - Cada bloque debe aportar información o curiosidad distinta; evita repetir el mismo recurso visual o reformular la misma idea. Alterna recursos visuales y narrativos para que el ritmo no se vuelva mecánico.
 - Cada 6–9 segundos introduce una revelación, contraste, mini-giro o respuesta parcial que abra una nueva pregunta. El cierre debe entregar una recompensa clara y memorable que responda la promesa inicial.
-- Crea un mapa de retención temporal llamado retention_map: un objeto por cada bloque consecutivo de máximo 3 segundos, cubriendo TODA la duración sin huecos ni solapamientos. Cada objeto debe incluir time (inicio–fin), new_stimulus (qué cambia de forma concreta), narrative_advance (qué nueva información aporta) y curiosity (qué razón da para continuar).
-- Comprueba internamente que retention_map cubre desde 00:00 hasta el final, que cada bloque aporta un estímulo real y que la progresión aumenta el interés. Reescribe cualquier bloque débil antes de responder.
-- Estructura: hook, promesa, contexto breve, explicación progresiva, revelación/detalle memorable y cierre con pregunta o llamada a interacción natural.
-- Evita relleno, repeticiones, clickbait engañoso y frases genéricas.
-- Escribe narración natural en español, con ritmo y frases fáciles de decir en voz alta.
-- Diseña 5 a 8 escenas visuales sencillas pero de acabado profesional. La IA debe poder crear fotogramas 2D originales y animarlos con paneos, zooms, capas, parallax suave, entradas, salidas, diagramas y transiciones.
-- No solicites actores reales, simulaciones físicas complejas, multitudes, escenas hiperrealistas ni 3D difícil. Mantén continuidad de paleta, estilo y elementos.
-- Cada escena debe incluir: tiempo, objetivo narrativo, descripción del fotograma, movimiento/animación, texto en pantalla y transición.
-- Incluye sugerencias de ritmo de edición, subtítulos y diseño sonoro que puedan implementarse con herramientas gratuitas.
+- Crea retention_map con bloques consecutivos de máximo 3 segundos, cubriendo toda la duración sin huecos ni solapamientos. Cada bloque debe incluir time, new_stimulus, narrative_advance, curiosity, visual_action y on_screen_text.
+- visual_action debe describir una acción física visible y realizable (por ejemplo: la cámara atraviesa una capa, un objeto cae y rebota, una esfera se abre y revela su interior, dos elementos chocan o una comparación aparece lado a lado). No uses instrucciones abstractas como 'hacerlo interesante'.
+- Cada bloque consecutivo debe cambiar al menos dos aspectos visuales: composición/encuadre, escala, perspectiva, objeto protagonista, acción, entorno o esquema de color. No repitas el mismo plano con una pequeña oscilación.
+- on_screen_text debe ser una frase editorial breve de 2 a 6 palabras, comprensible para el espectador. Nunca debe contener instrucciones de producción ni resumir el objetivo técnico de la escena.
+- Comprueba que el mapa cubre toda la duración y que cada bloque aporta una imagen o acción diferente y un avance narrativo real.
+- Estructura: hook, promesa, contexto breve, explicación progresiva, revelación memorable y cierre.
+- Evita relleno, repeticiones, clickbait engañoso y frases genéricas. Escribe narración natural en español.
+- Diseña de 5 a 8 escenas maestras 2D con continuidad de estilo, pero exige que cada bloque de retención se convierta en un plano visual distinto dentro de esas escenas.
+- Cada escena maestra debe incluir: time, objective, visual, animation, on_screen_text y transition. La animación debe especificar qué elemento se mueve, hacia dónde, cómo y qué revela.
+- Usa composiciones editoriales completas: primer plano, plano general, corte transversal, comparación, diagrama, cambio de perspectiva y detalle. No bases el video en círculos, líneas decorativas o elementos flotando.
+- No solicites actores reales, simulaciones físicas complejas, multitudes, hiperrealismo ni 3D difícil. Incluye ritmo de edición, subtítulos y diseño sonoro gratuitos.
 - Ajusta el guion a la duración elegida.
 
 Devuelve SOLAMENTE JSON válido con estas claves:
@@ -50,7 +52,7 @@ angle: enfoque editorial en 2-3 frases.
 hook: hook inicial.
 script: guion completo con marcas [HOOK], [PROMESA], [CONTEXTO], [EXPLICACIÓN], [REVELACIÓN], [CIERRE].
 story: arreglo de 5 a 8 objetos de escena; cada objeto debe tener los campos time, objective, visual, animation, on_screen_text, transition.
-retention_map: arreglo cronológico de bloques de máximo 3 segundos que cubra toda la duración; cada objeto debe tener time, new_stimulus, narrative_advance, curiosity.
+retention_map: arreglo cronológico de bloques de máximo 3 segundos; cada objeto debe tener time, new_stimulus, narrative_advance, curiosity, visual_action y on_screen_text (frase visible de 2 a 6 palabras).
 verification: lista de afirmaciones/datos que deben verificarse y qué evidencia falta.
 quality_check: lista de comprobaciones editoriales, científicas y de producción.
 
