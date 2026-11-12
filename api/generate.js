@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   async function fetchResearchSources(query) {
     try {
       const url = "https://api.openalex.org/works?search=" + encodeURIComponent(query) + "&filter=type:article,from_publication_date:2000-01-01&sort=relevance_score:desc&per-page=6&select=id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count";
-      const response = await fetch(url, { signal: AbortSignal.timeout(9000), headers: { "Accept": "application/json" } });
+      const response = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { "Accept": "application/json" } });
       if (!response.ok) throw new Error("OpenAlex HTTP " + response.status);
       const body = await response.json();
       return (body.results || []).slice(0, 6).map((work, index) => {
@@ -174,7 +174,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
             temperature: 0.55,
             max_completion_tokens: 7000
           }),
-          signal: AbortSignal.timeout(42000)
+          signal: AbortSignal.timeout(36000)
         });
         const groqBody = await groqResponse.text();
         let groqData;
@@ -229,7 +229,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
                 maxOutputTokens: 7000
               }
             }),
-            signal: AbortSignal.timeout(14000)
+            signal: AbortSignal.timeout(12000)
           }
         );
       } catch (error) {
@@ -327,11 +327,14 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     plan.research_sources = researchSources;
     if (Array.isArray(plan.fact_audit)) plan.fact_audit = plan.fact_audit.map(item => {
       const ids = Array.isArray(item.source_ids) ? item.source_ids.filter(id => validSourceIds.has(id)) : [];
-      return { ...item, source_ids: ids, status: ids.length ? "fuente recuperada; pertinencia pendiente de revisión" : "no verificada", evidence: ids.length ? String(item.evidence || "Revisar el resumen de la fuente antes de publicar.") : "No hay una fuente recuperada vinculada a esta afirmación." };
+      const originalStatus = String(item.status || "").toLowerCase();
+      const unresolved = /pendiente|no resuelt|no verific|provisional|incertid|bajo|moderad/.test(originalStatus);
+      return { ...item, source_ids: ids, status: ids.length ? "fuente recuperada; pertinencia pendiente de revisión" : (unresolved ? "no verificada" : "conocimiento general; sin fuente específica"), evidence: ids.length ? String(item.evidence || "Revisar el resumen de la fuente antes de publicar.") : "No hay una fuente recuperada vinculada a esta afirmación." };
     });
     const scriptText = String(plan.script || "").toLowerCase();
     const unresolvedInScript = (Array.isArray(plan.fact_audit) ? plan.fact_audit : []).filter(item => {
       if (item.source_ids && item.source_ids.length) return false;
+      if (item.status !== "no verificada") return false;
       const tokens = String(item.claim || "").toLowerCase().match(/[a-záéíóúüñ]{6,}/g) || [];
       const stop = new Set(["cuando","porque","sobre","durante","entre","despues","proceso","afirmacion","conocimiento","general","temperatura","molecular"]);
       const keyTerms = [...new Set(tokens)].filter(word => !stop.has(word));
