@@ -198,61 +198,31 @@ $("makeVisuals").textContent="Generar fotogramas cinematográficos";
 $("makeVisuals").addEventListener("click",generateAIVisuals);
 
 const timelineState={items:[],index:0,timer:null,storyDuration:0,mapDuration:0};
-const WATER_MODE_SEQUENCE=["paradox","glass","sunbeam","spectrum","drop","particles","absorb","bluepath","scatter","depth","column","observer","compare","skytest","finalblue"];
-const FOOD_MODE_SEQUENCE=["food_raw","food_pan","food_browning","food_chemistry","food_result"];
-const GENERIC_MODE_SEQUENCE=["editorial","compare","drop","particles","spectrum","depth","filter","rays"];
-const WATER_MODE_ACTIONS={
- paradox:"Composición: plano general dividido entre una mesa en primer término y el océano al fondo. Sujeto: un vaso pequeño junto al horizonte marino. Acción: la cámara se desplaza del vaso hacia el mar y compara ambos tonos azules. Resultado: queda visible el contraste entre poca agua y una gran masa de agua.",
- glass:"Composición: primer plano lateral a la altura de la mesa. Sujeto: un vaso transparente medio lleno. Acción: el vaso entra desde la izquierda y se detiene mientras una franja de luz atraviesa el agua. Resultado: se distingue el agua casi transparente dentro del recipiente.",
- sunbeam:"Composición: plano general desde encima de la superficie. Sujeto: el sol y un haz blanco que entra al océano. Acción: el haz cruza la superficie y desciende en diagonal. Resultado: aparece una columna luminosa bajo el agua.",
- spectrum:"Composición: plano submarino oblicuo. Sujeto: un haz de luz blanca que se separa en bandas de color. Acción: las bandas se despliegan en curvas distintas al entrar al agua. Resultado: el espectro queda visible como cintas de luz.",
- drop:"Composición: macro extremo sobre fondo azul oscuro. Sujeto: una gota esférica de agua suspendida. Acción: la cámara se acerca y una línea luminosa atraviesa la gota mientras aparecen reflejos curvos en su interior. Resultado: se revela la forma y la refracción dentro de la gota.",
- particles:"Composición: macro submarino con profundidad de campo. Sujeto: partículas y organismos microscópicos suspendidos. Acción: la corriente los desplaza en direcciones distintas mientras destellos azules se dispersan entre ellos. Resultado: se ve cómo la luz cambia de dirección.",
- absorb:"Composición: corte lateral de una columna de agua. Sujeto: bandas rojas, naranjas y azules. Acción: las bandas cálidas pierden intensidad antes que la azul a medida que avanzan. Resultado: el rojo y el naranja se atenúan primero.",
- bluepath:"Composición: perspectiva submarina siguiendo un rayo azul. Sujeto: una banda azul dentro del agua. Acción: la banda azul avanza más lejos que las bandas cálidas. Resultado: queda clara su mayor penetración relativa.",
- scatter:"Composición: plano macro alrededor de una partícula de agua. Sujeto: un punto iluminado por luz azul. Acción: la luz se dispersa en varios ángulos y una parte vuelve hacia la superficie. Resultado: se muestra el camino de la luz hacia el observador.",
- depth:"Composición: corte vertical de una columna oceánica con escala lateral. Sujeto: capas de agua a distintas profundidades. Acción: la cámara desciende y las longitudes de onda cálidas se desvanecen antes. Resultado: el agua se ve progresivamente más azul y oscura.",
- column:"Composición: plano frontal de una gran columna de agua. Sujeto: una columna profunda junto a una muestra pequeña en primer término. Acción: la cámara recorre la columna de arriba abajo y revela el trayecto más largo de la luz. Resultado: la gran masa de agua presenta un azul más intenso.",
- observer:"Composición: perspectiva desde debajo de la superficie mirando hacia arriba. Sujeto: un observador submarino y luz azul dispersada. Acción: la luz cambia de dirección y llega desde el agua hacia el observador. Resultado: se entiende por qué parte de la luz azul regresa a la vista.",
- compare:"Composición: comparación simultánea en dos paneles con perspectiva equivalente. Sujeto: un vaso con poca agua y una columna oceánica profunda. Acción: ambos reciben luz blanca al mismo tiempo y sus colores finales se comparan. Resultado: el vaso parece casi transparente y la columna se aprecia azul.",
- skytest:"Composición: plano amplio del mar bajo un cielo gris. Sujeto: superficie oceánica y cielo nublado. Acción: la cámara baja desde el cielo hasta el agua y revela el color azul bajo la superficie. Resultado: queda claro que el cielo no explica por sí solo el azul del océano.",
- finalblue:"Composición: plano general submarino de cierre. Sujeto: una columna azul profunda con rayos que se atenúan en la distancia. Acción: la cámara se aleja y deja visible toda la masa de agua. Resultado: aparece el océano azul como recompensa visual final."
-};
-const WATER_MODE_TITLES={paradox:"POCA AGUA, GRAN OCÉANO",glass:"UNA MUESTRA PEQUEÑA",sunbeam:"LA LUZ ENTRA AL AGUA",spectrum:"LA LUZ SE SEPARA",drop:"UNA GOTA POR DENTRO",particles:"LA LUZ CAMBIA DE RUMBO",absorb:"LOS TONOS CÁLIDOS SE APAGAN",bluepath:"EL AZUL LLEGA MÁS LEJOS",scatter:"EL AZUL SE DISPERSA",depth:"EL EFECTO DE LA PROFUNDIDAD",column:"UNA GRAN COLUMNA DE AGUA",observer:"LA LUZ REGRESA A LA VISTA",compare:"VASO FRENTE AL OCÉANO",skytest:"NO ES SOLO EL CIELO",finalblue:"EL AZUL DEL OCÉANO"};
-function normalizeVisualText(value){return String(value||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();}
+const GENERIC_MODE_SEQUENCE=["editorial","compare","detail","structure","layers","motion","interaction","reveal"];
+function normalizeVisualText(value){return String(value||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/\\s+/g," ").trim();}
 function chooseVisualMode(beat,scene,index,usedModes){
- const beatText=normalizeVisualText([beat&&beat.visual_action,beat&&beat.new_stimulus].join(" "));
- const sceneText=normalizeVisualText([currentTopic,scene&&scene.visual,scene&&scene.animation,scene&&scene.objective].join(" "));
- const water=/agua|oceano|mar|gota|vaso|profund|columna|azul/.test(sceneText);
- const food=/maillard|carne|bistec|filete|cocina|alimento/.test(sceneText);
- const foodRules=[[/carne cruda|bistec crudo|filete crudo|antes de cocinar/,"food_raw"],[/sarten|plancha|aceite|contacto con el calor|calor intenso/,"food_pan"],[/dora|costra|pardeamiento|cambio de color/,"food_browning"],[/aminoacido|azucar reductor|reaccion quimica|compuestos de aroma/,"food_chemistry"],[/plato terminado|carne dorada|filete cocido|resultado final/,"food_result"]];
- const waterRules=[[/vaso|vidrio|cristal|recipiente/,"glass"],[/gota|macro extremo|lupa/,"drop"],[/espectro|arcoiris|bandas de colores|separacion de colores/,"spectrum"],[/profundidad|metros bajo|capas de agua|escala vertical/,"depth"],[/particula|suspension|plancton|organismos microscopicos/,"particles"],[/absor|rojo|naranja|longitudes de onda calidas/,"absorb"],[/dispersion|dispersa|redirige la luz|vuelve hacia el observador/,"scatter"],[/rayo de sol|haz de luz|luz solar|sol entra/,"sunbeam"],[/columna de agua|gran masa de agua|volumen de agua/,"column"],[/observador|buzo|mirando hacia arriba|vista submarina/,"observer"],[/compar|lado a lado|poca agua y mucha agua/,"compare"],[/cielo gris|reflejo del cielo|no es el cielo/,"skytest"],[/azul penetra|azul llega mas lejos|luz azul avanza/,"bluepath"],[/recompensa final|cierre visual|titulo final|azul del oceano/,"finalblue"]];
- const genericRules=[[/compar|contraste|lado a lado/,"compare"],[/gota|macro|detalle microscopico/,"drop"],[/particula|suspension|granulos/,"particles"],[/espectro|colores|arcoiris/,"spectrum"],[/profundidad|capas|corte transversal/,"depth"],[/filtro|se filtra|atraviesa una capa/,"filter"],[/rayo|haz de luz|iluminacion/,"rays"],[/orbita|gira alrededor|trayectoria circular/,"observer"],[/revela|interior|se abre/,"molecules"]];
- const rules=food?foodRules:water?waterRules:genericRules;
- let preferred=null;
- for(const rule of rules){if(rule[0].test(beatText)){preferred=rule[1];break;}}
- if(!preferred){for(const rule of rules){if(rule[0].test(sceneText)){preferred=rule[1];break;}}}
- const sequence=food?FOOD_MODE_SEQUENCE:water?WATER_MODE_SEQUENCE:GENERIC_MODE_SEQUENCE;
+ const text=normalizeVisualText([beat&&beat.visual_action,beat&&beat.new_stimulus,scene&&scene.visual,scene&&scene.animation,scene&&scene.objective].join(" "));
+ const rules=[[/compar|contraste|dos estados|lado a lado/,"compare"],[/macro|detalle|estructura interna|micro/,"detail"],[/separa|divide|componentes|partes/,"structure"],[/profund|capas|corte transversal/,"layers"],[/trayectoria|orbita|gira|fluye|desplaza/,"motion"],[/interaccion|colision|contacto|reaccion/,"interaction"],[/revela|abre|expone|muestra el interior/,"reveal"]];
+ const preferred=rules.find(rule=>rule[0].test(text))?.[1];
  if(preferred&&!usedModes.has(preferred)){usedModes.add(preferred);return preferred;}
- const next=sequence.find(mode=>!usedModes.has(mode))||sequence[index%sequence.length];
+ const next=GENERIC_MODE_SEQUENCE.find(mode=>!usedModes.has(mode))||GENERIC_MODE_SEQUENCE[index%GENERIC_MODE_SEQUENCE.length];
  usedModes.add(next);return next;
 }
 function fallbackVisualAction(mode,scene,index){
- if(WATER_MODE_ACTIONS[mode])return WATER_MODE_ACTIONS[mode];
+ const subject=String(scene&&scene.visual||scene&&scene.objective||"el elemento central del tema").slice(0,220);
  const generic={
-  editorial:"Composición: plano medio editorial con el sujeto principal en primer término. Sujeto: el objeto central del tema. Acción: el objeto se desplaza y revela un detalle interno. Resultado: aparece una nueva característica del fenómeno.",
-  compare:"Composición: comparación simultánea en dos paneles. Sujeto: dos estados del mismo objeto. Acción: ambos estados aparecen a la vez y se contrastan. Resultado: la diferencia queda visible.",
-  drop:"Composición: macro extremo. Sujeto: el elemento más pequeño del tema. Acción: la cámara se acerca y revela su estructura. Resultado: se distingue un detalle antes oculto.",
-  particles:"Composición: vista microscópica. Sujeto: elementos pequeños del fenómeno. Acción: los elementos se desplazan en distintas trayectorias. Resultado: se revela su interacción.",
-  spectrum:"Composición: primer plano de un proceso de separación. Sujeto: el elemento que se divide en componentes. Acción: los componentes se separan y ocupan posiciones distintas. Resultado: aparece la estructura interna.",
-  depth:"Composición: corte transversal en profundidad. Sujeto: las capas del fenómeno. Acción: la cámara desciende y muestra cada capa. Resultado: se distingue el cambio entre niveles.",
-  filter:"Composición: plano lateral de una capa transparente. Sujeto: el objeto que atraviesa la capa. Acción: una parte atraviesa y otra se atenúa. Resultado: queda visible el efecto del filtro.",
-  rays:"Composición: plano general con luz lateral. Sujeto: el objeto central y un haz de luz. Acción: el haz atraviesa el entorno y revela el objeto. Resultado: el mecanismo queda expuesto."
+  editorial:"Composición: plano cinematográfico del elemento central. Sujeto: "+subject+". Acción: el fenómeno principal se hace visible mediante una transformación concreta. Resultado: el espectador identifica el cambio que explica esta escena.",
+  compare:"Composición: dos estados comparables en una misma escena. Sujeto: "+subject+". Acción: los estados se muestran lado a lado bajo las mismas condiciones relevantes. Resultado: la diferencia causal queda clara.",
+  detail:"Composición: acercamiento macro a un componente real del fenómeno. Sujeto: "+subject+". Acción: se revela una característica interna pertinente. Resultado: aparece un detalle necesario para comprender el mecanismo.",
+  structure:"Composición: vista seccionada y ordenada. Sujeto: "+subject+". Acción: sus componentes se distinguen y muestran su relación funcional. Resultado: la estructura deja de ser abstracta.",
+  layers:"Composición: corte transversal del sistema. Sujeto: "+subject+". Acción: se muestran niveles o etapas distintas solo si forman parte del fenómeno. Resultado: se entiende cómo se organiza.",
+  motion:"Composición: seguimiento lateral del proceso. Sujeto: "+subject+". Acción: el elemento se desplaza siguiendo el mecanismo descrito. Resultado: se hace visible la secuencia.",
+  interaction:"Composición: plano cercano de los elementos que interactúan. Sujeto: "+subject+". Acción: se muestra el contacto o intercambio que produce el cambio. Resultado: queda clara la relación causal.",
+  reveal:"Composición: detalle inicialmente oculto dentro del sistema. Sujeto: "+subject+". Acción: una apertura o cambio de perspectiva descubre el elemento explicativo. Resultado: se resuelve la pregunta de la escena."
  };
  return generic[mode]||generic.editorial;
 }
-function fallbackVisualTitle(mode,scene,index){return WATER_MODE_TITLES[mode]||String(scene&&scene.on_screen_text||("DETALLE "+(index+1)));}
-
+function fallbackVisualTitle(mode,scene,index){return String(scene&&scene.on_screen_text||("DETALLE "+(index+1)));}
 function sceneSeconds(scene){
  const raw=String(scene?.time||"");
  const match=raw.match(/(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})/);
@@ -326,8 +296,6 @@ function buildTimeline(){
   const beat=beatRange&&beatRange.beat;
   const rawAction=beat?(beat.visual_action||beat.new_stimulus||""):"";
   let visualMode=chooseVisualMode(beat||{},scene,index,usedModes);
-  const isWaterTopic=/agua|oceano|mar|azul/.test(normalizeVisualText(currentTopic+" "+scene.visual));
-  if(index===count-1&&isWaterTopic&&!usedModes.has("finalblue")){usedModes.add("finalblue");visualMode="finalblue";}
   const actionKey=normalizeVisualText(rawAction);
   const visualAction=!rawAction||usedActions.has(actionKey)?fallbackVisualAction(visualMode,scene,index):rawAction;
   usedActions.add(normalizeVisualText(visualAction));
