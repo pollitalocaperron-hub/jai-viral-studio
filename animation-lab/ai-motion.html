@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>J.A.I. · IA visual en movimiento</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#080e16;color:#f5f1e9;font:15px/1.5 system-ui,sans-serif}main{width:min(100% - 28px,560px);margin:24px auto 40px}.eyebrow{font-size:11px;letter-spacing:.16em;color:#8ce3d0;font-weight:800}h1{font-size:28px;line-height:1.08;margin:9px 0}p{color:#b8c3cc}.field{margin:16px 0}label{display:block;font-weight:700;margin-bottom:7px}textarea{width:100%;min-height:110px;padding:12px;border-radius:12px;border:1px solid #3b4b59;background:#111b26;color:#fff;font:inherit}button{border:0;border-radius:12px;padding:13px 16px;font-weight:800;cursor:pointer}#generate{width:100%;background:#8ce3d0;color:#06201b}button:disabled{opacity:.55}.stage{position:relative;overflow:hidden;aspect-ratio:9/16;background:#111b26;border:1px solid #354554;border-radius:18px;margin-top:18px;display:none}.stage.show{display:block}.stage img{position:absolute;width:100%;height:100%;object-fit:cover;inset:0;transform:scale(1.04)}.stage.playing img{animation:camera 10s ease-in-out both}.shade{position:absolute;inset:0;background:linear-gradient(180deg,#0008,transparent 28%,transparent 58%,#000b)}.topline{position:absolute;top:18px;left:18px;font-size:10px;letter-spacing:.18em;font-weight:800;color:#b7f2e6}.caption{position:absolute;left:18px;right:18px;bottom:56px;font-size:clamp(24px,7vw,34px);line-height:1.02;font-weight:900;text-shadow:0 3px 18px #000}.meta{position:absolute;bottom:18px;left:18px;right:18px;display:flex;justify-content:space-between;font-size:10px;letter-spacing:.13em;color:#e6eee9}.bar{height:4px;background:#2c3b46;border-radius:9px;margin-top:12px;overflow:hidden;display:none}.bar.show{display:block}.bar i{display:block;width:0;height:100%;background:#8ce3d0}.status{white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #34434e;border-radius:12px;padding:12px;margin-top:14px;color:#c6d2d9;font-size:13px}.actions{display:flex;gap:9px;margin-top:12px}.actions button{flex:1;background:#1a2935;color:#f5f1e9;border:1px solid #3a4a56}small{color:#8999a4;display:block;margin-top:12px}
+@keyframes camera{0%{transform:scale(1.04) translate(0,0)}30%{transform:scale(1.13) translate(-1.5%,1%)}62%{transform:scale(1.2) translate(1.5%,-1%)}100%{transform:scale(1.27) translate(-1%,0)}}
+@media(prefers-reduced-motion:reduce){.stage.playing img{animation:none}}
+</style>
+</head>
+<body><main>
+<div class="eyebrow">J.A.I. / LABORATORIO VISUAL 03</div>
+<h1>De imagen IA a escena en movimiento</h1>
+<p>Una sola imagen generada se convierte en un plano vertical con movimiento de cámara y subtítulos independientes. Esta prueba no modifica el editor principal.</p>
+<div class="field"><label for="prompt">Descripción visual de la escena</label>
+<textarea id="prompt">Cinematic macro food photography of a thick beef steak in a black cast iron skillet, realistic raw meat fibers and marbling, the surface beginning to turn golden brown from heat, warm kitchen light, shallow depth of field, highly detailed, vertical composition, no text, no labels, no graphics</textarea></div>
+<button id="generate">Generar imagen y preparar animación</button>
+<div id="status" class="status">Listo. Se realizará una sola solicitud de imagen.</div>
+<div id="stage" class="stage"><img id="art" alt="Escena visual generada"><div class="shade"></div><div class="topline">J.A.I. / ESCENA IA</div><div id="caption" class="caption">La transformación empieza en la superficie.</div><div class="meta"><span id="chapter">PLANO MACRO</span><span id="clock">00:00</span></div></div>
+<div id="bar" class="bar"><i id="progress"></i></div>
+<div class="actions"><button id="play" disabled>▶ Reproducir escena</button><button id="restart" disabled>↺ Reiniciar</button></div>
+<small>Acceso anónimo sujeto a disponibilidad y límites de OVHcloud. La imagen permanece en esta sesión; todavía no se guarda en un proyecto ni se exporta a MP4.</small>
+</main>
+<script>
+(()=>{"use strict";
+const $=id=>document.getElementById(id),duration=10000;
+let raf=0,start=0,elapsed=0,playing=false,ready=false;
+const beats=[
+ {at:0,title:"La transformación empieza en la superficie.",label:"PLANO MACRO"},
+ {at:3000,title:"El calor cambia el color y la textura.",label:"ACERCAMIENTO"},
+ {at:6000,title:"Aparece una costra llena de aroma.",label:"DETALLE"},
+ {at:9000,title:"La superficie dorada revela el resultado.",label:"REVELACIÓN"}
+];
+function render(ms){
+ const t=Math.max(0,Math.min(1,ms/duration));
+ const beat=[...beats].reverse().find(x=>ms>=x.at)||beats[0];
+ $("caption").textContent=beat.title;$("chapter").textContent=beat.label;
+ $("clock").textContent="00:"+String(Math.min(10,Math.floor(ms/1000))).padStart(2,"0");
+ $("progress").style.width=(t*100)+"%";
+ if(ms>=duration){playing=false;$("play").textContent="▶ Reproducir de nuevo";$("stage").classList.remove("playing");return;}
+ if(playing)raf=requestAnimationFrame(tick);
+}
+function tick(now){if(!playing)return;elapsed=now-start;render(elapsed);}
+function play(){if(!ready||playing)return;if(elapsed>=duration)elapsed=0;playing=true;start=performance.now()-elapsed;$("stage").classList.remove("playing");void $("stage").offsetWidth;$("stage").classList.add("playing");$("play").textContent="Ⅱ Pausar";raf=requestAnimationFrame(tick);}
+function pause(){playing=false;cancelAnimationFrame(raf);$("stage").classList.remove("playing");$("play").textContent="▶ Continuar";}
+$("generate").addEventListener("click",async()=>{
+ const prompt=$("prompt").value.trim();if(!prompt){$("status").textContent="Escribe una descripción visual.";return;}
+ $("generate").disabled=true;$("status").textContent="Generando imagen con SDXL…";
+ $("stage").classList.remove("show");$("bar").classList.remove("show");ready=false;
+ try{
+  const response=await fetch("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,size:"1024x1024"})});
+  const raw=await response.text();if(!response.ok){$("status").textContent="OVHcloud respondió HTTP "+response.status+":\n"+raw.slice(0,1600);return;}
+  const data=JSON.parse(raw),encoded=data?.data?.[0]?.b64_json;
+  if(!encoded){$("status").textContent="No llegó una imagen reconocible:\n"+JSON.stringify(data).slice(0,1200);return;}
+  $("art").src="data:image/png;base64,"+encoded;
+  $("stage").classList.add("show");$("bar").classList.add("show");
+  $("play").disabled=false;$("restart").disabled=false;ready=true;elapsed=0;render(0);
+  $("status").textContent="Imagen generada. Ya está separada del texto y lista para animarse con movimiento de cámara.";
+ }catch(error){$("status").textContent="No se pudo completar la solicitud: "+(error?.message||String(error));}
+ finally{$("generate").disabled=false;}
+});
+$("play").addEventListener("click",()=>playing?pause():play());
+$("restart").addEventListener("click",()=>{pause();elapsed=0;render(0);$("play").textContent="▶ Reproducir escena";});
+})();
+</script></body></html>
