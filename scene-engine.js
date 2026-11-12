@@ -109,6 +109,9 @@ function draw(ctx,canvas,item,index,progress){
   else if(/sarten|plancha|aceite|chisporrote|contacto con el calor|calor|temperatura|cocinar|entra en la sarten|cae sobre/.test(beat))mode="food_pan";
   else mode=["food_raw","food_pan","food_browning","food_chemistry","food_result"][((Number(index)||0)%5)];
  }
+ const requestedMode=String(item.visualMode||"");
+ const allowedModes=["editorial","paradox","sunbeam","molecules","heat","bluepath","scatter","depth","skytest","finalblue","glass","drop","spectrum","absorb","column","particles","observer","filter","compare","rays","food_raw","food_pan","food_browning","food_chemistry","food_result"];
+ if(allowedModes.indexOf(requestedMode)!==-1)mode=requestedMode;
  ctx.save();
  if(mode==="food_raw"){
   // Gentle camera drift and moving specular highlight keep even the raw-meat shot alive.
@@ -233,11 +236,16 @@ function draw(ctx,canvas,item,index,progress){
   line(82,430,110,790,"rgba(255,255,255,.65)",8);ctx.restore();
   ocean(960);label("UNA MUESTRA PEQUEÑA",cx,280,28);
  }else if(mode==="drop"){
-  // Macro droplet with a white beam passing through and emerging unchanged.
-  const r=205;ctx.fillStyle="rgba(74,190,230,.17)";ctx.strokeStyle="#a7efff";ctx.lineWidth=9;
-  ctx.beginPath();ctx.moveTo(cx,360);ctx.bezierCurveTo(cx+205,535,cx+175,825,cx,890);ctx.bezierCurveTo(cx-175,825,cx-205,535,cx,360);ctx.fill();ctx.stroke();
+  // Gota macro con volumen, reflejo especular y refracción visible.
+  const r=205,dropGrad=ctx.createRadialGradient(cx-72,505,12,cx,640,275);
+  dropGrad.addColorStop(0,"rgba(237,254,255,.92)");dropGrad.addColorStop(.22,"rgba(117,224,246,.62)");dropGrad.addColorStop(.68,"rgba(35,135,194,.30)");dropGrad.addColorStop(1,"rgba(4,35,78,.18)");
+  ctx.save();ctx.shadowColor="#48d8ff";ctx.shadowBlur=34;ctx.fillStyle=dropGrad;ctx.strokeStyle="#b9f4ff";ctx.lineWidth=9;
+  ctx.beginPath();ctx.moveTo(cx,360);ctx.bezierCurveTo(cx+205,535,cx+175,825,cx,890);ctx.bezierCurveTo(cx-175,825,cx-205,535,cx,360);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  ctx.strokeStyle="rgba(255,255,255,.82)";ctx.lineWidth=13;ctx.beginPath();ctx.bezierCurveTo(cx-90,480,cx-105,640,cx-52,760);ctx.stroke();
+  ctx.strokeStyle="rgba(158,244,255,.58)";ctx.lineWidth=7;ctx.beginPath();ctx.ellipse(cx+18,680,112,170,-.2,-1.1,1.1);ctx.stroke();ctx.restore();
   line(35,625,cx-r-8,625,"#fff1b5",16);line(cx-r,625,cx+r,625,"#fff1b5",13);line(cx+r+8,625,w-35,625,"#fff1b5",16);
-  dot(120,625,12,"#fff");dot(580,625,12,"#fff");label("LA LUZ CRUZA CASI INTACTA",cx,270,27);
+  for(let ring=0;ring<3;ring++){ctx.beginPath();ctx.ellipse(cx,930,85+ring*42,12+ring*4,0,0,Math.PI*2);ctx.strokeStyle="rgba(126,225,246,"+(0.55-ring*.13)+")";ctx.lineWidth=4;ctx.stroke();}
+  dot(120,625,12,"#fff");dot(580,625,12,"#fff");label("UNA GOTA, MUCHOS DETALLES",cx,270,27);
  }else if(mode==="spectrum"){
   // Cinematic underwater dispersion: no triangle, no chart-like straight bars.
   // A soft white sunbeam enters the sea and separates into flowing volumetric color ribbons.
@@ -283,10 +291,18 @@ function draw(ctx,canvas,item,index,progress){
   ctx.fillStyle=beam;ctx.beginPath();ctx.moveTo(310,400);ctx.lineTo(410,400);ctx.lineTo(430,1030);ctx.lineTo(290,1030);ctx.closePath();ctx.fill();
   label("MÁS AGUA, MÁS FILTRO",cx,285,29);
  }else if(mode==="particles"){
-  ocean(390);rays(70,430,230,.75);
-  for(let k=0;k<24;k++){const x=90+((k*79+p*180)%540),y=520+((k*97)%510);dot(x,y,5+(k%4)*2,"#b9f4ff");}
-  for(let k=0;k<8;k++){const x=140+k*62;arrow(x,730+Math.sin(p*5+k)*30,x+65,680+Math.sin(p*5+k)*30,"#8cecff",4);}
-  label("PARTÍCULAS DISPERSAN LUZ",cx,275,28);
+  ocean(390);rays(70,430,230,.72);
+  // Partículas con siluetas orgánicas, filamentos y corrientes; no una nube de puntos idénticos.
+  for(let k=0;k<7;k++){
+   const x=105+((k*91+p*105)%510),y=555+((k*113)%430)+Math.sin(p*5+k)*12;
+   ctx.save();ctx.translate(x,y);ctx.rotate((k%2?1:-1)*(.2+p*.18));
+   ctx.strokeStyle="rgba(189,246,255,.82)";ctx.lineWidth=4;ctx.fillStyle="rgba(111,220,242,.34)";
+   ctx.beginPath();ctx.ellipse(0,0,12+(k%3)*5,20+(k%2)*8,.2,0,Math.PI*2);ctx.fill();ctx.stroke();
+   for(let arm=0;arm<4;arm++){const a=arm*Math.PI/2+p*.4;ctx.beginPath();ctx.moveTo(Math.cos(a)*8,Math.sin(a)*8);ctx.quadraticCurveTo(Math.cos(a)*28,Math.sin(a)*25,Math.cos(a)*38,Math.sin(a)*42);ctx.stroke();}
+   ctx.restore();
+  }
+  for(let k=0;k<5;k++){const x=115+k*118,y=760+Math.sin(p*5+k)*35;ctx.strokeStyle="rgba(125,226,255,.48)";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x-35,y+30);ctx.bezierCurveTo(x+5,y-55,x+35,y-40,x+70,y-105);ctx.stroke();}
+  label("LA LUZ CAMBIA DE RUMBO",cx,275,28);
  }else if(mode==="observer"){
   ocean(390);ctx.fillStyle="#ffd56e";ctx.beginPath();ctx.arc(cx,290,60,0,Math.PI*2);ctx.fill();
   for(let k=0;k<7;k++){const x=70+k*95;line(cx,420,x,690,"rgba(180,239,255,.45)",3);}
