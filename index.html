@@ -356,12 +356,19 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  const img=generated.image;
  // Movimiento continuo más perceptible durante TODO el bloque, con dirección alternada.
  const direction=index%2===0?1:-1;
- const scale=Math.max(w/img.width,h/img.height)*(1.045+p*.19);
+ const eased=p*p*(3-2*p),animationText=String(item.animation||item.visual_action||"").toLowerCase();
+ const zoomOut=/reveal|expose|open|widen|pull back|expand view|overview/.test(animationText);
+ const zoomAmount=zoomOut?-.055:.17;
+ const scale=Math.max(w/img.width,h/img.height)*(1.055+eased*zoomAmount);
  const dw=img.width*scale,dh=img.height*scale;
- const driftX=direction*(p-.5)*Math.min(76,w*.10);
- const driftY=Math.sin(p*Math.PI*1.25+index*.7)*Math.min(34,h*.025);
+ const driftX=direction*(eased-.5)*Math.min(104,w*.145);
+ const driftY=Math.sin(eased*Math.PI+index*.55)*Math.min(52,h*.04);
  const dx=(w-dw)/2+driftX,dy=(h-dh)/2+driftY;
  ctx.drawImage(img,dx,dy,dw,dh);
+ if(index>0&&p<.12&&jaiSceneImages[index-1]?.image){
+  const previous=jaiSceneImages[index-1].image,fade=1-p/.12,prevScale=Math.max(w/previous.width,h/previous.height)*1.055;
+  ctx.save();ctx.globalAlpha=Math.max(0,fade);ctx.drawImage(previous,(w-previous.width*prevScale)/2,(h-previous.height*prevScale)/2,previous.width*prevScale,previous.height*prevScale);ctx.restore();
+ }
  const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,"rgba(2,8,18,.10)");shade.addColorStop(.68,"rgba(2,8,18,.04)");shade.addColorStop(1,"rgba(2,8,18,.72)");ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
  const title=String(item.on_screen_text||"").slice(0,62);
  if(title){ctx.fillStyle="#fff";ctx.font="800 36px Arial";ctx.textAlign="center";ctx.shadowColor="#000";ctx.shadowBlur=12;ctx.fillText(title,w/2,h-150);ctx.shadowBlur=0;}
@@ -436,7 +443,7 @@ async function renderVideo(){
   const activeItem=timelineState.items[blockIndex],sceneIndex=Number.isInteger(activeItem.sceneIndex)?activeItem.sceneIndex:0;
   let sceneStart=0,sceneDuration=0;
   timelineState.items.forEach((item,index)=>{if(item.sceneIndex===sceneIndex){if(index<blockIndex)sceneStart+=item.seconds;sceneDuration+=item.seconds;}});
-  const sceneProgress=Math.max(0,Math.min(1,(visualElapsed-(cursor-blockProgress*activeItem.seconds)+sceneStart)/Math.max(1,sceneDuration)));
+  const sceneProgress=Math.max(0,Math.min(1,(sceneStart+blockProgress*activeItem.seconds)/Math.max(1,sceneDuration)));
   drawVideoScene(activeItem,sceneIndex,sceneProgress,elapsed);
   $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+(audioBuffer?" · sincronizada con audio ("+Math.round(totalDuration)+" s)":"")+"…";
   if(elapsed>=totalDuration){recorder.stop();return;}
