@@ -53,6 +53,9 @@ B. PROFESOR: explica el fenómeno desde lo intuitivo hasta lo molecular/técnico
 C. AUDITOR: revisa cada afirmación del guion contra tu conocimiento fiable y las notas aportadas. Si no puedes respaldarla con seguridad, rebájala, matízala o márcala como pendiente; nunca la presentes como verificada. Distingue cambio físico, cambio químico, mecanismo y correlación. No fabriques valores numéricos para llenar escenas.
 D. DIRECTOR VISUAL: solo después de cerrar la explicación, asigna a cada escena una demostración que haga visible la causa o consecuencia explicada. Cada imagen debe aportar evidencia visual conceptual, no decoración. Si una escena no enseña nada nuevo, elimínala o rediseñala.
 E. EDITOR: comprueba que la narración realmente explica el tema completo dentro de la duración, sin sacrificar precisión para meter más estímulos.
+F. ALCANCE UNIVERSAL: antes de escribir, identifica las ramas, procesos y preguntas esenciales que contiene el tema. Separa lo imprescindible, lo complementario y lo que queda fuera del alcance.
+G. DELIMITACIÓN: si el tema reúne varios procesos independientes o demasiado contenido para la duración, no los comprimas a la fuerza. Propón una visión general honesta o una serie de episodios conectados y define qué explica este episodio.
+H. PERTINENCIA DE EVIDENCIA: una fuente encontrada por búsqueda temática o coincidencia de palabras es solo una candidata. No digas que respalda una afirmación hasta comprobar que el título/resumen o el texto leído trata directamente esa afirmación. Distingue fuente candidata, respaldo directo y afirmación sin verificar.
 - La profundidad informativa tiene prioridad sobre el vocabulario técnico, la espectacularidad y la cantidad de escenas.
 - No uses términos como moléculas, enlaces, energía, presión, ondas o reacción sin explicar qué papel desempeñan en el mecanismo.
 - No conviertas una hipótesis explicativa simplificada en una descripción literal de lo que ocurre a escala molecular.
