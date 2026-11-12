@@ -353,19 +353,57 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     plan.editorial_warnings = (Array.isArray(plan.fact_audit) ? plan.fact_audit : [])
       .filter(item => item.status === "no verificada")
       .map(item => ({ claim: item.claim, reason: "No se vinculó una fuente académica recuperada; requiere revisión antes de publicar como dato especializado." }));
-    const spokenText = String(plan.script || "").replace(/\[[^\]]+\]/g, " ");
+    const spokenText = String(plan.script || "").replace(/\\[[^\\]]+\\]/g, " ");
     const wordCount = (spokenText.match(/[a-záéíóúüñ0-9]+/gi) || []).length;
     const estimatedSeconds = Math.round(wordCount / 140 * 60);
-    const starts = Array.isArray(plan.story) ? plan.story.map(scene => { const value = scene && scene.time; if (typeof value === "number") return value; if (typeof value === "string" && /^\d+$/.test(value)) return Number(value); const match = String(value || "").match(/(\d+):(\d{2})/); return match ? Number(match[1]) * 60 + Number(match[2]) : NaN; }).filter(Number.isFinite) : [];
-    const storyboardSeconds = starts.length ? Math.max(...starts) + 6 : 0;
-    const mapBlocks = Array.isArray(plan.retention_map) ? plan.retention_map : [];
-    const mapRanges = mapBlocks.map(beat => {
-      const match = String(beat.time || "").match(/(\d+):(\d{2})\s*-\s*(\d+):(\d{2})/);
+    const parseTime = value => {
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+      const text = String(value || "");
+      const match = text.match(/(\\d+):(\\d{2})/);
+      return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
+    };
+    const parseRange = value => {
+      const match = String(value || "").match(/(\\d+):(\\d{2})\\s*[-–—]\\s*(\\d+):(\\d{2})/);
       return match ? { start: Number(match[1]) * 60 + Number(match[2]), end: Number(match[3]) * 60 + Number(match[4]) } : null;
-    });
-    const mapCoverageValid = mapBlocks.length === Math.ceil(storyboardSeconds / 3) && mapRanges.every((range, index) => range && range.end - range.start > 0 && range.end - range.start <= 3 && (index === 0 ? range.start === 0 : range.start === mapRanges[index - 1].end)) && mapRanges.length > 0 && mapRanges[mapRanges.length - 1].end === storyboardSeconds;
-    plan.duration_validation = { script_word_count: wordCount, estimated_narration_seconds: estimatedSeconds, storyboard_seconds: storyboardSeconds, retention_blocks: mapBlocks.length, retention_map_valid: mapCoverageValid, within_tolerance: storyboardSeconds > 0 && Math.abs(estimatedSeconds - storyboardSeconds) <= Math.max(5, storyboardSeconds * 0.15) && mapCoverageValid };
-    if (!plan.duration_validation.within_tolerance) return res.status(422).json({ error: "La duración estimada del guion, el storyboard y el mapa de retención no coinciden. El plan fue bloqueado para evitar una falsa sincronización.", diagnosticCode: "SCRIPT_TIMELINE_MISMATCH", duration_validation: plan.duration_validation });
+    };
+    const scenes = Array.isArray(plan.story) ? plan.story : [];
+    const sceneRanges = scenes.map(scene => parseRange(scene && scene.time)).filter(Boolean);
+    const sceneStarts = scenes.map(scene => parseTime(scene && scene.time)).filter(Number.isFinite);
+    const mapBlocks = Array.isArray(plan.retention_map) ? plan.retention_map : [];
+    const mapRanges = mapBlocks.map(beat => parseRange(beat && beat.time));
+    const mapEnd = mapRanges.length && mapRanges.every(Boolean) ? mapRanges[mapRanges.length - 1].end : 0;
+    // Prefer explicit scene end-times. If the model supplies only scene start-times,
+    // use the retention-map endpoint rather than assuming every scene lasts six seconds.
+    const storyboardSeconds = sceneRanges.length
+      ? Math.max(...sceneRanges.map(range => range.end))
+      : (mapEnd || (sceneStarts.length ? Math.max(...sceneStarts) + 6 : 0));
+    const mapCoverageValid = mapRanges.length > 0 &&
+      mapRanges.every((range, index) => range && range.end > range.start && range.end - range.start <= 3 &&
+        (index === 0 ? range.start === 0 : range.start === mapRanges[index - 1].end)) &&
+      mapEnd === storyboardSeconds;
+    const narrationDifference = Math.abs(estimatedSeconds - storyboardSeconds);
+    const narrationWithinTolerance = storyboardSeconds > 0 &&
+      narrationDifference <= Math.max(8, storyboardSeconds * 0.25);
+    const durationConsistent = storyboardSeconds > 0 && mapCoverageValid && narrationWithinTolerance;
+    plan.duration_validation = {
+      script_word_count: wordCount,
+      estimated_narration_seconds: estimatedSeconds,
+      storyboard_seconds: storyboardSeconds,
+      retention_blocks: mapBlocks.length,
+      retention_map_valid: mapCoverageValid,
+      narration_within_tolerance: narrationWithinTolerance,
+      within_tolerance: durationConsistent,
+      status: durationConsistent ? "duración estimada coherente; confirmar con el audio real" : "requiere ajuste de montaje o locución",
+      warning: durationConsistent ? "" : "El plan se muestra para revisión. La duración hablada es una estimación; ajusta los tiempos al audio real antes de exportar."
+    };
+    if (!mapCoverageValid) {
+      plan.editorial_warnings = [...(Array.isArray(plan.editorial_warnings) ? plan.editorial_warnings : []),
+        { claim: "Cronología del mapa de retención", reason: "Los bloques no cubren la duración del storyboard en intervalos consecutivos de hasta 3 segundos; revisar antes de producir." }];
+    }
+    if (!narrationWithinTolerance) {
+      plan.editorial_warnings = [...(Array.isArray(plan.editorial_warnings) ? plan.editorial_warnings : []),
+        { claim: "Duración de la narración", reason: "La estimación por número de palabras difiere del montaje previsto; ajustar la locución o el montaje usando la duración del audio real." }];
+    }
     console.info("[JAI] Plan generado y validado con", providerUsed);
     return res.status(200).json(plan);
   } catch (error) {
