@@ -670,6 +670,40 @@ $("stopScript").addEventListener("click",()=>{if("speechSynthesis" in window)spe
 $("create").addEventListener("click",makePlan);
 $("copy").addEventListener("click",async()=>{if(!currentPlan)return;try{await navigator.clipboard.writeText(currentPlan);$("status").textContent="Plan copiado.";}catch(e){$("status").textContent="No se pudo copiar automáticamente. Selecciona el texto para copiarlo.";}});
 function getProjects(){try{const value=JSON.parse(localStorage.getItem("jaiProjects")||"[]");return Array.isArray(value)?value:[]}catch(e){return[]}}
+function loadSavedProject(project){
+ if(!project||!project.data){$("status").textContent="Este registro antiguo no contiene un plan completo para restaurar.";return;}
+ const data=project.data;
+ $("topic").value=String(project.topic||"");$("research").value=String(project.notes||"");
+ currentTopic=String(project.topic||"");currentPlanData=data;currentPlan=String(project.plan||JSON.stringify(data,null,2));
+ if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
+ kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;captionCues=[];
+ $("kokoroAudio").pause();$("kokoroAudio").removeAttribute("src");$("kokoroAudio").style.display="none";
+ $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("generateCaptions").disabled=true;
+ $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">Proyecto guardado</span><span class="tag">Dirección visual CGI</span>';
+ $("angle").textContent=readable(data.angle||"Enfoque pendiente.");
+ $("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");
+ renderResearchSources(data.research_sources);
+ $("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");
+ $("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");
+ $("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");
+ $("hook").textContent=readable(data.hook||"Hook pendiente.");
+ $("script").textContent=readable(data.script||"Guion pendiente.");
+ renderStory(data.story||"Storyboard pendiente.");
+ currentDurationValidation=data.duration_validation||null;
+ currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];
+ currentScenes=Array.isArray(data.story)?data.story:[];
+ renderRetentionMap(currentRetentionMap);
+ jaiSceneImages=[];$("visualScenes").replaceChildren();
+ $("visualStatus").textContent="Proyecto restaurado. Los fotogramas no se guardan en el navegador; vuelve a generarlos para continuar el montaje.";
+ $("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";
+ $("verification").textContent=readable(data.verification||"Sin datos.");
+ $("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
+ buildTimeline();
+ const normalizedRetention=timelineState.items.map(item=>({time:item.time,new_stimulus:item.retentionStimulus,narrative_advance:item.narrativeAdvance||item.visualAction,curiosity:item.curiosity,visual_action:item.visualAction,on_screen_text:item.on_screen_text}));
+ renderRetentionMap(normalizedRetention);
+ if(currentPlan){currentPlan=currentPlan.replace(readable(data.retention_map),readable(normalizedRetention));}
+ $("output").classList.add("show");$("status").textContent="Proyecto restaurado. Puedes revisar el plan, regenerar la voz y crear de nuevo los fotogramas."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
+}
 function renderProjects(){
  const root=$("projects");root.replaceChildren();const projects=getProjects();
  if(!projects.length){root.textContent="Todavía no hay proyectos guardados en este dispositivo.";return;}
@@ -678,6 +712,7 @@ function renderProjects(){
   const title=document.createElement("b");title.textContent=String(project.topic||"Proyecto sin título");
   const date=document.createElement("div");date.className="hint";date.textContent=String(project.date||"Fecha no disponible");
   const actions=document.createElement("div");actions.className="row";
+  const loadButton=document.createElement("button");loadButton.type="button";loadButton.className="secondary";loadButton.textContent="Cargar";loadButton.disabled=!project.data;loadButton.addEventListener("click",()=>loadSavedProject(project));
   const copyButton=document.createElement("button");copyButton.type="button";copyButton.className="secondary";copyButton.textContent="Copiar plan";
   copyButton.addEventListener("click",async()=>{
    const content=String(project.plan||JSON.stringify(project.data||{},null,2));
@@ -690,7 +725,7 @@ function renderProjects(){
    try{localStorage.setItem("jaiProjects",JSON.stringify(latest));renderProjects();$("status").textContent="Proyecto eliminado de este dispositivo.";}
    catch(e){$("status").textContent="No se pudo actualizar el almacenamiento.";}
   });
-  actions.append(copyButton,deleteButton);card.append(title,date,actions);root.appendChild(card);
+  actions.append(loadButton,copyButton,deleteButton);card.append(title,date,actions);root.appendChild(card);
  });
 }
 $("save").addEventListener("click",()=>{
