@@ -178,7 +178,7 @@ async function generateAIVisuals(){
   let generatedCount=jaiSceneImages.filter(Boolean).length;
   for(let i=0;i<scenes.length;i++){
    if(jaiSceneImages[i]?.image)continue;
-   if(lastRequestAt){
+   if(lastImageRequestAt){
     const remaining=Math.max(0,35000-(Date.now()-lastImageRequestAt));
     if(remaining>0){$("visualStatus").textContent="Escena "+(i+1)+" de "+scenes.length+" · pausa de seguridad del servicio gratuito ("+Math.ceil(remaining/1000)+" s).";await wait(remaining);}
    }
