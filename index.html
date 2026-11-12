@@ -59,7 +59,9 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <div class="hint" id="kokoroStatus" aria-live="polite">Primero genera el guion y después crea la narración neuronal.</div>
  <audio id="kokoroAudio" controls style="display:none;width:100%;margin-top:12px"></audio>
  <a id="downloadNarration" class="secondary" hidden download="jai-narracion.wav">Descargar narración WAV</a>
- <label for="captionImport">Importar subtítulos con tiempos (SRT o VTT)</label>
+ <label for="captionFile">Archivo de subtítulos (SRT/VTT)</label>
+ <input id="captionFile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip">
+ <label for="captionImport">O pega aquí los subtítulos con sus tiempos</label>
  <textarea id="captionImport" rows="5" placeholder="00:00:00,000 --> 00:00:02,500&#10;Texto del primer subtítulo&#10;&#10;00:00:02,500 --> 00:00:05,000&#10;Texto del segundo subtítulo"></textarea>
  <div class="row" style="margin-top:8px">
   <button class="secondary" id="importCaptions" type="button">Cargar subtítulos</button>
@@ -353,7 +355,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
    const visible=lines.slice(0,2),lineHeight=43,boxHeight=visible.length*lineHeight+34,boxY=h-255-boxHeight/2;
    const maxWidth=Math.max(...visible.map(value=>ctx.measureText(value).width),0)+44;
    const boxX=(w-maxWidth)/2;
-   ctx.fillStyle="rgba(3,9,20,.82)";ctx.beginPath();ctx.roundRect(boxX,boxY,maxWidth,boxHeight,16);ctx.fill();
+   ctx.fillStyle="rgba(3,9,20,.82)";ctx.fillRect(boxX,boxY,maxWidth,boxHeight);
    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";
    visible.forEach((value,i)=>ctx.fillText(value,w/2,boxY+17+lineHeight*(i+.5)));
    ctx.textBaseline="alphabetic";
@@ -519,6 +521,11 @@ function parseSubtitleFile(raw){
  });
  return cues.sort((a,b)=>a.start-b.start);
 }
+$("captionFile").addEventListener("change",async()=>{
+ const file=$("captionFile").files&&$("captionFile").files[0];if(!file)return;
+ try{$("captionImport").value=await file.text();$("captionStatus").textContent="Archivo cargado. Pulsa Cargar subtítulos para revisar y editar sus tiempos.";}
+ catch(error){$("captionStatus").textContent="No se pudo leer el archivo seleccionado.";}
+});
 $("importCaptions").addEventListener("click",()=>{
  const cues=parseSubtitleFile($("captionImport").value);
  if(!cues.length){$("captionStatus").textContent="No se encontraron subtítulos válidos. Comprueba que el archivo use tiempos SRT o VTT.";return;}
