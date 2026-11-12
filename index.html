@@ -131,7 +131,7 @@ function renderStory(value){
  }else{const box=document.createElement("div");box.className="result";box.textContent=readable(value);root.appendChild(box);}
 }
 
-let currentScenes=[],jaiSceneImages=[];
+let currentScenes=[],jaiSceneImages=[],currentDurationValidation=null;
 let planningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
 function renderVisualScenes(){
  const root=$("visualScenes");root.replaceChildren();
@@ -246,7 +246,7 @@ function renderTimeline(){
  const coverage=map===story?"storyboard y mapa coinciden":map<story?"mapa "+map+" s; "+(story-map)+" s completados":"mapa recortado al final del storyboard";
  $("timelineSummary").textContent=timelineState.items.length+" bloques · "+total+" segundos · storyboard "+story+" s · "+coverage+".";
  $("previewTimeline").disabled=!timelineState.items.length;
- $("renderVideo").disabled=!timelineState.items.length||jaiSceneImages.length!==timelineState.items.length;
+ $("renderVideo").disabled=!timelineState.items.length||jaiSceneImages.length!==timelineState.items.length||!currentDurationValidation?.within_tolerance;
 }
 function buildTimeline(){
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("timelineStatus").textContent="Primero genera un plan con storyboard.";return;}
@@ -365,6 +365,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
 async function renderVideo(){
  if(planningInProgress||visualGenerationRunning||narrationGenerating){$("renderStatus").textContent="Espera a que terminen las tareas de producción antes de renderizar.";return;}
  if(renderRecording||!timelineState.items.length)return;
+ if(!currentDurationValidation?.within_tolerance){$("renderStatus").textContent="Render bloqueado: corrige primero la duración y la cronología del plan editorial.";return;}
  if(jaiSceneImages.length!==timelineState.items.length||timelineState.items.some((item,i)=>!jaiSceneImages[i]?.image)){ $("renderStatus").textContent="Primero genera y revisa todos los fotogramas cinematográficos. No se usarán dibujos de respaldo.";return;}
  const supported=window.MediaRecorder&&renderCanvas.captureStream;
  if(!supported){$("renderStatus").textContent="Este navegador no permite grabar el lienzo. Prueba con Chrome actualizado.";return;}
@@ -466,7 +467,7 @@ async function makePlan(){
   $("captionStatus").textContent="Nuevo guion: genera la narración y J.A.I. preparará sus subtítulos automáticamente.";
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual CGI</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
-  renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
+  renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
   rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
   buildTimeline();
   const normalizedRetention=timelineState.items.map(item=>({time:item.time,new_stimulus:item.retentionStimulus,narrative_advance:item.narrativeAdvance||item.visualAction,curiosity:item.curiosity,visual_action:item.visualAction,on_screen_text:item.on_screen_text}));
