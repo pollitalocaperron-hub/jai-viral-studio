@@ -360,9 +360,10 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     const spokenText = String(plan.script || "").replace(/\\[[^\\]]+\\]/g, " ");
     const wordCount = (spokenText.match(/[a-záéíóúüñ0-9]+/gi) || []).length;
     const estimatedSeconds = Math.round(wordCount / 140 * 60);
-    const parseTime = value => {
+    const parseClock = value => {
       if (typeof value === "number" && Number.isFinite(value)) return value;
-      const text = String(value || "");
+      const text = String(value || "").trim();
+      if (/^\\d+(?:\\.\\d+)?$/.test(text)) return Number(text);
       const match = text.match(/(\\d+):(\\d{2})/);
       return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
     };
@@ -371,16 +372,21 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
       return match ? { start: Number(match[1]) * 60 + Number(match[2]), end: Number(match[3]) * 60 + Number(match[4]) } : null;
     };
     const scenes = Array.isArray(plan.story) ? plan.story : [];
-    const sceneRanges = scenes.map(scene => parseRange(scene && scene.time)).filter(Boolean);
-    const sceneStarts = scenes.map(scene => parseTime(scene && scene.time)).filter(Number.isFinite);
+    const parsedScenes = scenes.map(scene => {
+      const range = parseRange(scene && scene.time);
+      return range || { start: parseClock(scene && scene.time), end: NaN };
+    }).filter(scene => Number.isFinite(scene.start)).sort((a,b) => a.start-b.start);
     const mapBlocks = Array.isArray(plan.retention_map) ? plan.retention_map : [];
     const mapRanges = mapBlocks.map(beat => parseRange(beat && beat.time));
     const mapEnd = mapRanges.length && mapRanges.every(Boolean) ? mapRanges[mapRanges.length - 1].end : 0;
-    // Prefer explicit scene end-times. If the model supplies only scene start-times,
-    // use the retention-map endpoint rather than assuming every scene lasts six seconds.
-    const storyboardSeconds = sceneRanges.length
-      ? Math.max(...sceneRanges.map(range => range.end))
-      : (mapEnd || (sceneStarts.length ? Math.max(...sceneStarts) + 6 : 0));
+    const inferredSceneEnds = parsedScenes.map((scene,index) => {
+      if (Number.isFinite(scene.end) && scene.end > scene.start) return scene.end;
+      const next = parsedScenes[index+1];
+      return next && next.start > scene.start ? next.start : (mapEnd > scene.start ? mapEnd : scene.start + 6);
+    });
+    const storyboardSeconds = parsedScenes.length
+      ? Math.max(...inferredSceneEnds)
+      : mapEnd;
     const mapCoverageValid = mapRanges.length > 0 &&
       mapRanges.every((range, index) => range && range.end > range.start && range.end - range.start <= 3 &&
         (index === 0 ? range.start === 0 : range.start === mapRanges[index - 1].end)) &&
