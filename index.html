@@ -98,6 +98,18 @@ function renderRetentionMap(value){
   root.appendChild(card);
  });
 }
+function renderResearchSources(value){
+ const root=$("researchSources");root.replaceChildren();
+ if(!Array.isArray(value)||!value.length){root.textContent="No se recuperaron fuentes académicas para este tema. Las afirmaciones deben tratarse como no verificadas.";return;}
+ value.forEach(source=>{
+  const item=document.createElement("article");item.className="scene";
+  const heading=document.createElement("h4");heading.textContent="["+String(source.id||"Fuente")+"] "+String(source.title||"Sin título");item.appendChild(heading);
+  const meta=document.createElement("p");meta.textContent=[source.year||"Año no indicado",source.authors||"Autores no disponibles"].join(" · ");item.appendChild(meta);
+  if(source.url){const link=document.createElement("a");link.href=source.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Abrir publicación / DOI";link.style.color="#69d9ef";item.appendChild(link);}
+  const abstract=document.createElement("p");abstract.textContent=source.abstract||"No se recuperó resumen.";item.appendChild(abstract);
+  root.appendChild(item);
+ });
+}
 function renderStory(value){
  const root=$("story");root.replaceChildren();
  if(Array.isArray(value)){
@@ -442,17 +454,17 @@ async function makePlan(){
  $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";
  try{
   const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,learning_memory:buildLearningMemoryContext()})});
-  const data=await readJsonResponse(response,"Generador del plan");if(!response.ok)throw new Error(data.error||"No se pudo generar el plan.");
+  const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;throw failure;}
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual CGI</span>';
-  $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");$("researchSources").textContent=Array.isArray(data.research_sources)&&data.research_sources.length?data.research_sources.map(s=>"["+s.id+"] "+s.title+" ("+(s.year||"s/f")+")\n"+(s.authors||"Autores no disponibles")+"\n"+(s.url||"Sin enlace")+"\n"+(s.abstract||"Resumen no disponible")).join("\n\n"):"No se recuperaron fuentes académicas para este tema. Las afirmaciones deberán permanecer como no verificadas.";$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
-  renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.");
+  $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
+  renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
   rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
   buildTimeline();
   const normalizedRetention=timelineState.items.map(item=>({time:item.time,new_stimulus:item.retentionStimulus,narrative_advance:item.narrativeAdvance||item.visualAction,curiosity:item.curiosity,visual_action:item.visualAction,on_screen_text:item.on_screen_text}));
   renderRetentionMap(normalizedRetention);
   currentPlan=currentPlan.replace(readable(data.retention_map),readable(normalizedRetention));
   $("output").classList.add("show");$("status").textContent="¡Plan generado! Revisa las escenas, verificaciones y control de calidad antes de producir."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
- }catch(error){$("status").textContent=error.message||"Ocurrió un error al generar el plan.";}finally{$("create").disabled=false;}
+ }catch(error){$("status").textContent=error.message||"Ocurrió un error al generar el plan.";if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{$("create").disabled=false;}
 }
 
 let kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioDuration=0,kokoroSampleRate=24000,kokoroSource=null,kokoroAudioContext=null;
