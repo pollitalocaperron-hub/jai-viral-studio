@@ -84,10 +84,9 @@ ${safeNotes}
 `;
 
   try {
-    // Respaldo automático: si el modelo principal está saturado (503/504),
-    // espera brevemente y prueba otros modelos Flash con la misma API key.
-    // No se cambia a proveedores de pago ni se requiere otra clave.
-    const modelFallbacks = ["gemini-3.5-flash-lite", "gemini-3.8-flash"];
+    // Respaldo escalonado: modelos Flash estables de distintas generaciones.
+    // Solo reintenta ante saturación/timeout; nunca activa facturación ni otro proveedor.
+    const modelFallbacks = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
     const requestBody = JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
@@ -112,8 +111,12 @@ ${safeNotes}
         }
       );
       if (response.ok || ![503, 504].includes(response.status) || i === modelFallbacks.length - 1) break;
-      console.warn(`[JAI][Gemini] ${selectedModel} saturado (HTTP ${response.status}); se probará el siguiente modelo.`);
-      await new Promise(resolve => setTimeout(resolve, 1200 * (i + 1)));
+      const retryAfter = Number(response.headers.get("retry-after"));
+      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+        ? Math.min(retryAfter * 1000, 2500)
+        : Math.min(900 * (i + 1), 2200);
+      console.warn(`[JAI][Gemini] ${selectedModel} saturado (HTTP ${response.status}); siguiente modelo en ${waitMs} ms.`);
+      await new Promise(resolve => setTimeout(resolve, waitMs));
     }
     console.info("[JAI][Gemini] Modelo utilizado:", selectedModel);
 
