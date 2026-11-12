@@ -27,14 +27,15 @@ function draw(ctx,canvas,item,index,progress){
  if(/aparicion simultanea|vaso y el mar|vaso frente al mar|paradoja/.test(beat))mode="paradox";
  else if(/primer plano.*vaso|vaso|vidrio|cristal/.test(beat))mode="glass";
  else if(/ingreso.*rayo|rayo de sol|luz solar directa|sol entra|haz de luz/.test(beat))mode="sunbeam";
- else if(/descomposicion|bandas de colores|espectro|arcoiris/.test(beat))mode="spectrum";
+ else if(/descomposicion|bandas de colores|espectro|arcoiris|siete colores|colores ocultos|se despliega/.test(beat))mode="spectrum";
  else if(/molecula|molecular|contacto de la luz/.test(beat))mode="molecules";
  else if(/calor|energia roja|transformacion de la energia|se convierte/.test(beat))mode="heat";
  else if(/camino.*ondas azules|ondas azules|azul penetra|azul sigue|continua avanzando/.test(beat))mode="bluepath";
- else if(/dispersion|dispersa|hacia arriba|sale hacia la superficie/.test(beat))mode="scatter";
+ else if(/dispersion|dispersa|rebote|sube a la superficie|hacia arriba|sale hacia la superficie|asciende/.test(beat))mode="scatter";
  else if(/grafico de profundidad|profundidad|metros|distancia recorrida/.test(beat))mode="depth";
- else if(/comparacion|comparar|lado a lado|volumen|vaso vs|escala/.test(beat))mode="compare";
- else if(/acercamiento final|columna azul|azul profundo|recompensa final/.test(beat))mode="finalblue";
+ else if(/comparacion|comparar|lado a lado|volumen|vaso vs|escala|cuestion de grosor|grosor|recorrido corto/.test(beat))mode="compare";
+ else if(/no es el cielo|cielo nublado|cielo gris|mito del reflejo|papel del cielo/.test(beat))mode="skytest";
+ else if(/acercamiento final|columna azul|azul profundo|recompensa final|el agua crea su azul|titulo final/.test(beat))mode="finalblue";
  else if(/gota|macro|lupa/.test(beat))mode="drop";
  else if(/particula|suspension/.test(beat))mode="particles";
  else if(/absor|rojo|naranja|amarillo|se apaga|desvanec/.test(beat))mode="absorb";
@@ -97,6 +98,22 @@ function draw(ctx,canvas,item,index,progress){
   for(let k=0;k<6;k++){const y=470+k*105;line(115,y,150,y,"#eafaff",5);label((k*10)+" m",205,y+8,21,"#d7f5ff");}
   const fade=ctx.createLinearGradient(0,420,0,1050);fade.addColorStop(0,"rgba(255,90,75,.9)");fade.addColorStop(.28,"rgba(255,90,75,.15)");fade.addColorStop(.29,"rgba(255,90,75,0)");fade.addColorStop(.55,"rgba(78,190,255,.42)");fade.addColorStop(1,"rgba(38,132,255,.08)");
   ctx.fillStyle=fade;ctx.fillRect(270,430,330,620);label("LA PROFUNDIDAD FILTRA LA LUZ",cx,285,25);
+ }else if(mode==="skytest"){
+  // Separate the ocean's intrinsic blue from a grey, non-blue sky: no mirror-like reflection.
+  ocean(470);
+  ctx.fillStyle="#8796a8";ctx.fillRect(0,180,w,280);
+  for(let k=0;k<7;k++){
+   const x=45+k*100,y=245+(k%3)*38;
+   ctx.fillStyle="rgba(225,232,238,.72)";ctx.beginPath();ctx.ellipse(x,y,72,27,0,0,Math.PI*2);ctx.fill();
+   ctx.beginPath();ctx.ellipse(x+34,y-10,48,24,0,0,Math.PI*2);ctx.fill();
+  }
+  // A visible cross-section shows blue light emerging from the water itself.
+  for(let k=0;k<5;k++){
+   const x=115+k*115;
+   arrow(x,900,x+18,540,"#8ce8ff",8);
+  }
+  panel(45,970,630,100,"rgba(2,13,32,.72)");
+  label("EL AZUL NACE EN EL AGUA",cx,1032,27);
  }else if(mode==="finalblue"){
   // Final payoff: a cinematic blue water column with rays fading through depth.
   ocean(340);const g=ctx.createLinearGradient(0,350,0,1100);g.addColorStop(0,"rgba(114,229,255,.75)");g.addColorStop(.45,"rgba(29,151,218,.28)");g.addColorStop(1,"rgba(1,16,53,.05)");
