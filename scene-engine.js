@@ -16,7 +16,42 @@ function draw(ctx,canvas,item,index,progress){
  const dot=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();};
  const panel=(x,y,ww,hh,color)=>{ctx.fillStyle=color;ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,ww,hh,22);else{ctx.rect(x,y,ww,hh);}ctx.fill();};
  const arrow=(x1,y1,x2,y2,color="#ffe08a",width=8)=>{line(x1,y1,x2,y2,color,width);const a=Math.atan2(y2-y1,x2-x1);ctx.save();ctx.translate(x2,y2);ctx.rotate(a);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-22,-12);ctx.lineTo(-22,12);ctx.closePath();ctx.fill();ctx.restore();};
- const ocean=(top=430)=>{const g=ctx.createLinearGradient(0,top,0,h);g.addColorStop(0,"#28b8d0");g.addColorStop(.28,"#087fa7");g.addColorStop(1,"#031a3d");ctx.fillStyle=g;ctx.fillRect(0,top,w,h-top);ctx.fillStyle="#8cf1ef";ctx.fillRect(0,top-8,w,9);};
+ const ocean=(top=430)=>{
+  // Cinematic environment: atmospheric sky, layered horizon, moving wave bands and underwater caustics.
+  const sky=ctx.createLinearGradient(0,0,0,top+30);sky.addColorStop(0,"#8eb9d0");sky.addColorStop(.62,"#d6e8e8");sky.addColorStop(1,"#f7dca8");
+  ctx.fillStyle=sky;ctx.fillRect(0,0,w,top+12);
+  const haze=ctx.createRadialGradient(w*.73,top*.48,12,w*.73,top*.48,290);haze.addColorStop(0,"rgba(255,242,194,.7)");haze.addColorStop(1,"rgba(255,242,194,0)");
+  ctx.fillStyle=haze;ctx.fillRect(0,0,w,top+30);
+  const g=ctx.createLinearGradient(0,top,0,h);g.addColorStop(0,"#45c5d0");g.addColorStop(.12,"#148eaf");g.addColorStop(.43,"#07577f");g.addColorStop(1,"#03152f");
+  ctx.fillStyle=g;ctx.fillRect(0,top,w,h-top);
+  // Distant horizon and successive wave planes create real spatial depth.
+  ctx.fillStyle="rgba(4,54,78,.22)";ctx.beginPath();ctx.moveTo(0,top+18);ctx.quadraticCurveTo(w*.28,top-4,w*.52,top+15);ctx.quadraticCurveTo(w*.8,top+35,w,top+8);ctx.lineTo(w,top+75);ctx.lineTo(0,top+75);ctx.fill();
+  for(let layer=0;layer<5;layer++){
+   const y=top+55+layer*48,amp=7+layer*2,shift=(p*52+layer*73)%150;
+   ctx.beginPath();ctx.moveTo(-30,y);
+   for(let x=-30;x<=w+40;x+=35)ctx.quadraticCurveTo(x+17,y+Math.sin((x+shift)/74)*amp,x+35,y+Math.sin((x+shift+35)/74)*amp);
+   ctx.strokeStyle="rgba(178,245,239,"+(0.34-layer*.045)+")";ctx.lineWidth=layer<2?5:3;ctx.stroke();
+  }
+  // Broken sunlight reflections on the surface.
+  for(let k=0;k<18;k++){
+   const x=(k*47+Math.sin(p*5+k)*18)%w,y=top+12+(k%4)*12;
+   ctx.strokeStyle="rgba(255,239,190,"+(.18+(k%3)*.08)+")";ctx.lineWidth=2+(k%3);
+   ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+18+(k%4)*9,y+Math.sin(p*4+k)*3);ctx.stroke();
+  }
+  // Subtle underwater light shafts and caustic ripples add scale and atmosphere.
+  ctx.save();ctx.globalAlpha=.22;
+  for(let k=0;k<6;k++){
+   const x=55+k*125+Math.sin(p*2+k)*13;
+   const beam=ctx.createLinearGradient(x,top+20,x+90,h*.8);beam.addColorStop(0,"rgba(177,249,245,.7)");beam.addColorStop(1,"rgba(75,190,220,0)");
+   ctx.fillStyle=beam;ctx.beginPath();ctx.moveTo(x-9,top+20);ctx.lineTo(x+9,top+20);ctx.lineTo(x+100,h*.78);ctx.lineTo(x+45,h*.78);ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
+  for(let k=0;k<12;k++){
+   const x=35+((k*61+p*18)%650),y=top+190+((k*97)%560);
+   ctx.strokeStyle="rgba(135,226,235,.13)";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x,y,12+(k%4)*5,5+(k%3)*2,0,0,Math.PI*2);ctx.stroke();
+  }
+  ctx.fillStyle="rgba(191,249,242,.75)";ctx.fillRect(0,top-3,w,5);
+ };
  const rays=(x,y,len,alpha=1)=>{ctx.save();ctx.globalAlpha=alpha;["#fff3bd","#ff9a70","#ffdf77","#70dcff","#9c9aff"].forEach((c,k)=>{ctx.strokeStyle=c;ctx.lineWidth=k===0?13:8;ctx.beginPath();ctx.moveTo(x,y+k*12);ctx.lineTo(x+len,y+len*.58+k*9);ctx.stroke();});ctx.restore();};
  const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,"#07162c");bg.addColorStop(1,water?"#06435e":"#18294b");ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
  // Beat-level action has priority. Broad words such as "comparación" in the scene objective
