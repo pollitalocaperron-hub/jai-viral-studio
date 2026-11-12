@@ -84,98 +84,125 @@ ${safeNotes}
 `;
 
   try {
-    // Respaldo escalonado: modelos Flash estables de distintas generaciones.
-    // Solo reintenta ante saturación/timeout; nunca activa facturación ni otro proveedor.
-    const modelFallbacks = [
-      { id: "gemini-3.8-flash", timeout: 28000 },
-      { id: "gemini-3.6-flash", timeout: 12000 },
-      { id: "gemini-3.5-flash-lite", timeout: 8000 }
-    ];
-    const requestBody = JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.55,
-        maxOutputTokens: 7000
-      }
-    });
-    let response;
-    let selectedModel = "";
-    let lastNetworkError = "";
-    for (let i = 0; i < modelFallbacks.length; i++) {
-      selectedModel = modelFallbacks[i].id;
+    // Proveedor principal: Groq GPT-OSS 120B. Gemini queda como respaldo.
+    let output = "";
+    let finishReason = "unknown";
+    let providerUsed = "";
+    let groqFailure = "";
+
+    const groqKey = process.env.GROQ_API_KEY;
+    if (groqKey) {
       try {
-        response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent`,
+        const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${groqKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "openai/gpt-oss-120b",
+            messages: [
+              { role: "system", content: "Eres el motor editorial y de producción de J.A.I. Devuelve exclusivamente un objeto JSON válido, sin Markdown ni texto fuera del JSON." },
+              { role: "user", content: prompt }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.55,
+            max_completion_tokens: 7000
+          }),
+          signal: AbortSignal.timeout(42000)
+        });
+        const groqBody = await groqResponse.text();
+        let groqData;
+        try { groqData = JSON.parse(groqBody); }
+        catch { throw new Error(`Groq devolvió contenido no JSON (HTTP ${groqResponse.status}).`); }
+
+        if (!groqResponse.ok) {
+          const detail = groqData?.error?.message || "Sin detalle del proveedor";
+          throw new Error(`Groq HTTP ${groqResponse.status}: ${detail.slice(0, 350)}`);
+        }
+
+        output = groqData.choices?.[0]?.message?.content?.trim() || "";
+        finishReason = groqData.choices?.[0]?.finish_reason || "unknown";
+        if (!output) throw new Error("Groq respondió sin contenido.");
+        providerUsed = "Groq GPT-OSS 120B";
+      } catch (error) {
+        groqFailure = error?.message || "Fallo desconocido de Groq";
+        console.warn("[JAI][Groq] Falló el proveedor principal; se intentará Gemini:", groqFailure.slice(0, 500));
+      }
+    } else {
+      groqFailure = "GROQ_API_KEY no está configurada.";
+      console.warn("[JAI][Groq] GROQ_API_KEY no está configurada; se intentará Gemini.");
+    }
+
+    // Respaldo Gemini: se usa solo si Groq no está disponible.
+    if (!output) {
+      const geminiKey = process.env.GEMINI_API_KEY;
+      if (!geminiKey) {
+        console.error("[JAI] No hay proveedor configurado. Groq:", groqFailure);
+        return res.status(500).json({
+          error: "No hay un proveedor de IA disponible. Revisa GROQ_API_KEY y GEMINI_API_KEY en Vercel.",
+          diagnosticCode: "NO_AI_PROVIDER"
+        });
+      }
+
+      const geminiModel = "gemini-2.5-flash";
+      let geminiResponse;
+      try {
+        geminiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`,
           {
             method: "POST",
             headers: {
-              "x-goog-api-key": key,
+              "x-goog-api-key": geminiKey,
               "Content-Type": "application/json"
             },
-            body: requestBody,
-            signal: AbortSignal.timeout(modelFallbacks[i].timeout)
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.55,
+                maxOutputTokens: 7000
+              }
+            }),
+            signal: AbortSignal.timeout(14000)
           }
         );
-      } catch (networkError) {
-        lastNetworkError = networkError?.name || "NetworkError";
-        console.warn(`[JAI][Gemini] ${selectedModel} no respondió dentro de ${modelFallbacks[i].timeout} ms:`, lastNetworkError);
-        if (i === modelFallbacks.length - 1) {
-          return res.status(502).json({
-            error: lastNetworkError === "TimeoutError"
-              ? "Gemini tardó demasiado en generar el plan incluso con los tiempos ampliados. Inténtalo una vez más."
-              : "El servidor de J.A.I. no pudo conectar con Google. Estamos registrando el tipo de fallo para corregir la conexión.",
-            diagnosticCode: lastNetworkError === "TimeoutError" ? "GEMINI_RESPONSE_TIMEOUT" : "GEMINI_NETWORK_ERROR"
-          });
-        }
-        await new Promise(resolve => setTimeout(resolve, 500));
-        continue;
+      } catch (error) {
+        console.error("[JAI][Gemini] Falló también el respaldo:", error?.name || "Error", error?.message || "");
+        return res.status(502).json({
+          error: "Groq y Gemini no pudieron completar la generación. Inténtalo de nuevo en unos momentos.",
+          diagnosticCode: "ALL_AI_PROVIDERS_FAILED"
+        });
       }
-      if (response.ok || ![503, 504].includes(response.status) || i === modelFallbacks.length - 1) break;
-      const retryAfter = Number(response.headers.get("retry-after"));
-      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
-        ? Math.min(retryAfter * 1000, 2500)
-        : Math.min(900 * (i + 1), 2200);
-      console.warn(`[JAI][Gemini] ${selectedModel} saturado (HTTP ${response.status}); siguiente modelo en ${waitMs} ms.`);
-      await new Promise(resolve => setTimeout(resolve, waitMs));
-    }
-    console.info("[JAI][Gemini] Modelo utilizado:", selectedModel);
 
-    const rawBody = await response.text();
-    let data;
-    try {
-      data = JSON.parse(rawBody);
-    } catch {
-      console.error("[JAI][Gemini] Respuesta no JSON. HTTP", response.status, "Body:", rawBody.slice(0, 500));
-      return res.status(502).json({ error: "Gemini devolvió una respuesta que no pudimos interpretar. Revisa Runtime Logs.", diagnosticCode: "NON_JSON_PROVIDER_RESPONSE", providerStatus: response.status });
-    }
+      const geminiBody = await geminiResponse.text();
+      let geminiData;
+      try { geminiData = JSON.parse(geminiBody); }
+      catch {
+        console.error("[JAI][Gemini] Respuesta no JSON. HTTP", geminiResponse.status, geminiBody.slice(0, 400));
+        return res.status(502).json({ error: "El proveedor de respaldo devolvió una respuesta ilegible.", diagnosticCode: "GEMINI_NON_JSON_RESPONSE" });
+      }
 
-    if (!response.ok) {
-      const providerMessage = data?.error?.message || "Sin detalle del proveedor";
-      console.error("[JAI][Gemini] HTTP", response.status, "Status:", data?.error?.status || "unknown", "Message:", providerMessage.slice(0, 700));
-      const status = response.status;
-      const message = status === 429
-        ? "Gemini alcanzó un límite de uso (429). No se realizará ningún cobro; podemos probar un proveedor alternativo."
-        : status === 403
-        ? "Google rechazó el acceso (403). Hay que revisar permisos o disponibilidad del nivel gratuito; no actives facturación."
-        : status === 400
-        ? "Gemini rechazó la solicitud (400). El registro técnico ya contiene el detalle para corregirla."
-        : status === 404
-        ? "El modelo o endpoint de Gemini no está disponible (404). Revisaremos el nombre del modelo."
-        : status === 503
-        ? "Gemini está temporalmente saturado. J.A.I. ya probó los modelos de respaldo disponibles; vuelve a intentarlo más tarde."
-        : status === 504
-        ? "Los modelos de Gemini tardaron demasiado en responder (504). J.A.I. intentó el respaldo automático; vuelve a intentarlo más tarde."
-        : "Gemini respondió con un error HTTP " + status + ". Revisa Runtime Logs para conocer el detalle.";
-      return res.status(status >= 400 && status < 500 ? status : 502).json({ error: message, diagnosticCode: data?.error?.status || "GEMINI_HTTP_ERROR", providerStatus: status });
+      if (!geminiResponse.ok) {
+        const detail = geminiData?.error?.message || "Sin detalle";
+        console.error("[JAI][Gemini] HTTP", geminiResponse.status, detail.slice(0, 500));
+        return res.status(502).json({
+          error: "Groq no estuvo disponible y Gemini también respondió con un error. Vuelve a intentarlo.",
+          diagnosticCode: "ALL_AI_PROVIDERS_FAILED",
+          providerStatus: geminiResponse.status
+        });
+      }
+
+      output = geminiData.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim() || "";
+      finishReason = geminiData.candidates?.[0]?.finishReason || "unknown";
+      if (!output) {
+        console.error("[JAI][Gemini] Respuesta sin texto. finishReason:", finishReason);
+        return res.status(502).json({ error: "El proveedor de respaldo respondió sin contenido.", diagnosticCode: "EMPTY_GEMINI_RESPONSE" });
+      }
+      providerUsed = "Gemini 2.5 Flash (respaldo)";
     }
 
-    const output = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
-    if (!output) {
-      console.error("[JAI][Gemini] Respuesta sin texto. finishReason:", data.candidates?.[0]?.finishReason || "unknown");
-      return res.status(502).json({ error: "Gemini respondió sin contenido. Revisa Runtime Logs.", diagnosticCode: "EMPTY_GEMINI_RESPONSE" });
-    }
-
+    console.info("[JAI] Proveedor utilizado:", providerUsed);
     let plan;
     try {
       // Primero intenta la respuesta íntegra. Después tolera fences Markdown,
@@ -220,8 +247,7 @@ ${safeNotes}
         throw new Error("No se encontró un objeto JSON completo.");
       }
     } catch (parseError) {
-      const finishReason = data.candidates?.[0]?.finishReason || "unknown";
-      console.error("[JAI][Gemini] No se pudo recuperar el JSON:", parseError.message, "finishReason:", finishReason, "Contenido:", output.slice(0, 700));
+      console.error("[JAI] No se pudo recuperar el JSON:", parseError.message, "Proveedor:", providerUsed, "finishReason:", finishReason, "Contenido:", output.slice(0, 700));
       const incomplete = finishReason === "MAX_TOKENS";
       return res.status(502).json({
         error: incomplete
@@ -232,10 +258,10 @@ ${safeNotes}
       });
     }
 
-    console.info("[JAI][Gemini] Plan generado correctamente.");
+    console.info("[JAI] Plan generado correctamente con", providerUsed);
     return res.status(200).json(plan);
   } catch (error) {
-    console.error("[JAI][Gemini] Error de conexión:", error?.name || "Error", error?.message || "Sin detalle");
-    return res.status(502).json({ error: "No se pudo conectar con Gemini. Revisa Runtime Logs; no compartas claves ni secretos.", diagnosticCode: "GEMINI_CONNECTION_ERROR" });
+    console.error("[JAI] Error de conexión:", error?.name || "Error", error?.message || "Sin detalle");
+    return res.status(502).json({ error: "No se pudo completar la generación. Revisa Runtime Logs; no compartas claves ni secretos.", diagnosticCode: "AI_GENERATION_ERROR" });
   }
 }
