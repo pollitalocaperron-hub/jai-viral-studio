@@ -334,7 +334,17 @@ function drawStoryBeat(item,index,progress){
  const orb=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();};
  const person=(x,y,s=1,pose=0)=>{ctx.save();ctx.translate(x,y);ctx.scale(s,s);ctx.strokeStyle="#f5f7ff";ctx.lineWidth=17;ctx.lineCap="round";orb(0,-70,22,"#f0c49c");ctx.beginPath();ctx.moveTo(0,-43);ctx.lineTo(0,35);ctx.moveTo(0,-20);ctx.lineTo(pose?45:-38,10);ctx.moveTo(0,35);ctx.lineTo(-30,90);ctx.moveTo(0,35);ctx.lineTo(32,90);ctx.stroke();ctx.restore();};
  const objectX=100+p*430;
- const mode=index%7;
+ const actionText=(String(item.visualAction||"")+" "+String(item.retentionStimulus||"")+" "+String(item.visual||"")+" "+String(item.objective||"")).toLowerCase();
+ const mode=(()=>{
+  if(/compar|contrasta|lado a lado|antes y despu[eé]s|diferencia|frente a/.test(actionText))return 3;
+  if(/abre|revela|corte transversal|interior|capas|atraviesa|penetra|descompone/.test(actionText))return 2;
+  if(/choca|impact|colisi|golpea|rompe|cae|rebota|explota/.test(actionText))return 4;
+  if(/[oó]rbita|orbita|gira alrededor|rodea|trayectoria circular/.test(actionText))return 6;
+  if(/corriente|fluye|desplaza|arrastra|viaja|se mueve|avanza|recorre|separa|dispersa/.test(actionText))return 5;
+  if(/acercamiento|primer plano|macro|zoom|detalle|ampl[ií]a/.test(actionText))return 1;
+  if(/persona|humano|escala humana|observador|cuerpo/.test(actionText))return 5;
+  return (index*3+1)%7;
+ })();
  ctx.save();
  if(earth){
   if(mode===0){orb(cx,560,245,"#147db1");orb(cx-72,500,75,"#69c58d");orb(cx+90,620,96,"#79d18d");ctx.strokeStyle="#a8efff";ctx.lineWidth=12;ctx.beginPath();ctx.ellipse(cx,560,310,95,-.2,0,Math.PI*2);ctx.stroke();person(110,870,.8);arrow(175,845,310,820);}
