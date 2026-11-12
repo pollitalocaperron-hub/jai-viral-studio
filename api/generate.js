@@ -251,8 +251,8 @@ ${safeNotes}
       const incomplete = finishReason === "MAX_TOKENS";
       return res.status(502).json({
         error: incomplete
-          ? "Gemini cortó la respuesta por su límite de longitud. J.A.I. necesita volver a generar el plan con una salida más compacta."
-          : "Gemini devolvió un formato que J.A.I. no pudo recuperar. Intenta generar el plan otra vez.",
+          ? "El modelo cortó la respuesta por su límite de longitud. Intenta generar el plan otra vez."
+          : "El modelo devolvió un formato que J.A.I. no pudo recuperar. Intenta generar el plan otra vez.",
         diagnosticCode: incomplete ? "INCOMPLETE_MODEL_JSON" : "INVALID_MODEL_JSON",
         finishReason
       });
