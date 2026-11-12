@@ -324,7 +324,7 @@ function drawEarthScene(item,index,progress){
 function drawStoryBeat(item,index,progress){
  const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height,p=Math.max(0,Math.min(1,progress));
  const cx=w/2,visual=String(item.visualAction||item.visual||item.objective||"").toLowerCase(),title=String(item.on_screen_text||item.objective||"");
- const topic=String(item.visual||"").toLowerCase()+" "+String(item.retentionStimulus||"").toLowerCase();
+ const topic=(String(item.visual||"")+" "+String(item.visualAction||"")+" "+String(item.retentionStimulus||"")+" "+String(item.objective||"")).toLowerCase();
  const water=/agua|mar|oc[eé]ano|ola|líquido|liquido|corriente/.test(topic),light=/luz|rayo|sol|color|fot[oó]n|espectro/.test(topic),earth=/tierra|planeta|rotaci[oó]n|ecuador/.test(topic),human=/persona|humano|cuerpo|observador|viajero/.test(topic);
  const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,"#07142b");bg.addColorStop(1,water?"#075477":light?"#38274d":"#142b48");ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
  for(let i=0;i<32;i++){ctx.globalAlpha=.12;ctx.fillStyle="#bcecff";ctx.beginPath();ctx.arc((i*137)%w,(i*211)%h,1+i%3,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
