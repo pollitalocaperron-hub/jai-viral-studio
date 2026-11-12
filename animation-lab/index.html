@@ -29,7 +29,7 @@ button.primary{background:#e6b36e;color:#1a1712;border-color:#e6b36e;flex:1}
 <body><main>
 <header><div class="brand">J.A.I. / VISUAL LAB</div><div class="status">PILOTO AISLADO · 10 S</div></header>
 <h1>El dorado no es pintura.<br>Es química en acción.</h1>
-<p class="sub">Prueba visual de la reacción de Maillard · escena continua de 10 segundos</p>
+<p class="sub">Prueba visual de la reacción de Maillard · escena continua de 10 segundos · ritmo visual cada 3 segundos</p>
 <div class="frame">
 <svg id="shot" viewBox="0 0 450 800" role="img" aria-label="Un bistec se coloca en una sartén de hierro y su superficie se dora progresivamente">
 <defs>
@@ -116,28 +116,42 @@ const ease=v=>{v=clamp(v);return v*v*(3-2*v)};
 const set=(id,attr,val)=>$(id).setAttribute(attr,val);
 const chapters=[
  {at:0,k:"01 / MATERIA PRIMA",t:"La carne aún está cruda.",d:"Macro · fibras y marmoleado"},
- {at:2100,k:"02 / CONTACTO",t:"Todo empieza en la sartén.",d:"Plano cenital · contacto y aceite"},
- {at:4300,k:"03 / TRANSFORMACIÓN",t:"La superficie empieza a dorarse.",d:"Macro lateral · costra progresiva"},
- {at:6900,k:"04 / QUÍMICA",t:"Aparecen nuevos aromas y sabores.",d:"Detalle científico · reacción de Maillard"},
- {at:8700,k:"05 / RESULTADO",t:"Ese dorado es una reacción.",d:"Plano final · corteza tostada"}
+ {at:3000,k:"02 / CONTACTO",t:"El calor despierta la reacción.",d:"Acercamiento · carne y sartén"},
+ {at:6000,k:"03 / TRANSFORMACIÓN",t:"El dorado crea aromas nuevos.",d:"Macro · costra y química en acción"},
+ {at:9000,k:"04 / RESULTADO",t:"Así nace la costra dorada.",d:"Plano final · transformación completa"}
 ];
 function render(ms){
- const t=clamp(ms/duration),pan=ease((ms-1400)/900),brown=ease((ms-3900)/4200),chem=ease((ms-6800)/600),finish=ease((ms-8500)/700);
- set("steak","transform","translate(0 "+(pan*48-20)+"px) rotate("+(-pan*1.7)+"deg)");
- set("brownFill","opacity",String(brown*.96));
- set("crustEdge","opacity",String(brown*.75));
- set("crustEdge","transform","translate(0 "+(brown*105)+"px)");
- set("crustTexture","opacity",String(brown*.72));
- set("steam","opacity",String(clamp((ms-2400)/1100)*(.55+.22*Math.sin(ms/280))));
- set("steam","transform","translateY("+(-8*Math.sin(ms/440))+"px)");
- set("sizzle","opacity",String(clamp((ms-2600)/700)*(.6+.3*Math.sin(ms/95))));
- set("sizzle","transform","translateY("+(-5*Math.sin(ms/110))+"px)");
- set("molecular","opacity",String(chem*.92));
- set("molecular","transform","translateY("+(12*(1-chem))+"px)");
- set("heatGlow","opacity",String(.45+.35*Math.sin(ms/300)));
+ const t=clamp(ms/duration);
+ const contact=ease((ms-850)/1750);
+ const brown=ease((ms-3150)/4900);
+ const chem=ease((ms-6100)/650);
+ const reveal=ease((ms-8850)/650);
+ // La cámara respira y se acerca por fases, sin cortes bruscos.
+ const zoom=1+0.075*ease(ms/2600)+0.035*ease((ms-5700)/1800)-0.075*ease((ms-8900)/800);
+ const vw=450/zoom,vh=800/zoom;
+ const driftX=5*Math.sin(ms/1700),driftY=-7*ease(ms/3000)+5*ease((ms-6000)/2400);
+ $("shot").setAttribute("viewBox",(225-vw/2+driftX)+" "+(400-vh/2+driftY)+" "+vw+" "+vh);
+ // La carne baja con suavidad y se asienta; después vibra apenas con el chisporroteo.
+ const bob= Math.sin(ms/520)*1.8*contact;
+ set("steak","transform","translate("+(-2*Math.sin(ms/1200)*contact)+" "+(-24+contact*50+bob)+"px) rotate("+(-1.2*contact+0.45*Math.sin(ms/950)*contact)+"deg)");
+ set("brownFill","opacity",String(brown*.98));
+ set("crustEdge","opacity",String(brown*.8));
+ set("crustEdge","transform","translate(0 "+(brown*108)+"px)");
+ set("crustTexture","opacity",String(brown*.88));
+ const steamPulse=.62+.2*Math.sin(ms/390)+.1*Math.sin(ms/170);
+ set("steam","opacity",String(clamp((ms-2250)/850)*steamPulse));
+ set("steam","transform","translate("+ (2*Math.sin(ms/700)) +"px "+(-12-10*Math.sin(ms/480))+"px)");
+ set("sizzle","opacity",String(clamp((ms-2850)/500)*(.55+.4*Math.sin(ms/82))));
+ set("sizzle","transform","translate("+ (2*Math.sin(ms/140)) +"px "+(-4-5*Math.sin(ms/105))+"px)");
+ set("molecular","opacity",String(chem*.96));
+ set("molecular","transform","translateY("+(16*(1-chem))+"px) scale("+(0.97+0.03*chem)+")");
+ set("heatGlow","opacity",String(.38+.3*Math.sin(ms/330)+.12*contact));
+ set("oil","opacity",String(.45+.3*contact+.12*Math.sin(ms/240)));
  set("progress","width",(t*100)+"%");
- const c=[...chapters].reverse().find(x=>ms>=x.at)||chapters[0];
- $("chapter").textContent=c.k;$("caption").textContent=c.t;$("descriptor").textContent=c.d;
+ const chapter=[...chapters].reverse().find(x=>ms>=x.at)||chapters[0];
+ $("chapter").textContent=chapter.k;
+ $("caption").textContent=chapter.t;
+ $("descriptor").textContent=chapter.d;
  $("time").textContent="00:"+String(Math.min(10,Math.floor(ms/1000))).padStart(2,"0");
  if(ms>=duration){playing=false;$("play").textContent="▶ Reproducir de nuevo";return;}
  if(playing)raf=requestAnimationFrame(tick);
