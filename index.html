@@ -346,7 +346,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  const title=String(item.on_screen_text||"").slice(0,62);
  if(title){ctx.fillStyle="#fff";ctx.font="800 36px Arial";ctx.textAlign="center";ctx.shadowColor="#000";ctx.shadowBlur=12;ctx.fillText(title,w/2,h-150);ctx.shadowBlur=0;}
  if(Array.isArray(captionCues)&&captionCues.length){
-  const cue=captionCues.find(entry=>audioElapsed>=entry.start&&audioElapsed<entry.end);
+  const cue=captionCues.slice().sort((a,b)=>a.start-b.start).find(entry=>audioElapsed>=entry.start&&audioElapsed<entry.end);
   if(cue&&String(cue.text||"").trim()){
    const words=String(cue.text).trim().split(/\\s+/),lines=[];let line="";
    ctx.font="700 34px Arial";
@@ -458,6 +458,11 @@ async function makePlan(){
  try{
   const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,learning_memory:buildLearningMemoryContext()})});
   const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;throw failure;}
+  if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
+  kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;captionCues=[];
+  $("kokoroAudio").pause();$("kokoroAudio").removeAttribute("src");$("kokoroAudio").style.display="none";
+  $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("captionImport").value="";$("captionFile").value="";$("downloadSrt").disabled=true;
+  $("captionStatus").textContent="Nuevo guion: genera una narración e importa sus subtítulos para mantener la sincronía.";
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual CGI</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
