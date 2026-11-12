@@ -21,6 +21,22 @@ Diseña un plan de producción de alta calidad para un video educativo vertical 
 Objetivo: maximizar interés, comprensión, retención y potencial de compartirse sin prometer viralidad ni usar engaños.
 
 REGLAS EDITORIALES Y CIENTÍFICAS:
+ARQUITECTURA EDITORIAL OBLIGATORIA — TRABAJA EN ETAPAS INTERNAS ANTES DE ESCRIBIR:
+A. INVESTIGADOR: descompón la pregunta en subpreguntas; identifica mecanismo, condiciones, excepciones y consenso. Usa primero las notas del usuario como pistas, nunca como evidencia automática. Si no tienes acceso real a fuentes externas durante esta solicitud, NO afirmes haber buscado, consultado ni verificado fuentes. No inventes nombres de estudios, autores, enlaces, instituciones ni referencias. Separa "hecho establecido", "dato que requiere fuente" y "incertidumbre".
+B. PROFESOR: explica el fenómeno desde lo intuitivo hasta lo molecular/técnico. Define los términos inevitables en lenguaje cotidiano. Construye una cadena causal explícita: condición inicial → qué cambia → por qué cambia → consecuencia observable → qué límites/excepciones existen. Cada frase del guion debe enseñar un hecho, responder una pregunta o preparar una revelación; elimina frases que solo suenen científicas.
+C. AUDITOR: revisa cada afirmación del guion contra tu conocimiento fiable y las notas aportadas. Si no puedes respaldarla con seguridad, rebájala, matízala o márcala como pendiente; nunca la presentes como verificada. Distingue cambio físico, cambio químico, mecanismo y correlación. No fabriques valores numéricos para llenar escenas.
+D. DIRECTOR VISUAL: solo después de cerrar la explicación, asigna a cada escena una demostración que haga visible la causa o consecuencia explicada. Cada imagen debe aportar evidencia visual conceptual, no decoración. Si una escena no enseña nada nuevo, elimínala o rediseñala.
+E. EDITOR: comprueba que la narración realmente explica el tema completo dentro de la duración, sin sacrificar precisión para meter más estímulos.
+- La profundidad informativa tiene prioridad sobre el vocabulario técnico, la espectacularidad y la cantidad de escenas.
+- No uses términos como moléculas, enlaces, energía, presión, ondas o reacción sin explicar qué papel desempeñan en el mecanismo.
+- No conviertas una hipótesis explicativa simplificada en una descripción literal de lo que ocurre a escala molecular.
+- En temas con cambio de estado, distingue claramente cambio físico de transformación química; no asumas que todos los materiales tienen un punto de fusión simple ni que el material permanece químicamente intacto.
+- Para cada idea central, responde "¿por qué ocurre?" y "¿qué observaríamos si no ocurriera?". Incluye límites relevantes cuando cambien la conclusión.
+- No presentes la lista verification como evidencia ya consultada. Cada elemento debe declarar afirmación, estado ("respaldada por notas", "conocimiento general pendiente de fuente" o "no resuelta"), evidencia concreta disponible y qué falta. Si no hay fuente aportada, dilo claramente.
+- Añade research_brief (4–7 puntos), causal_chain (pasos ordenados), concept_explanations (término + explicación sencilla + función en el fenómeno) y fact_audit (afirmación + estado + justificación + tratamiento editorial).
+- Guion: explica mecanismos con ejemplos concretos; no encadenes frases grandilocuentes. Incluye al menos dos capas de explicación: intuición cotidiana y mecanismo real. La narración debe poder enseñarse sin imágenes.
+- STORYBOARD DIDÁCTICO: cada escena debe responder a una frase concreta del guion. Añade en cada escena "teaching_point" (qué aprende el espectador) y "visual_proof" (qué elemento visible demuestra o aclara esa idea). Prohíbe termómetros, cifras, etiquetas o instrumentos si el dato no está respaldado.
+- RETENTION MAP: estímulo nuevo no significa solo cambio visual; cada bloque debe avanzar la comprensión. En visual_action indica qué mecanismo o contraste se hace visible, no solo un movimiento decorativo.
 - No inventes cifras, estudios, citas, fuentes ni hechos. Distingue hechos conocidos de hipótesis y señala qué requiere verificación.
 - Las notas del usuario son material de partida, no hechos automáticamente confirmados.
 - En ciencia, explica el mecanismo con precisión y evita simplificaciones que cambien la causa física. No confundas absorción, reflexión, dispersión, refracción o emisión. Si hay varios mecanismos, indica cuál predomina y bajo qué condiciones.
@@ -71,12 +87,12 @@ ${/oceano|mar|agua azul|color del agua/i.test(topic) ? `- PRECISIÓN SOBRE EL CO
 - En el ejemplo del océano, termina con una comparación física entre una pequeña cantidad de agua y una gran columna de agua, no con kilómetros de agua que acumulan luz azul.` : ""}
 
 Devuelve SOLAMENTE JSON válido con estas claves:
-category, angle, hook, script, story, retention_map, verification, quality_check.
+category, research_brief, causal_chain, concept_explanations, fact_audit, angle, hook, script, story, retention_map, verification, quality_check.
 category: categoría breve.
 angle: enfoque editorial en 2-3 frases.
 hook: hook inicial.
 script: guion completo con marcas [HOOK], [PROMESA], [CONTEXTO], [EXPLICACIÓN], [REVELACIÓN], [CIERRE].
-story: arreglo de 5 a 8 objetos de escena; cada objeto debe tener los campos time, objective, visual, animation, on_screen_text, transition.
+research_brief: lista de 4 a 7 hallazgos concisos con su nivel de certeza. causal_chain: pasos numerados de causa y efecto. concept_explanations: lista de objetos con term, plain_explanation y role. fact_audit: lista de objetos con claim, status, rationale y editorial_treatment. story: arreglo de 5 a 8 objetos de escena; cada objeto debe tener time, objective, teaching_point, visual_proof, visual, animation, on_screen_text, transition.
 retention_map: arreglo cronológico de bloques de máximo 3 segundos; cada objeto debe tener time, new_stimulus, narrative_advance, curiosity, visual_action y on_screen_text (frase visible de 2 a 6 palabras).
 verification: lista de afirmaciones/datos que deben verificarse y qué evidencia falta.
 quality_check: lista de comprobaciones editoriales, científicas y de producción.
