@@ -468,7 +468,51 @@ async function makePlan(){
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual CGI</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
-  rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan="J.A.I. VIRAL STUDIO\nTema: "+topic+"\nCategoría: "+readable(data.category)+"\nEnfoque: "+readable(data.angle)+"\nHook: "+readable(data.hook)+"\n\n"+readable(data.script)+"\n\nSTORYBOARD\n"+readable(data.story)+"\n\nMAPA DE RETENCIÓN\n"+readable(data.retention_map)+"\n\nVERIFICACIONES\n"+readable(data.verification)+"\n\nCONTROL DE CALIDAD\n"+readable(data.quality_check);
+  rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan=[
+   "J.A.I. VIRAL STUDIO",
+   "Tema: "+topic,
+   "Categoría: "+readable(data.category),
+   "Enfoque: "+readable(data.angle),
+   "",
+   "INVESTIGACIÓN Y COMPRENSIÓN",
+   readable(data.research_brief),
+   "",
+   "FUENTES ACADÉMICAS",
+   readable(data.research_sources),
+   "",
+   "CADENA DE CAUSA Y EFECTO",
+   readable(data.causal_chain),
+   "",
+   "CONCEPTOS EXPLICADOS",
+   readable(data.concept_explanations),
+   "",
+   "AUDITORÍA DE AFIRMACIONES",
+   readable(data.fact_audit),
+   "",
+   "HOOK",
+   readable(data.hook),
+   "",
+   "GUION",
+   readable(data.script),
+   "",
+   "STORYBOARD",
+   readable(data.story),
+   "",
+   "MAPA DE RETENCIÓN",
+   readable(data.retention_map),
+   "",
+   "ALERTAS EDITORIALES",
+   readable(data.editorial_warnings),
+   "",
+   "VALIDACIÓN DE DURACIÓN",
+   readable(data.duration_validation),
+   "",
+   "VERIFICACIONES",
+   readable(data.verification),
+   "",
+   "CONTROL DE CALIDAD",
+   readable(data.quality_check)
+  ].join("\n");
   buildTimeline();
   const normalizedRetention=timelineState.items.map(item=>({time:item.time,new_stimulus:item.retentionStimulus,narrative_advance:item.narrativeAdvance||item.visualAction,curiosity:item.curiosity,visual_action:item.visualAction,on_screen_text:item.on_screen_text}));
   renderRetentionMap(normalizedRetention);
