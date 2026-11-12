@@ -32,9 +32,7 @@ export default async function handler(req, res) {
           contents: [{
             role: "user",
             parts: [{
-              text: "Lee exactamente el siguiente guion en español de México. No traduzcas, no resumas y no agregues palabras. Interprétalo como una narración documental cálida, clara y natural, con ritmo dinámico y pausas breves entre ideas. Texto:
-
-" + text.trim()
+              text: `Lee exactamente el siguiente guion en español de México. No traduzcas, no resumas y no agregues palabras. Interprétalo como una narración documental cálida, clara y natural, con ritmo dinámico y pausas breves entre ideas. Texto:\n\n${text.trim()}`
             }]
           }],
           generationConfig: {
