@@ -84,26 +84,38 @@ ${safeNotes}
 `;
 
   try {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "x-goog-api-key": key,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.55,
-            // El mapa de retención requiere 15–20 bloques para 45–60 s.
-            // 3500 tokens podía cortar el JSON antes de cerrar el objeto.
-            maxOutputTokens: 7000
-          }
-        })
+    // Respaldo automático: si el modelo principal está saturado (503/504),
+    // espera brevemente y prueba otros modelos Flash con la misma API key.
+    // No se cambia a proveedores de pago ni se requiere otra clave.
+    const modelFallbacks = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
+    const requestBody = JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0.55,
+        maxOutputTokens: 7000
       }
-    );
+    });
+    let response;
+    let selectedModel = "";
+    for (let i = 0; i < modelFallbacks.length; i++) {
+      selectedModel = modelFallbacks[i];
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": key,
+            "Content-Type": "application/json"
+          },
+          body: requestBody
+        }
+      );
+      if (response.ok || ![503, 504].includes(response.status) || i === modelFallbacks.length - 1) break;
+      console.warn(`[JAI][Gemini] ${selectedModel} saturado (HTTP ${response.status}); se probará el siguiente modelo.`);
+      await new Promise(resolve => setTimeout(resolve, 1200 * (i + 1)));
+    }
+    console.info("[JAI][Gemini] Modelo utilizado:", selectedModel);
 
     const rawBody = await response.text();
     let data;
@@ -127,9 +139,9 @@ ${safeNotes}
         : status === 404
         ? "El modelo o endpoint de Gemini no está disponible (404). Revisaremos el nombre del modelo."
         : status === 503
-        ? "Gemini está temporalmente saturado (503). Podemos reintentar o usar un proveedor alternativo."
+        ? "Gemini está temporalmente saturado. J.A.I. ya probó los modelos de respaldo disponibles; vuelve a intentarlo más tarde."
         : status === 504
-        ? "Gemini tardó demasiado en responder (504). Reduciremos la carga o reintentaremos."
+        ? "Los modelos de Gemini tardaron demasiado en responder (504). J.A.I. intentó el respaldo automático; vuelve a intentarlo más tarde."
         : "Gemini respondió con un error HTTP " + status + ". Revisa Runtime Logs para conocer el detalle.";
       return res.status(status >= 400 && status < 500 ? status : 502).json({ error: message, diagnosticCode: data?.error?.status || "GEMINI_HTTP_ERROR", providerStatus: status });
     }
