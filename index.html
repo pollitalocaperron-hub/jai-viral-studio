@@ -131,7 +131,7 @@ function renderStory(value){
  }else{const box=document.createElement("div");box.className="result";box.textContent=readable(value);root.appendChild(box);}
 }
 
-let currentScenes=[],jaiSceneImages=[],currentDurationValidation=null;
+let currentScenes=[],jaiSceneImages=[],currentDurationValidation=null,lastImageRequestAt=0;
 let planningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
 function renderVisualScenes(){
  const root=$("visualScenes");root.replaceChildren();
@@ -171,11 +171,11 @@ async function generateAIVisuals(){
  const style="Premium scientific CGI documentary still, physically plausible materials, photorealistic 3D rendering, sophisticated cinematic lighting, deep graphite and midnight-blue environment, restrained cyan and amber accents only where scientifically meaningful, crisp subject detail, realistic depth and scale.";
  const avoid="No abstract fog, no amorphous clouds, no random glowing blobs, no decorative particle field, no generic galaxy, no unrelated objects, no text, no labels, no watermark, no people, no characters, no cameras or filming equipment, no collage, no split screen, no cartoon, no flat vector illustration.";
  try{
-  let generatedCount=jaiSceneImages.filter(Boolean).length,lastRequestAt=0;
+  let generatedCount=jaiSceneImages.filter(Boolean).length;
   for(let i=0;i<scenes.length;i++){
    if(jaiSceneImages[i]?.image)continue;
    if(lastRequestAt){
-    const remaining=Math.max(0,35000-(Date.now()-lastRequestAt));
+    const remaining=Math.max(0,35000-(Date.now()-lastImageRequestAt));
     if(remaining>0){$("visualStatus").textContent="Escena "+(i+1)+" de "+scenes.length+" · pausa de seguridad del servicio gratuito ("+Math.ceil(remaining/1000)+" s).";await wait(remaining);}
    }
    const scene=scenes[i];
@@ -198,7 +198,7 @@ async function generateAIVisuals(){
     "The main object must be unmistakable, large, sharply focused and placed inside the central portrait-safe area so a square source can be cropped vertically without cutting it off. Show a concrete recognizable object and its actual material, not an abstract metaphor. One scene and one dominant action only. "+avoid
    ].filter(Boolean).join(" ");
    $("visualStatus").textContent="Generando escena "+(i+1)+" de "+scenes.length+" · "+subject.slice(0,90)+"…";
-   lastRequestAt=Date.now();
+   lastImageRequestAt=Date.now();
    const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,size:"1024x1024"}),signal:AbortSignal.timeout(90000)});
    const raw=await response.text();
    if(!response.ok)throw new Error("El generador respondió HTTP "+response.status+" en la escena "+(i+1)+". "+raw.slice(0,220));
@@ -500,7 +500,7 @@ async function makePlan(){
   $("captionStatus").textContent="Nuevo guion: genera la narración y J.A.I. preparará sus subtítulos automáticamente.";
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual CGI</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
-  renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
+  renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico por escena, no por cada bloque de 3 segundos.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
   rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan=[
    "J.A.I. VIRAL STUDIO",
    "Tema: "+topic,
