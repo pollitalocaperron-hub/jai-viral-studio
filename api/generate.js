@@ -86,7 +86,11 @@ ${safeNotes}
   try {
     // Respaldo escalonado: modelos Flash estables de distintas generaciones.
     // Solo reintenta ante saturación/timeout; nunca activa facturación ni otro proveedor.
-    const modelFallbacks = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
+    const modelFallbacks = [
+      { id: "gemini-3.8-flash", timeout: 28000 },
+      { id: "gemini-3.6-flash", timeout: 12000 },
+      { id: "gemini-3.5-flash-lite", timeout: 8000 }
+    ];
     const requestBody = JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
@@ -97,8 +101,9 @@ ${safeNotes}
     });
     let response;
     let selectedModel = "";
+    let lastNetworkError = "";
     for (let i = 0; i < modelFallbacks.length; i++) {
-      selectedModel = modelFallbacks[i];
+      selectedModel = modelFallbacks[i].id;
       try {
         response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent`,
@@ -109,15 +114,18 @@ ${safeNotes}
               "Content-Type": "application/json"
             },
             body: requestBody,
-            signal: AbortSignal.timeout(12000)
+            signal: AbortSignal.timeout(modelFallbacks[i].timeout)
           }
         );
       } catch (networkError) {
-        console.warn(`[JAI][Gemini] ${selectedModel} no respondió en 12 segundos:`, networkError?.name || "NetworkError");
+        lastNetworkError = networkError?.name || "NetworkError";
+        console.warn(`[JAI][Gemini] ${selectedModel} no respondió dentro de ${modelFallbacks[i].timeout} ms:`, lastNetworkError);
         if (i === modelFallbacks.length - 1) {
           return res.status(502).json({
-            error: "No se pudo establecer conexión con los modelos de Gemini tras probar los respaldos. Comprueba la conexión e inténtalo de nuevo.",
-            diagnosticCode: "GEMINI_UPSTREAM_TIMEOUT"
+            error: lastNetworkError === "TimeoutError"
+              ? "Gemini tardó demasiado en generar el plan incluso con los tiempos ampliados. Inténtalo una vez más."
+              : "El servidor de J.A.I. no pudo conectar con Google. Estamos registrando el tipo de fallo para corregir la conexión.",
+            diagnosticCode: lastNetworkError === "TimeoutError" ? "GEMINI_RESPONSE_TIMEOUT" : "GEMINI_NETWORK_ERROR"
           });
         }
         await new Promise(resolve => setTimeout(resolve, 500));
