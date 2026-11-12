@@ -36,7 +36,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <button class="primary" id="create">Crear plan de producción con IA</button><div class="hint status" id="status">Motor editorial con Gemini · MP4 y animación completa: siguientes etapas de desarrollo.</div></section>
 <section class="card output" id="output"><div class="row" style="justify-content:space-between"><h3 class="section-title">Plan de producción</h3><span class="tag">9:16 · 1080 × 1920</span></div><div id="category" style="margin-bottom:10px"></div>
 <label>Enfoque recomendado</label><div class="result" id="angle"></div><div style="height:13px"></div><label>Hook inicial</label><div class="result" id="hook"></div><div style="height:13px"></div><label>Guion base</label><div class="result" id="script"></div><div style="height:13px"></div>
-<section class="card" id="voiceStudio">
+<section class="card" id="voiceStudio" style="display:none" aria-hidden="true">
  <div class="row" style="justify-content:space-between"><h3 class="section-title">Estudio de voz</h3><span class="tag">Voz del dispositivo · Sin coste</span></div>
  <p class="hint">Esta prueba usa únicamente las voces instaladas en tu dispositivo. Si solo aparece una voz en la lista, no hay otras voces españolas disponibles en el navegador. No son voces profesionales generadas por J.A.I.</p>
  <label for="voiceSelect">Voz de narración</label><select id="voiceSelect"><option value="">Voz en español automática</option></select>
@@ -45,12 +45,10 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 </section>
 <section class="card" id="kokoroStudio">
  <div class="row" style="justify-content:space-between"><h3 class="section-title">Narración neuronal Kokoro</h3><span class="tag">Motor local · Sin API</span></div>
- <p class="hint">Genera una voz neuronal en español directamente en tu navegador. La primera vez descarga el modelo (puede ocupar cientos de MB); después puede reutilizarse desde la caché del navegador.</p>
- <label for="kokoroVoice">Voz profesional</label>
+ <p class="hint">Genera la narración con el motor neuronal local. La primera vez descarga el modelo (puede ocupar cientos de MB); después puede reutilizarse desde la caché del navegador.</p>
+ <label for="kokoroVoice">Voz de narración</label>
  <select id="kokoroVoice">
-  <option value="ef_dora">Dora · Femenina</option>
-  <option value="em_alex">Alex · Masculina</option>
-  <option value="em_santa">Santa · Masculina</option>
+  <option value="am_santa">Santa · Masculina</option>
  </select>
  <div class="row" style="margin-top:12px">
   <button class="primary" id="generateNarration" type="button">Generar narración Kokoro</button>
