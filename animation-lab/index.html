@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>J.A.I. · Laboratorio visual · Maillard</title>
+<style>
+:root{color-scheme:dark;--ink:#f7f1e8;--muted:#b9b1a5;--gold:#e8ad62}
+*{box-sizing:border-box}body{margin:0;background:#080d13;color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif}
+main{width:min(100%,520px);margin:auto;padding:18px 14px 28px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.brand{font-size:12px;letter-spacing:.18em;font-weight:800;color:#d9c8ae}.status{font-size:10px;color:#9bd9c2;border:1px solid #315c50;border-radius:30px;padding:5px 9px}
+h1{font-size:clamp(23px,6vw,31px);line-height:1.05;margin:12px 0 7px;letter-spacing:-.04em}
+.sub{color:var(--muted);font-size:13px;margin:0 0 15px}
+.frame{position:relative;overflow:hidden;border:1px solid #34404a;border-radius:20px;background:#111820;box-shadow:0 24px 70px #0009}
+svg{display:block;width:100%;height:auto;aspect-ratio:9/16}
+.overlay{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:18px}
+.kicker{font-size:9px;letter-spacing:.22em;font-weight:800;color:#e5b878;text-transform:uppercase}
+.scene-title{font-size:clamp(21px,6vw,31px);line-height:1.02;font-weight:850;letter-spacing:-.04em;max-width:82%;text-shadow:0 3px 20px #000b}
+.scene-bottom{display:flex;justify-content:space-between;align-items:end;color:#e5d9c7;font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+#time{font-variant-numeric:tabular-nums;color:#f3c987}
+.controls{display:flex;gap:9px;margin-top:12px}
+button{border:1px solid #394650;border-radius:12px;padding:11px 14px;background:#17212a;color:#f7f1e8;font-weight:700;cursor:pointer}
+button.primary{background:#e6b36e;color:#1a1712;border-color:#e6b36e;flex:1}
+.note{font-size:11px;color:#929da5;margin:12px 2px 0}
+.timeline{height:4px;background:#28323a;border-radius:9px;margin-top:12px;overflow:hidden}.progress{height:100%;width:0;background:#e7b56f}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body><main>
+<header><div class="brand">J.A.I. / VISUAL LAB</div><div class="status">PILOTO AISLADO · 10 S</div></header>
+<h1>El dorado no es pintura.<br>Es química en acción.</h1>
+<p class="sub">Prueba visual de la reacción de Maillard · escena continua de 10 segundos</p>
+<div class="frame">
+<svg id="shot" viewBox="0 0 450 800" role="img" aria-label="Un bistec se coloca en una sartén de hierro y su superficie se dora progresivamente">
+<defs>
+ <linearGradient id="bg" x2="0" y2="1"><stop stop-color="#293039"/><stop offset=".48" stop-color="#171e25"/><stop offset="1" stop-color="#090e13"/></linearGradient>
+ <radialGradient id="warm"><stop stop-color="#f5a34c" stop-opacity=".34"/><stop offset="1" stop-color="#f5a34c" stop-opacity="0"/></radialGradient>
+ <linearGradient id="iron" x2=".1" y2="1"><stop stop-color="#68717a"/><stop offset=".18" stop-color="#303941"/><stop offset=".55" stop-color="#11171d"/><stop offset="1" stop-color="#05090d"/></linearGradient>
+ <radialGradient id="pan"><stop stop-color="#59616a"/><stop offset=".55" stop-color="#202830"/><stop offset=".88" stop-color="#0b1117"/><stop offset="1" stop-color="#05090d"/></radialGradient>
+ <linearGradient id="meat" x2=".2" y2="1"><stop stop-color="#f1b39a"/><stop offset=".42" stop-color="#c96f62"/><stop offset="1" stop-color="#7e3434"/></linearGradient>
+ <linearGradient id="crust" x2=".1" y2="1"><stop stop-color="#e2a15b"/><stop offset=".28" stop-color="#a95d30"/><stop offset=".72" stop-color="#6c321e"/><stop offset="1" stop-color="#351b16"/></linearGradient>
+ <linearGradient id="sear" x2="0" y2="1"><stop stop-color="#e6a35c" stop-opacity="0"/><stop offset=".35" stop-color="#a94d28" stop-opacity=".96"/><stop offset="1" stop-color="#4a2118"/></linearGradient>
+ <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="18"/></filter>
+ <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
+ <filter id="glow"><feGaussianBlur stdDeviation="12"/></filter>
+ <clipPath id="steakClip"><path d="M95 360 C105 305 155 278 218 286 C274 260 343 295 356 344 C378 391 352 453 310 481 C269 514 187 501 139 481 C91 460 70 414 95 360Z"/></clipPath>
+ <clipPath id="crustClip"><path d="M95 360 C105 305 155 278 218 286 C274 260 343 295 356 344 C378 391 352 453 310 481 C269 514 187 501 139 481 C91 460 70 414 95 360Z"/></clipPath>
+</defs>
+<rect width="450" height="800" fill="url(#bg)"/>
+<ellipse cx="220" cy="405" rx="220" ry="250" fill="url(#warm)" id="heatGlow"/>
+<g opacity=".25" fill="none" stroke="#c6b7a0"><path d="M0 145H450M0 153H450" stroke-width="1"/><path d="M35 0V800M415 0V800" opacity=".12"/></g>
+<!-- Back counter and warm practical lights -->
+<g opacity=".75"><rect x="0" y="535" width="450" height="265" fill="#10161b"/><path d="M0 570 Q110 550 220 570T450 565" stroke="#4a4036" stroke-width="3" fill="none"/><ellipse cx="365" cy="178" rx="75" ry="85" fill="#d78c49" opacity=".12" filter="url(#glow)"/><circle cx="365" cy="178" r="4" fill="#e5b879"/></g>
+<!-- Pan handle -->
+<g id="handle"><path d="M323 534 L438 633 Q447 641 439 650 L422 668 Q414 676 405 668 L294 564Z" fill="#11171d" stroke="#56616a" stroke-width="5"/><path d="M337 548L421 625" stroke="#78818a" stroke-width="3" opacity=".5"/><circle cx="420" cy="649" r="7" fill="#69737a"/></g>
+<!-- skillet -->
+<ellipse cx="220" cy="540" rx="208" ry="154" fill="#020508" opacity=".9" filter="url(#shadow)"/>
+<ellipse cx="220" cy="514" rx="204" ry="153" fill="url(#iron)" stroke="#87919a" stroke-width="5"/>
+<ellipse cx="220" cy="505" rx="181" ry="129" fill="url(#pan)" stroke="#111920" stroke-width="8"/>
+<ellipse cx="220" cy="497" rx="160" ry="108" fill="none" stroke="#7e8990" stroke-opacity=".22" stroke-width="2"/>
+<g id="oil" fill="none" stroke="#d8a45d" stroke-linecap="round" opacity=".8"><path d="M80 493q30 -17 56 2t53 -3" stroke-width="5"/><path d="M276 550q31 -21 58 -2t28 -3" stroke-width="4"/><path d="M151 570q24 -10 39 1" stroke-width="3"/></g>
+<!-- steak shadow -->
+<path d="M95 374 C105 319 155 292 218 300 C274 274 343 309 356 358 C378 405 352 467 310 495 C269 528 187 515 139 495 C91 474 70 428 95 374Z" fill="#000" opacity=".75" filter="url(#soft)" transform="translate(0 15)"/>
+<!-- steak body -->
+<g id="steak" transform="translate(0 0)">
+<path d="M95 360 C105 305 155 278 218 286 C274 260 343 295 356 344 C378 391 352 453 310 481 C269 514 187 501 139 481 C91 460 70 414 95 360Z" fill="url(#meat)" stroke="#f0b69d" stroke-width="5"/>
+<path d="M111 362 C129 321 166 307 214 311 C270 291 325 315 340 355" fill="none" stroke="#f7c4a8" stroke-width="8" opacity=".55"/>
+<!-- marbling -->
+<g fill="none" stroke="#f5d1b4" stroke-linecap="round" opacity=".76">
+<path d="M132 371q26 -28 47 -5t38 0" stroke-width="7"/><path d="M220 333q20 18 43 4t42 14" stroke-width="6"/><path d="M142 426q25 -19 47 2t40 -1" stroke-width="8"/><path d="M249 454q27 -29 51 -6t28 -8" stroke-width="7"/><path d="M190 388q-4 21 16 29" stroke-width="5"/>
+</g>
+<g fill="#f8d8bc" opacity=".6"><ellipse cx="116" cy="405" rx="8" ry="4"/><ellipse cx="319" cy="382" rx="9" ry="4"/><ellipse cx="277" cy="474" rx="7" ry="3"/></g>
+<!-- progressive sear layer -->
+<g clip-path="url(#steakClip)" id="browning">
+ <rect x="65" y="270" width="330" height="245" fill="url(#sear)" opacity="0" id="brownFill"/>
+ <path id="crustEdge" d="M75 300 Q220 285 380 300 L380 300 L75 300Z" fill="#5b2b1b" opacity="0"/>
+ <g opacity="0" id="crustTexture" stroke="#f2bd75" stroke-width="3" fill="none">
+  <path d="M110 348q35 -16 57 4t41 -2M221 326q24 13 47 -1t51 15M118 426q28 -18 48 3t44 -2M245 450q28 -21 48 -2t31 -6"/>
+  <path d="M160 370l12 7m83 -26l14 9m-98 87l12 7m105 -5l13 -8" opacity=".6"/>
+ </g>
+</g>
+<path d="M95 360 C105 305 155 278 218 286 C274 260 343 295 356 344 C378 391 352 453 310 481 C269 514 187 501 139 481 C91 460 70 414 95 360Z" fill="none" stroke="#f2c1a0" stroke-width="4" opacity=".65"/>
+</g>
+<!-- Steam curls -->
+<g id="steam" fill="none" stroke="#e9e2d8" stroke-width="5" stroke-linecap="round" opacity="0">
+ <path d="M135 298 C108 270 153 253 129 220 C112 196 139 184 145 166"/>
+ <path d="M220 276 C195 246 238 224 215 194 C198 170 226 151 230 130"/>
+ <path d="M310 294 C287 267 329 246 307 219 C292 198 318 180 322 160"/>
+</g>
+<!-- sizzling flecks -->
+<g id="sizzle" fill="#f6c77c" opacity="0"><circle cx="104" cy="485" r="4"/><circle cx="333" cy="466" r="5"/><circle cx="164" cy="535" r="3"/><circle cx="278" cy="545" r="4"/><circle cx="355" cy="510" r="3"/></g>
+<!-- molecular inset appears in final act -->
+<g id="molecular" opacity="0" transform="translate(0 0)">
+ <rect x="28" y="600" width="394" height="142" rx="16" fill="#121b22" stroke="#c38c50" stroke-opacity=".6"/>
+ <text x="48" y="628" fill="#e7c18e" font-size="11" font-weight="700" letter-spacing="2">A ESCALA MOLECULAR</text>
+ <g stroke="#e4b16d" stroke-width="3" fill="#71452c"><path d="M115 679L151 659L184 680L151 703Z"/><circle cx="115" cy="679" r="12"/><circle cx="151" cy="659" r="10"/><circle cx="184" cy="680" r="12"/><circle cx="151" cy="703" r="10"/></g>
+ <path d="M211 680h49m-10 -9 10 9-10 9" stroke="#e6b56f" stroke-width="3" fill="none"/>
+ <g stroke="#d98b57" stroke-width="3" fill="#a65a35"><circle cx="300" cy="663" r="12"/><circle cx="326" cy="683" r="12"/><circle cx="300" cy="705" r="12"/><path d="M300 663l26 20-26 22"/></g>
+ <text x="150" y="730" fill="#d6c8b5" text-anchor="middle" font-size="10">AMINOÁCIDOS</text><text x="313" y="730" fill="#d6c8b5" text-anchor="middle" font-size="10">AZÚCARES</text>
+</g>
+<!-- cinematic lens vignette -->
+<rect width="450" height="800" fill="none" stroke="#000" stroke-width="60" opacity=".22"/>
+</svg>
+<div class="overlay"><div class="kicker" id="chapter">01 / ANTES DEL CALOR</div><div class="scene-title" id="caption">La carne aún está cruda.</div><div class="scene-bottom"><span id="descriptor">Primer plano · superficie rosada</span><span id="time">00:00</span></div></div>
+</div>
+<div class="timeline"><div class="progress" id="progress"></div></div>
+<div class="controls"><button class="primary" id="play">▶ Reproducir escena</button><button id="restart">↺ Reiniciar</button></div>
+<p class="note">Prototipo de composición y movimiento. Aún no está conectado al generador ni al editor principal.</p>
+</main>
+<script>
+(()=>{"use strict";
+const $=id=>document.getElementById(id),duration=10000;
+let start=0,elapsed=0,raf=0,playing=false;
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const ease=v=>{v=clamp(v);return v*v*(3-2*v)};
+const set=(id,attr,val)=>$(id).setAttribute(attr,val);
+const chapters=[
+ {at:0,k:"01 / MATERIA PRIMA",t:"La carne aún está cruda.",d:"Macro · fibras y marmoleado"},
+ {at:2100,k:"02 / CONTACTO",t:"Todo empieza en la sartén.",d:"Plano cenital · contacto y aceite"},
+ {at:4300,k:"03 / TRANSFORMACIÓN",t:"La superficie empieza a dorarse.",d:"Macro lateral · costra progresiva"},
+ {at:6900,k:"04 / QUÍMICA",t:"Aparecen nuevos aromas y sabores.",d:"Detalle científico · reacción de Maillard"},
+ {at:8700,k:"05 / RESULTADO",t:"Ese dorado es una reacción.",d:"Plano final · corteza tostada"}
+];
+function render(ms){
+ const t=clamp(ms/duration),pan=ease((ms-1400)/900),brown=ease((ms-3900)/4200),chem=ease((ms-6800)/600),finish=ease((ms-8500)/700);
+ set("steak","transform","translate(0 "+(pan*48-20)+"px) rotate("+(-pan*1.7)+"deg)");
+ set("brownFill","opacity",String(brown*.96));
+ set("crustEdge","opacity",String(brown*.75));
+ set("crustEdge","transform","translate(0 "+(brown*105)+"px)");
+ set("crustTexture","opacity",String(brown*.72));
+ set("steam","opacity",String(clamp((ms-2400)/1100)*(.55+.22*Math.sin(ms/280))));
+ set("steam","transform","translateY("+(-8*Math.sin(ms/440))+"px)");
+ set("sizzle","opacity",String(clamp((ms-2600)/700)*(.6+.3*Math.sin(ms/95))));
+ set("sizzle","transform","translateY("+(-5*Math.sin(ms/110))+"px)");
+ set("molecular","opacity",String(chem*.92));
+ set("molecular","transform","translateY("+(12*(1-chem))+"px)");
+ set("heatGlow","opacity",String(.45+.35*Math.sin(ms/300)));
+ set("progress","width",(t*100)+"%");
+ const c=[...chapters].reverse().find(x=>ms>=x.at)||chapters[0];
+ $("chapter").textContent=c.k;$("caption").textContent=c.t;$("descriptor").textContent=c.d;
+ $("time").textContent="00:"+String(Math.min(10,Math.floor(ms/1000))).padStart(2,"0");
+ if(ms>=duration){playing=false;$("play").textContent="▶ Reproducir de nuevo";return;}
+ if(playing)raf=requestAnimationFrame(tick);
+}
+function tick(now){if(!playing)return;elapsed=now-start;render(elapsed);}
+function play(){if(playing)return;if(elapsed>=duration)elapsed=0;playing=true;start=performance.now()-elapsed;$("play").textContent="Ⅱ Pausar";raf=requestAnimationFrame(tick);}
+function pause(){playing=false;cancelAnimationFrame(raf);$("play").textContent="▶ Continuar";}
+$("play").addEventListener("click",()=>playing?pause():play());
+$("restart").addEventListener("click",()=>{pause();elapsed=0;render(0);$("play").textContent="▶ Reproducir escena";});
+render(0);
+})();
+</script>
+</body></html>
