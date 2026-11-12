@@ -59,6 +59,14 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <div class="hint" id="kokoroStatus" aria-live="polite">Primero genera el guion y después crea la narración neuronal.</div>
  <audio id="kokoroAudio" controls style="display:none;width:100%;margin-top:12px"></audio>
  <a id="downloadNarration" class="secondary" hidden download="jai-narracion.wav">Descargar narración WAV</a>
+ <div class="row" style="margin-top:12px">
+  <button class="secondary" id="transcribeNarration" type="button" disabled>Crear subtítulos sincronizados</button>
+ </div>
+ <div class="hint" id="captionStatus" aria-live="polite">Genera la narración para poder transcribir sus palabras con marcas de tiempo.</div>
+ <div id="captionEditor" style="display:grid;gap:9px;margin-top:10px"></div>
+ <div class="row" style="margin-top:8px">
+  <button class="secondary" id="addCaptionCue" type="button" disabled>Añadir subtítulo</button>
+ </div>
 </section>
 <div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de retención · estímulo nuevo cada 3 segundos</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Fotogramas IA · Estilo científico</span></div><p class="hint">Genera una imagen científica cinematográfica diferente por cada bloque de 3 segundos. Todas las tomas comparten la misma dirección de arte; después se animan sin inventar contenido.</p><button class="primary" id="makeVisuals" type="button">Generar fotogramas cinematográficos</button><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Editor de escenas · Línea de tiempo</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza las escenas del storyboard en orden. Esta etapa prepara la secuencia y sus tiempos; todavía no exporta el MP4.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Revisar secuencia</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar video de prueba</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video WebM</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Kokoro, se mezclará dentro del WebM. La exportación MP4 sigue pendiente.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
 <div class="steps"><div class="step"><b>01 · Investigación</b><span>Verificar afirmaciones y fuentes.</span></div><div class="step"><b>02 · Dirección visual</b><span>Objetos, diagramas y movimiento.</span></div><div class="step"><b>03 · Voz</b><span>Narración y sincronización.</span></div><div class="step"><b>04 · Montaje</b><span>Ritmo, subtítulos y sonido.</span></div><div class="step"><b>05 · Revisión</b><span>Exactitud y originalidad.</span></div><div class="step"><b>06 · Exportación</b><span>MP4 vertical 9:16.</span></div></div>
@@ -346,7 +354,7 @@ function previewTimeline(){
 
 const renderCanvas=$("renderCanvas"),renderCtx=renderCanvas.getContext("2d");
 let renderFrame=0,renderRecording=false;
-function drawVideoScene(item,index,progress){
+function drawVideoScene(item,index,progress,audioElapsed=0){
  const imageIndex=Number.isInteger(item?.visualIndex)?item.visualIndex:index;
  const generated=jaiSceneImages[imageIndex];
  const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height,p=Math.max(0,Math.min(1,Number(progress)||0));
@@ -366,6 +374,22 @@ function drawVideoScene(item,index,progress){
  const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,"rgba(2,8,18,.10)");shade.addColorStop(.68,"rgba(2,8,18,.04)");shade.addColorStop(1,"rgba(2,8,18,.72)");ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
  const title=String(item.on_screen_text||"").slice(0,62);
  if(title){ctx.fillStyle="#fff";ctx.font="800 36px Arial";ctx.textAlign="center";ctx.shadowColor="#000";ctx.shadowBlur=12;ctx.fillText(title,w/2,h-150);ctx.shadowBlur=0;}
+ if(Array.isArray(captionCues)&&captionCues.length){
+  const cue=captionCues.find(entry=>audioElapsed>=entry.start&&audioElapsed<entry.end);
+  if(cue&&String(cue.text||"").trim()){
+   const words=String(cue.text).trim().split(/\\s+/),lines=[];let line="";
+   ctx.font="700 34px Arial";
+   words.forEach(word=>{const test=line?line+" "+word:word;if(line&&ctx.measureText(test).width>w-110){lines.push(line);line=word;}else line=test;});
+   if(line)lines.push(line);
+   const visible=lines.slice(0,2),lineHeight=43,boxHeight=visible.length*lineHeight+34,boxY=h-255-boxHeight/2;
+   const maxWidth=Math.max(...visible.map(value=>ctx.measureText(value).width),0)+44;
+   const boxX=(w-maxWidth)/2;
+   ctx.fillStyle="rgba(3,9,20,.82)";ctx.beginPath();ctx.roundRect(boxX,boxY,maxWidth,boxHeight,16);ctx.fill();
+   ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";
+   visible.forEach((value,i)=>ctx.fillText(value,w/2,boxY+17+lineHeight*(i+.5)));
+   ctx.textBaseline="alphabetic";
+  }
+ }
  ctx.fillStyle="rgba(255,255,255,.82)";ctx.font="700 17px Arial";ctx.textAlign="center";ctx.fillText(item.segmentLabel||("TOMA "+(index+1)),w/2,h-62);
  ctx.fillStyle="rgba(255,255,255,.25)";ctx.fillRect(55,h-34,610,6);ctx.fillStyle="#72e5d0";ctx.fillRect(55,h-34,610*p,6);
 }
@@ -416,7 +440,7 @@ async function renderVideo(){
    if(visualElapsed<cursor+seconds){sceneIndex=i;progress=(visualElapsed-cursor)/seconds;break;}
    cursor+=seconds;
   }
-  drawVideoScene(timelineState.items[sceneIndex],sceneIndex,progress);
+  drawVideoScene(timelineState.items[sceneIndex],sceneIndex,progress,elapsed);
   $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+timelineState.items.length+(audioBuffer?" · sincronizada con audio ("+Math.round(totalDuration)+" s)":"")+"…";
   if(elapsed>=totalDuration){recorder.stop();return;}
   renderFrame=requestAnimationFrame(draw);
@@ -476,6 +500,7 @@ async function makePlan(){
 }
 
 let kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioDuration=0,kokoroSampleRate=24000,kokoroSource=null,kokoroAudioContext=null;
+let captionCues=[];
 function makePcmWavBlob(base64,sampleRate){
  const binary=atob(base64),pcm=new Uint8Array(binary.length);
  for(let i=0;i<binary.length;i++)pcm[i]=binary.charCodeAt(i);
@@ -485,6 +510,58 @@ function makePcmWavBlob(base64,sampleRate){
  new Uint8Array(buffer,44).set(pcm);
  return new Blob([buffer],{type:"audio/wav"});
 }
+
+function groupTimestampedWords(words){
+ const cues=[];let group=[];
+ const flush=()=>{if(!group.length)return;cues.push({start:Math.max(0,Number(group[0].start)||0),end:Math.max(Number(group[group.length-1].end)||0.1,Number(group[0].start)+0.15),text:group.map(w=>String(w.text||"").trim()).filter(Boolean).join(" ")});group=[];};
+ words.forEach(word=>{
+  const text=String(word.text||"").trim();if(!text)return;
+  const nextEnd=Number(word.end)||0,firstStart=group.length?(Number(group[0].start)||0):Number(word.start)||0;
+  const currentText=group.map(w=>w.text).join(" ");
+  if(group.length&&(group.length>=6||nextEnd-firstStart>2.8||/[.!?][”’"]?$/.test(currentText)))flush();
+  group.push(word);
+  if(/[.!?][”’"]?$/.test(text))flush();
+ });
+ flush();return cues;
+}
+function renderCaptionEditor(){
+ const root=$("captionEditor");root.replaceChildren();
+ captionCues.forEach((cue,index)=>{
+  const card=document.createElement("article");card.className="scene";card.style.display="grid";card.style.gap="7px";
+  const heading=document.createElement("b");heading.textContent="SUBTÍTULO "+String(index+1).padStart(2,"0");card.appendChild(heading);
+  const times=document.createElement("div");times.className="row";
+  const start=document.createElement("input");start.type="number";start.step="0.01";start.min="0";start.value=Number(cue.start).toFixed(2);start.setAttribute("aria-label","Inicio en segundos");
+  const end=document.createElement("input");end.type="number";end.step="0.01";end.min="0.01";end.value=Number(cue.end).toFixed(2);end.setAttribute("aria-label","Fin en segundos");
+  start.addEventListener("change",()=>{cue.start=Math.max(0,Number(start.value)||0);if(cue.end<=cue.start)cue.end=cue.start+.2;});
+  end.addEventListener("change",()=>{cue.end=Math.max(cue.start+.1,Number(end.value)||cue.start+.1);});
+  const startLabel=document.createElement("label");startLabel.textContent="Inicio (s)";startLabel.appendChild(start);
+  const endLabel=document.createElement("label");endLabel.textContent="Fin (s)";endLabel.appendChild(end);
+  times.append(startLabel,endLabel);card.appendChild(times);
+  const text=document.createElement("textarea");text.rows=2;text.value=cue.text;text.setAttribute("aria-label","Texto del subtítulo");text.addEventListener("input",()=>cue.text=text.value);card.appendChild(text);
+  const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="Eliminar subtítulo";remove.addEventListener("click",()=>{captionCues.splice(index,1);renderCaptionEditor();});
+  card.appendChild(remove);root.appendChild(card);
+ });
+}
+$("transcribeNarration").addEventListener("click",async()=>{
+ if(!kokoroAudioBlob){$("captionStatus").textContent="Primero genera la narración.";return;}
+ const button=$("transcribeNarration");button.disabled=true;$("captionStatus").textContent="Transcribiendo el audio y calculando los tiempos reales de cada palabra…";
+ try{
+  const buffer=await kokoroAudioBlob.arrayBuffer(),bytes=new Uint8Array(buffer);let binary="";
+  for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));
+  const audioBase64=btoa(binary);
+  const response=await fetch("/api/transcribe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({audioBase64,mimeType:"audio/wav"})});
+  const data=await readJsonResponse(response,"Transcripción");if(!response.ok)throw new Error(data.error||"No se pudo transcribir.");
+  captionCues=Array.isArray(data.words)&&data.words.length?groupTimestampedWords(data.words):Array.isArray(data.segments)?data.segments.map(s=>({start:Number(s.start),end:Number(s.end),text:String(s.text||"").trim()})):[];
+  if(!captionCues.length)throw new Error("No se obtuvieron marcas de tiempo para los subtítulos.");
+  renderCaptionEditor();$("captionStatus").textContent=captionCues.length+" subtítulos creados con tiempos de voz reales ("+data.timing+"). Puedes editar texto, inicio y fin; se integrarán al vídeo al renderizar.";
+ }catch(error){$("captionStatus").textContent=error.message||"Falló la transcripción."; }
+ finally{button.disabled=false;}
+});
+$("addCaptionCue").addEventListener("click",()=>{
+ const last=captionCues[captionCues.length-1],start=last?last.end:0;
+ captionCues.push({start,end:start+2,text:"Nuevo subtítulo"});renderCaptionEditor();
+});
+
 $("generateNarration").addEventListener("click",async()=>{
  const text=cleanNarrationText($("script").textContent);
  if(!text||text==="Guion pendiente."){$("kokoroStatus").textContent="Primero genera el guion editorial.";return;}
@@ -497,6 +574,8 @@ $("generateNarration").addEventListener("click",async()=>{
   if(!data.audioBase64)throw new Error("El servicio no devolvió audio.");
   kokoroSampleRate=data.sampleRate||24000;
   kokoroAudioBlob=makePcmWavBlob(data.audioBase64,kokoroSampleRate);
+  captionCues=[];$("captionEditor").replaceChildren();$("transcribeNarration").disabled=false;$("addCaptionCue").disabled=false;
+  $("captionStatus").textContent="La narración cambió. Crea de nuevo los subtítulos para sincronizarlos con este audio.";
   kokoroAudioDuration=(kokoroAudioBlob.size-44)/(kokoroSampleRate*2);
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
   kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);
