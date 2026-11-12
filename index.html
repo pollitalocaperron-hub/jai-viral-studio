@@ -199,7 +199,7 @@ $("makeVisuals").addEventListener("click",generateAIVisuals);
 
 const timelineState={items:[],index:0,timer:null,storyDuration:0,mapDuration:0};
 const GENERIC_MODE_SEQUENCE=["editorial","compare","detail","structure","layers","motion","interaction","reveal"];
-function normalizeVisualText(value){return String(value||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/\\s+/g," ").trim();}
+function normalizeVisualText(value){return String(value||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();}
 function chooseVisualMode(beat,scene,index,usedModes){
  const text=normalizeVisualText([beat&&beat.visual_action,beat&&beat.new_stimulus,scene&&scene.visual,scene&&scene.animation,scene&&scene.objective].join(" "));
  const rules=[[/compar|contraste|dos estados|lado a lado/,"compare"],[/macro|detalle|estructura interna|micro/,"detail"],[/separa|divide|componentes|partes/,"structure"],[/profund|capas|corte transversal/,"layers"],[/trayectoria|orbita|gira|fluye|desplaza/,"motion"],[/interaccion|colision|contacto|reaccion/,"interaction"],[/revela|abre|expone|muestra el interior/,"reveal"]];
