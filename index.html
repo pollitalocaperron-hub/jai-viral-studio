@@ -272,12 +272,14 @@ function buildTimeline(){
   const scene=currentScenes[sceneRange.index]||currentScenes[0];
   const beat=beatRange&&beatRange.beat;
   const rawAction=beat?(beat.visual_action||beat.new_stimulus||""):"";
-  const visualMode=chooseVisualMode(beat||{},scene,index,usedModes);
+  let visualMode=chooseVisualMode(beat||{},scene,index,usedModes);
+  const isWaterTopic=/agua|oceano|mar|azul/.test(normalizeVisualText(currentTopic+" "+scene.visual));
+  if(index===count-1&&isWaterTopic&&!usedModes.has("finalblue")){usedModes.add("finalblue");visualMode="finalblue";}
   const actionKey=normalizeVisualText(rawAction);
   const visualAction=!rawAction||usedActions.has(actionKey)?fallbackVisualAction(visualMode,scene,index):rawAction;
   usedActions.add(normalizeVisualText(visualAction));
   const title=(beat&&beat.on_screen_text)||scene.on_screen_text||fallbackVisualTitle(visualMode,scene,index);
-  return {...scene,time:Math.floor(start/60)+":"+String(start%60).padStart(2,"0")+" - "+Math.floor(end/60)+":"+String(end%60).padStart(2,"0"),seconds:end-start,sceneIndex:sceneRange.index,visualMode,segmentLabel:"BLOQUE "+(index+1)+" / "+count,on_screen_text:title,objective:scene.objective,visual:String(scene.visual||"")+"; "+String(visualAction),visualAction,retentionStimulus:beat?(beat.new_stimulus||visualAction):visualAction,curiosity:beat?(beat.curiosity||""):""};
+  return {...scene,time:Math.floor(start/60)+":"+String(start%60).padStart(2,"0")+" - "+Math.floor(end/60)+":"+String(end%60).padStart(2,"0"),seconds:end-start,sceneIndex:sceneRange.index,visualMode,segmentLabel:"BLOQUE "+(index+1)+" / "+count,on_screen_text:title,objective:scene.objective,visual:String(scene.visual||"")+"; "+String(visualAction),visualAction,retentionStimulus:beat?(beat.new_stimulus||visualAction):visualAction,narrativeAdvance:beat?(beat.narrative_advance||""): "La composición revela un detalle distinto del fenómeno.",curiosity:beat?(beat.curiosity||""):""};
  });
  renderTimeline();
  const gap=Math.max(0,totalSeconds-mapEnd),overrun=Math.max(0,mapEnd-totalSeconds);
@@ -582,6 +584,9 @@ async function makePlan(){
   renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se preparará una composición distinta por cada bloque.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.");
   currentTopic=topic;currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
   buildTimeline();
+  const normalizedRetention=timelineState.items.map(item=>({time:item.time,new_stimulus:item.retentionStimulus,narrative_advance:item.narrativeAdvance||item.visualAction,curiosity:item.curiosity,visual_action:item.visualAction,on_screen_text:item.on_screen_text}));
+  renderRetentionMap(normalizedRetention);
+  currentPlan=currentPlan.replace(readable(data.retention_map),readable(normalizedRetention));
   $("output").classList.add("show");$("status").textContent="¡Plan generado! Revisa las escenas, verificaciones y control de calidad antes de producir."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
  }catch(error){$("status").textContent=error.message||"Ocurrió un error al generar el plan.";}finally{$("create").disabled=false;}
 }
