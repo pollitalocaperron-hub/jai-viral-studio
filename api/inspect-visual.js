@@ -11,6 +11,9 @@ export default async function handler(req, res) {
   if (!Array.isArray(images) || images.length < 1 || images.length > 8) {
     return res.status(400).json({ error: "Envía entre 1 y 8 fotogramas para inspección." });
   }
+  const totalImageChars = images.reduce((sum, item) => sum + (typeof item?.image_base64 === "string" ? item.image_base64.length : 0), 0);
+  if (totalImageChars > 3500000) return res.status(413).json({ error: "Las imágenes superan el tamaño seguro de inspección. Reduce la cantidad o resolución de fotogramas." });
+
   for (const [index, item] of images.entries()) {
     if (!item || typeof item.image_base64 !== "string" || item.image_base64.length > 950000 ||
         !/^[A-Za-z0-9+/]+={0,2}$/.test(item.image_base64)) {
