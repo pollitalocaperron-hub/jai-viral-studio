@@ -34,6 +34,10 @@ REGLAS EDITORIALES Y CIENTÍFICAS:
 - Cada 6–9 segundos introduce una revelación, contraste, mini-giro o respuesta parcial que abra una nueva pregunta. El cierre debe entregar una recompensa clara y memorable que responda la promesa inicial.
 - Crea retention_map con bloques consecutivos de máximo 3 segundos, cubriendo toda la duración sin huecos ni solapamientos. Cada bloque debe incluir time, new_stimulus, narrative_advance, curiosity, visual_action y on_screen_text.
 - visual_action debe describir una acción física visible y realizable (por ejemplo: la cámara atraviesa una capa, un objeto cae y rebota, una esfera se abre y revela su interior, dos elementos chocan o una comparación aparece lado a lado). No uses instrucciones abstractas como 'hacerlo interesante'.
+- No encadenes más de dos bloques con el mismo objeto protagonista. Alterna plano general, demostración física, macro, comparación, vista interna, entorno y escala humana cuando el tema lo permita.
+- visual_action debe describir un movimiento físico observable con inicio y resultado; evita acciones vagas como "flota", "brilla" o "se mueve" sin explicar qué cambia.
+- Propón profundidad y variedad de encuadre: primer plano, plano medio, plano general, perspectiva lateral, corte transversal y elementos en primer término.
+- No inventes acciones físicamente imposibles ni datos numéricos para hacer espectacular una escena.
 - Cada bloque consecutivo debe cambiar al menos dos aspectos visuales: composición/encuadre, escala, perspectiva, objeto protagonista, acción, entorno o esquema de color. No repitas el mismo plano con una pequeña oscilación.
 - on_screen_text debe ser una frase editorial breve de 2 a 6 palabras, comprensible para el espectador. Nunca debe contener instrucciones de producción ni resumir el objetivo técnico de la escena.
 - Comprueba que el mapa cubre toda la duración y que cada bloque aporta una imagen o acción diferente y un avance narrativo real.
