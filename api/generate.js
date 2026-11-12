@@ -400,7 +400,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     const unsupportedClaims = (Array.isArray(plan.fact_audit) ? plan.fact_audit : [])
       .filter(item => !Array.isArray(item.source_ids) || item.source_ids.length === 0)
       .map(item => ({ claim: item.claim, reason: "No hay una fuente recuperada que respalde directamente esta afirmación; se conserva como conocimiento general pendiente de documentación, no como verificación académica." }));
-    plan.editorial_warnings = [...warnings, ...unsupportedClaims];
+    plan.editorial_warnings = [...new Map([...warnings, ...unsupportedClaims].map(item => [String(item.claim || "") + "|" + String(item.reason || ""), item])).values()];
     if (!sceneCoverageValid) {
       plan.editorial_warnings.push({ claim: "Cronología del storyboard", reason: "Las escenas deben tener intervalos explícitos, consecutivos, comenzar en 0:00 y no contener huecos ni solapamientos." });
     }
