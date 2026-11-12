@@ -139,8 +139,8 @@ function renderTimeline(){
 function buildTimeline(){
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("timelineStatus").textContent="Primero genera un plan con storyboard.";return;}
  if(Array.isArray(currentRetentionMap)&&currentRetentionMap.length){
-  const parseStart=time=>{const m=String(time||"").match(/(\\d{1,2}):(\\d{2})/);return m?Number(m[1])*60+Number(m[2]):0;};
-  const parseRange=time=>{const m=String(time||"").match(/(\\d{1,2}):(\\d{2})\\s*[-–—]\\s*(\\d{1,2}):(\\d{2})/);return m?{start:Number(m[1])*60+Number(m[2]),end:Number(m[3])*60+Number(m[4])}:null;};
+  const parseStart=time=>{const m=String(time||"").match(/(\d{1,2}):(\d{2})/);return m?Number(m[1])*60+Number(m[2]):0;};
+  const parseRange=time=>{const m=String(time||"").match(/(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})/);return m?{start:Number(m[1])*60+Number(m[2]),end:Number(m[3])*60+Number(m[4])}:null;};
   timelineState.items=currentRetentionMap.map((beat,index)=>{
    const range=parseRange(beat.time),start=range?range.start:parseStart(beat.time),end=range?range.end:start+3;
    const sceneIndex=currentScenes.findIndex(scene=>{const r=parseRange(scene.time);return r&&start<r.end&&end>r.start;});
