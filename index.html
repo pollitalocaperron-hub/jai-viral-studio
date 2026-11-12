@@ -133,6 +133,7 @@ function renderStory(value){
 
 let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,lastImageRequestAt=0;
 let planningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
+function visualAuditPassed(){return visualAuditResults.length===currentScenes.length&&currentScenes.length>0&&visualAuditResults.every(item=>item&&item.status==="pass");}
 function renderVisualScenes(){
  const root=$("visualScenes");root.replaceChildren();
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Genera primero un plan con storyboard.";return;}
@@ -154,7 +155,7 @@ function renderVisualScenes(){
   const desc=document.createElement("p");desc.textContent=String(scene.visual_subject||scene.visual||scene.objective||"Visualización científica");
   const proof=document.createElement("p");proof.className="hint";proof.textContent="Demostración: "+String(scene.visual_proof||scene.teaching_point||"Pendiente de definir");
   meta.append(heading,desc,proof);
-  const audit=visualAuditResults[index];if(audit){const verdict=document.createElement("p");verdict.className="hint";verdict.textContent=(audit.status==="pass"?"INSPECCIÓN APROBADA":"REVISAR FOTOGRAMA")+" · "+String(audit.score??"—")+"/100 · "+String(audit.reason||"");meta.appendChild(verdict);if(Array.isArray(audit.issues)&&audit.issues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+audit.issues.join(" · ");meta.appendChild(issues);}}
+  const audit=visualAuditResults[index];if(audit){const verdict=document.createElement("p");verdict.className="hint";verdict.textContent=(audit.status==="pass"?"INSPECCIÓN APROBADA":"REVISAR FOTOGRAMA")+" · "+String(audit.score??"—")+"/100 · "+String(audit.reason||"");meta.appendChild(verdict);if(Array.isArray(audit.issues)&&audit.issues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+audit.issues.join(" · ");meta.appendChild(issues);}if(audit.status!=="pass"){const retry=document.createElement("button");retry.type="button";retry.className="secondary";retry.textContent="Regenerar esta escena";retry.addEventListener("click",()=>regenerateVisualScene(index));meta.appendChild(retry);}}
   const promptDetails=document.createElement("details");promptDetails.style.cssText="margin-top:8px;font-size:12px;color:#b8c9dc";
   const promptSummary=document.createElement("summary");promptSummary.textContent="Ver dirección visual usada";
   const promptText=document.createElement("p");promptText.style.cssText="white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere";promptText.textContent=String(generated?.prompt||scene.visual_prompt_en||"El plan no entregó un prompt visual específico para esta escena.");
@@ -216,7 +217,7 @@ async function generateAIVisuals(){
   }
   $("visualStatus").textContent="Producción visual lista: "+generatedCount+" escenas únicas. El vídeo reutiliza cada fotograma durante su escena completa con movimiento continuo, no una imagen nueva cada 3 segundos.";
   $("inspectVisuals").disabled=!scenes.every((scene,index)=>jaiSceneImages[index]?.image);
-  $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&scenes.every((scene,index)=>jaiSceneImages[index]?.image));
+  $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&scenes.every((scene,index)=>jaiSceneImages[index]?.image)&&visualAuditPassed());
  }catch(error){
   $("visualStatus").textContent="La generación se detuvo: "+error.message+" · "+jaiSceneImages.filter(Boolean).length+" de "+scenes.length+" escenas listas. Las imágenes ya terminadas se conservaron; vuelve a pulsar para continuar sin repetirlas.";
   renderVisualScenes();
@@ -241,10 +242,38 @@ async function inspectVisuals(){
   if(!Array.isArray(data.results)||data.results.length!==currentScenes.length)throw new Error("El inspector no devolvió un resultado por cada escena.");
   visualAuditResults=data.results;
   renderVisualScenes();
+  $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)&&visualAuditPassed());
   const failed=visualAuditResults.filter(item=>item.status!=="pass").length;
   $("visualAuditStatus").textContent=failed===0?"Inspección completada: todas las escenas superaron la revisión visual. Revisa los detalles de cada tarjeta.": "Inspección completada: "+failed+" de "+visualAuditResults.length+" escenas necesitan revisión. Consulta las observaciones de cada tarjeta.";
  }catch(error){$("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Puedes revisar las imágenes manualmente; no se modificaron ni se descartaron.";}
  finally{$("makeVisuals").disabled=false;button.disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));}
+}
+async function regenerateVisualScene(index){
+ if(!Number.isInteger(index)||!currentScenes[index]||visualGenerationRunning||planningInProgress||narrationGenerating||renderRecording)return;
+ const scene=currentScenes[index],button=$("makeVisuals");visualGenerationRunning=true;button.disabled=true;$("inspectVisuals").disabled=true;$("renderVideo").disabled=true;
+ $("visualAuditStatus").textContent="Regenerando la escena "+(index+1)+" con su dirección visual corregida…";
+ try{
+  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  if(lastImageRequestAt){const remaining=Math.max(0,35000-(Date.now()-lastImageRequestAt));if(remaining>0){$("visualAuditStatus").textContent="Esperando el límite gratuito antes de regenerar la escena "+(index+1)+" ("+Math.ceil(remaining/1000)+" s).";await wait(remaining);}}
+  const style="Premium scientific CGI documentary still, physically plausible materials, photorealistic 3D rendering, sophisticated cinematic lighting, deep graphite and midnight-blue environment, restrained cyan and amber accents only where scientifically meaningful, crisp subject detail, realistic depth and scale.";
+  const avoid="No abstract fog, no amorphous clouds, no random glowing blobs, no decorative particle field, no generic galaxy, no unrelated objects, no text, no labels, no watermark, no people, no characters, no cameras or filming equipment, no collage, no split screen, no cartoon, no flat vector illustration.";
+  const subject=String(scene.visual_subject||scene.visual_proof||scene.teaching_point||scene.objective||"the exact physical subject described in the scene").slice(0,260);
+  const state=String(scene.visual_state||scene.visual||scene.objective||"").slice(0,380);
+  const action=String(scene.visual_action||scene.animation||scene.visual_proof||scene.teaching_point||"").slice(0,380);
+  const environment=String(scene.visual_environment||scene.visual||"a scientifically relevant physical environment").slice(0,280);
+  const composition=String(scene.visual_composition||"single dominant subject, close cinematic three-quarter view, centered portrait-safe composition").slice(0,260);
+  const proof=String(scene.visual_proof||scene.teaching_point||"the physical change described by the scene").slice(0,320);
+  const authored=String(scene.visual_prompt_en||"").trim().slice(0,1300);
+  const prompt=[style,authored?"SHOT DESCRIPTION: "+authored:"","EXACT SUBJECT: "+subject+".","VISIBLE MATERIAL STATE: "+state+".","ONE OBSERVABLE PHYSICAL ACTION: "+action+".","VISIBLE SCIENTIFIC PROOF: "+proof+".","PHYSICAL ENVIRONMENT: "+environment+".","COMPOSITION: "+composition+".","The main object must be unmistakable, large, sharply focused and placed inside the central portrait-safe area so a square source can be cropped vertically without cutting it off. Show a concrete recognizable object and its actual material, not an abstract metaphor. One scene and one dominant action only. "+avoid].filter(Boolean).join(" ");
+  lastImageRequestAt=Date.now();
+  const response=await fetch("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,size:"1024x1024"}),signal:AbortSignal.timeout(90000)});
+  const raw=await response.text();if(!response.ok)throw new Error("El generador respondió HTTP "+response.status+". "+raw.slice(0,220));
+  const data=JSON.parse(raw),b64=data?.data?.[0]?.b64_json;if(!b64)throw new Error("El generador no devolvió un fotograma.");
+  const src="data:image/png;base64,"+b64,img=new Image();img.src=src;await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error("No se pudo abrir el fotograma regenerado."));});
+  jaiSceneImages[index]={src,image:img,shot:subject,time:scene.time,sceneIndex:index,prompt};visualAuditResults[index]=null;renderVisualScenes();
+  $("visualAuditStatus").textContent="Escena "+(index+1)+" regenerada. Vuelve a auditar el conjunto antes de exportar.";
+ }catch(error){$("visualAuditStatus").textContent="No se pudo regenerar la escena "+(index+1)+": "+error.message;}
+ finally{visualGenerationRunning=false;button.disabled=false;$("inspectVisuals").disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((item,i)=>jaiSceneImages[i]?.image));}
 }
 $("inspectVisuals").addEventListener("click",inspectVisuals);
 $("makeVisuals").textContent="Generar fotogramas cinematográficos";
@@ -298,7 +327,7 @@ function renderTimeline(){
  const coverage=map===story?"storyboard y mapa coinciden":map<story?"mapa "+map+" s; "+(story-map)+" s completados":"mapa recortado al final del storyboard";
  $("timelineSummary").textContent=timelineState.items.length+" bloques · "+total+" segundos · storyboard "+story+" s · "+coverage+".";
  $("previewTimeline").disabled=!timelineState.items.length;
- $("renderVideo").disabled=!timelineState.items.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)||!currentDurationValidation?.within_tolerance;
+ $("renderVideo").disabled=!timelineState.items.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)||!currentDurationValidation?.within_tolerance||!visualAuditPassed();
 }
 function buildTimeline(){
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("timelineStatus").textContent="Primero genera un plan con storyboard.";return;}
@@ -425,6 +454,7 @@ async function renderVideo(){
  if(planningInProgress||visualGenerationRunning||narrationGenerating){$("renderStatus").textContent="Espera a que terminen las tareas de producción antes de renderizar.";return;}
  if(renderRecording||!timelineState.items.length)return;
  if(!currentDurationValidation?.within_tolerance){$("renderStatus").textContent="Render bloqueado: corrige primero la duración y la cronología del plan editorial.";return;}
+ if(!visualAuditPassed()){$("renderStatus").textContent="Render bloqueado: inspecciona los fotogramas y corrige las escenas que no hayan sido aprobadas.";return;}
  if(jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,i)=>jaiSceneImages[i]?.image)){ $("renderStatus").textContent="Primero genera y revisa todos los fotogramas cinematográficos. No se usarán dibujos de respaldo.";return;}
  const supported=window.MediaRecorder&&renderCanvas.captureStream;
  if(!supported){$("renderStatus").textContent="Este navegador no permite grabar el lienzo. Prueba con Chrome actualizado.";return;}
