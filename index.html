@@ -153,9 +153,9 @@ async function generateAIVisuals(){
   for(let i=0;i<items.length;i++){
    if(i>0){for(let left=35;left>0;left--){$("visualStatus").textContent="Fotograma "+(i+1)+" de "+items.length+" · respetando el límite gratuito: "+left+" s";await wait(1000);}}
    const item=items[i];
-   const exactShot=[item.visualAction,item.retentionStimulus,item.narrativeAdvance,item.curiosity].filter(Boolean).join(". ").slice(0,1500);
-   const context=[item.visual,item.objective].filter(Boolean).join(". ").slice(0,500);
-   const prompt=visualBible+" TEMA ÚNICO DEL DOCUMENTAL: "+currentTopic+". TOMA "+(i+1)+" DE "+items.length+"; instante "+item.time+". CONTEXTO DE LA ESCENA: "+context+". REPRESENTA EXCLUSIVAMENTE ESTA ACCIÓN Y ESTE INSTANTE: "+exactShot+". La imagen debe mostrar el sujeto concreto y el cambio físico descrito, no una metáfora ni una escena genérica. Cada toma debe tener encuadre, escala, perspectiva y momento distintos de las demás, manteniendo exactamente la misma dirección de arte. Composición vertical pensada para recorte 9:16, sujeto principal grande y claramente reconocible, profundidad cinematográfica. No incluyas seres humanos ni personajes. Sin letras, rótulos, números ni marcas.";
+   // La imagen es una composición cinematográfica, no una ilustración literal de instrucciones de cámara.
+   const context=[item.visual,item.objective,item.retentionStimulus,item.narrativeAdvance].filter(Boolean).join(". ").slice(0,1500);
+   const prompt=visualBible+" Actúa como director de arte y artista conceptual de un documental científico CGI 3D. TEMA: "+currentTopic+". FOTOGRAMA "+(i+1)+" DE "+items.length+"; instante narrativo "+item.time+". IDEA QUE DEBE EXPLICAR LA IMAGEN: "+context+". INTERPRETA la idea y conviértela en una escena visual potente, clara y hermosa: elige el sujeto físico más importante, colócalo en un entorno pertinente y muestra el fenómeno mediante una composición tridimensional cinematográfica. No ilustres literalmente instrucciones de producción, verbos como 'observar', 'mostrar', 'acercar', 'revelar' ni movimientos de cámara. La cámara NUNCA debe aparecer como objeto; no dibujes cámaras, lentes, trípodes, operadores, pantallas, claquetas ni equipo de filmación. Si el texto menciona un movimiento de cámara, úsalo solo para elegir el punto de vista; representa el fenómeno y su resultado, no el aparato ni la instrucción. La imagen debe parecer un fotograma final de una película científica de alto presupuesto, no una captura del proceso de grabación ni un esquema literal. Diseña una composición con sujeto protagonista reconocible, escala dramática, profundidad, materiales realistas y detalles científicos pertinentes. Cada toma debe cambiar de sujeto, escala o composición cuando el contenido lo permita, sin abandonar la misma dirección de arte. Vertical 9:16, sujeto grande y legible. Sin seres humanos, personajes, equipo de filmación, letras, rótulos, números ni marcas.";
    $("visualStatus").textContent="Generando toma científica "+(i+1)+" de "+items.length+"…";
    const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,negative_prompt:negative,size:"1024x1024"})});
    const raw=await response.text();
@@ -304,7 +304,7 @@ function buildTimeline(){
   const visualAction=!rawAction||usedActions.has(actionKey)?fallbackVisualAction(visualMode,scene,index):rawAction;
   usedActions.add(normalizeVisualText(visualAction));
   const title=(beat&&beat.on_screen_text)||scene.on_screen_text||fallbackVisualTitle(visualMode,scene,index);
-  return {...scene,visualIndex:index,time:Math.floor(start/60)+":"+String(start%60).padStart(2,"0")+" - "+Math.floor(end/60)+":"+String(end%60).padStart(2,"0"),seconds:end-start,sceneIndex:sceneRange.index,visualMode,segmentLabel:"BLOQUE "+(index+1)+" / "+count,on_screen_text:title,objective:scene.objective,visual:String(scene.visual||"")+"; "+String(visualAction),visualAction,retentionStimulus:beat?(beat.new_stimulus||visualAction):visualAction,narrativeAdvance:beat?(beat.narrative_advance||""): "La composición revela un detalle distinto del fenómeno.",curiosity:beat?(beat.curiosity||""):""};
+  return {...scene,visualIndex:index,time:Math.floor(start/60)+":"+String(start%60).padStart(2,"0")+" - "+Math.floor(end/60)+":"+String(end%60).padStart(2,"0"),seconds:end-start,sceneIndex:sceneRange.index,visualMode,segmentLabel:"BLOQUE "+(index+1)+" / "+count,on_screen_text:title,objective:scene.objective,visual:String(scene.visual||""),visualAction,retentionStimulus:beat?(beat.new_stimulus||visualAction):visualAction,narrativeAdvance:beat?(beat.narrative_advance||""): "La composición revela un detalle distinto del fenómeno.",curiosity:beat?(beat.curiosity||""):""};
  });
  renderTimeline();
  const gap=Math.max(0,totalSeconds-mapEnd),overrun=Math.max(0,mapEnd-totalSeconds);
@@ -334,8 +334,14 @@ function drawVideoScene(item,index,progress){
  if(!generated||!generated.image){
   ctx.fillStyle="#07101e";ctx.fillRect(0,0,w,h);ctx.fillStyle="#f5fbff";ctx.textAlign="center";ctx.font="700 28px Arial";ctx.fillText("FOTOGRAMA NO DISPONIBLE",w/2,h/2);return;
  }
- const img=generated.image,scale=Math.max(w/img.width,h/img.height)*(1.035+p*.095),dw=img.width*scale,dh=img.height*scale;
- const dx=(w-dw)/2-Math.sin(p*Math.PI)*18,dy=(h-dh)/2+Math.cos(p*Math.PI)*12;
+ const img=generated.image;
+ // Movimiento continuo más perceptible durante TODO el bloque, con dirección alternada.
+ const direction=index%2===0?1:-1;
+ const scale=Math.max(w/img.width,h/img.height)*(1.045+p*.19);
+ const dw=img.width*scale,dh=img.height*scale;
+ const driftX=direction*(p-.5)*Math.min(76,w*.10);
+ const driftY=Math.sin(p*Math.PI*1.25+index*.7)*Math.min(34,h*.025);
+ const dx=(w-dw)/2+driftX,dy=(h-dh)/2+driftY;
  ctx.drawImage(img,dx,dy,dw,dh);
  const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,"rgba(2,8,18,.10)");shade.addColorStop(.68,"rgba(2,8,18,.04)");shade.addColorStop(1,"rgba(2,8,18,.72)");ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
  const title=String(item.on_screen_text||"").slice(0,62);
@@ -375,20 +381,23 @@ async function renderVideo(){
   renderRecording=false;$("renderVideo").disabled=false;
  };
  const timelineDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(1,item.seconds),0);
- const totalDuration=Math.max(timelineDuration,audioBuffer?audioBuffer.duration:0);
+ // La pista visual se estira o comprime proporcionalmente para cubrir la duración real del audio.
+ const totalDuration=audioBuffer?audioBuffer.duration:timelineDuration;
+ const visualTimeScale=timelineDuration/Math.max(.1,totalDuration);
  let started=0;
  const draw=now=>{
   if(!renderRecording)return;
   if(!started){started=now;if(audioSource)audioSource.start();}
   const elapsed=(now-started)/1000;
+  const visualElapsed=Math.min(timelineDuration,elapsed*visualTimeScale);
   let cursor=0,sceneIndex=timelineState.items.length-1,progress=1;
   for(let i=0;i<timelineState.items.length;i++){
    const seconds=Math.max(1,timelineState.items[i].seconds);
-   if(elapsed<cursor+seconds){sceneIndex=i;progress=(elapsed-cursor)/seconds;break;}
+   if(visualElapsed<cursor+seconds){sceneIndex=i;progress=(visualElapsed-cursor)/seconds;break;}
    cursor+=seconds;
   }
   drawVideoScene(timelineState.items[sceneIndex],sceneIndex,progress);
-  $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+timelineState.items.length+(audioBuffer?" · voz Kokoro incluida":"")+"…";
+  $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+timelineState.items.length+(audioBuffer?" · sincronizada con audio ("+Math.round(totalDuration)+" s)":"")+"…";
   if(elapsed>=totalDuration){recorder.stop();return;}
   renderFrame=requestAnimationFrame(draw);
  };
