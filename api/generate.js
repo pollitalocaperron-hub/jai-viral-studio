@@ -326,19 +326,26 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     const validSourceIds = new Set(researchSources.map(source => source.id));
     plan.research_sources = researchSources;
     if (Array.isArray(plan.fact_audit)) plan.fact_audit = plan.fact_audit.map(item => {
-      const ids = Array.isArray(item.source_ids) ? item.source_ids.filter(id => validSourceIds.has(id)) : [];
+      const claimTokens = String(item.claim || "").toLowerCase().match(/[a-záéíóúüñ]{5,}/g) || [];
+      const stop = new Set(["cuando","porque","sobre","durante","entre","despues","proceso","afirmacion","conocimiento","general","temperatura","molecular","cambio","forma"]);
+      const keyTerms = [...new Set(claimTokens)].filter(word => !stop.has(word));
+      const ids = (Array.isArray(item.source_ids) ? item.source_ids : []).filter(id => {
+        const source = researchSources.find(entry => entry.id === id);
+        if (!source) return false;
+        const sourceText = (source.title + " " + source.abstract).toLowerCase();
+        return keyTerms.filter(word => sourceText.includes(word)).length >= 2;
+      });
       const originalStatus = String(item.status || "").toLowerCase();
-      const unresolved = /pendiente|no resuelt|no verific|provisional|incertid|bajo|moderad/.test(originalStatus);
-      return { ...item, source_ids: ids, status: ids.length ? "fuente recuperada; pertinencia pendiente de revisión" : (unresolved ? "no verificada" : "conocimiento general; sin fuente específica"), evidence: ids.length ? String(item.evidence || "Revisar el resumen de la fuente antes de publicar.") : "No hay una fuente recuperada vinculada a esta afirmación." };
+      const unresolved = /pendient|pending|no resuelt|no verific|provisional|incertid|bajo|moderad/.test(originalStatus);
+      return { ...item, source_ids: ids, status: ids.length ? "fuente relacionada recuperada; pertinencia pendiente de revisión" : (unresolved ? "no verificada" : "conocimiento general; sin fuente específica"), evidence: ids.length ? String(item.evidence || "La fuente coincide en términos; revisar el resumen para confirmar que respalda la afirmación.") : "No hay una fuente recuperada cuya ficha coincida con esta afirmación." };
     });
-    const scriptText = String(plan.script || "").toLowerCase();
+    const narrativeText = JSON.stringify({ script: plan.script, angle: plan.angle, hook: plan.hook, story: plan.story, retention_map: plan.retention_map }).toLowerCase();
     const unresolvedInScript = (Array.isArray(plan.fact_audit) ? plan.fact_audit : []).filter(item => {
       if (item.source_ids && item.source_ids.length) return false;
       if (item.status !== "no verificada") return false;
       const tokens = String(item.claim || "").toLowerCase().match(/[a-záéíóúüñ]{6,}/g) || [];
-      const stop = new Set(["cuando","porque","sobre","durante","entre","despues","proceso","afirmacion","conocimiento","general","temperatura","molecular"]);
       const keyTerms = [...new Set(tokens)].filter(word => !stop.has(word));
-      return keyTerms.length >= 2 && keyTerms.filter(word => scriptText.includes(word)).length >= 2;
+      return keyTerms.length >= 2 && keyTerms.filter(word => narrativeText.includes(word)).length >= 2;
     });
     if (unresolvedInScript.length) return res.status(422).json({ error: "La auditoría detectó afirmaciones sin fuente que siguen apareciendo en el guion. El plan fue bloqueado para evitar enseñar datos no verificados.", diagnosticCode: "UNVERIFIED_CLAIMS_IN_SCRIPT", blockedClaims: unresolvedInScript.map(x => x.claim) });
     const spokenText = String(plan.script || "").replace(/\[[^\]]+\]/g, " ");
