@@ -40,6 +40,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <div class="row" style="margin-top:14px"><button class="secondary" id="copy">Copiar plan</button><button class="secondary" id="save">Guardar proyecto</button></div></section>
 <section class="card"><h3 class="section-title">Proyectos guardados</h3><div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div></section>
 <footer>J.A.I. Viral Studio · Producción editorial con Gemini · Exportación MP4 en desarrollo.</footer></div>
+<script src="/scene-engine.js"></script>
 <script>
 const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[];
 function readable(value){
@@ -381,6 +382,7 @@ function drawStoryBeat(item,index,progress){
  ctx.fillStyle="rgba(255,255,255,.18)";ctx.fillRect(55,1170,610,9);ctx.fillStyle="#65e0bd";ctx.fillRect(55,1170,610*p,9);
 }
 function drawVideoScene(item,index,progress){
+ if(window.JAIStoryEngine){window.JAIStoryEngine.draw(renderCtx,renderCanvas,item,index,progress);return;}
  drawStoryBeat(item,index,progress);return;
  const visual=String(item.visual||item.objective||"").toLowerCase();
  const title=String(item.on_screen_text||item.objective||"");
