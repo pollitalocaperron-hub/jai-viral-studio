@@ -174,7 +174,7 @@ function drawEarthScene(item,index,progress){
  const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height;
  const p=Math.max(0,Math.min(1,progress)),cx=w/2;
  // Cada bloque de retención obtiene un plano distinto, aunque pertenezca a la misma escena maestra.
- const stage=((Number.isFinite(Number(index))?Number(index):0)%6+6)%6;
+ const stage=((Number.isFinite(Number(index))?Number(index):0)%12+12)%12;
  const title=String(item.on_screen_text||"La Tierra y su movimiento");
  const visual=String(item.visual||"").toLowerCase();
  const stimulus=String(item.retentionStimulus||"").toLowerCase();
@@ -272,6 +272,35 @@ function drawEarthScene(item,index,progress){
   ctx.strokeStyle="#ffb66e";ctx.lineWidth=9;ctx.beginPath();ctx.ellipse(cx,570,295,95,p*.35,0,Math.PI*2);ctx.stroke();
   label("MOMENTO ANGULAR",220,30);
   label("UN PLANETA NO SE FRENA",970,25);
+ }else if(stage===5){
+  earth(cx,575,330,-.18+p*.24);
+  ctx.save();ctx.beginPath();ctx.arc(cx,575,330,0,Math.PI*2);ctx.clip();
+  for(let k=0;k<8;k++){const y=300+k*78+Math.sin(p*7+k)*22;ctx.strokeStyle=k%2?"#7ce7ee":"#b7f3ff";ctx.globalAlpha=.65;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,y);ctx.bezierCurveTo(180,y-70,470,y+80,720,y-35);ctx.stroke();}
+  ctx.restore();label("UN MUNDO EN MOVIMIENTO",205,27);
+ }else if(stage===6){
+  earth(cx,570,250,p*.28);
+  const night=ctx.createLinearGradient(cx-20,0,cx+250,0);night.addColorStop(0,"rgba(2,8,28,0)");night.addColorStop(.48,"rgba(2,8,28,.2)");night.addColorStop(1,"rgba(2,8,28,.94)");
+  ctx.fillStyle=night;ctx.beginPath();ctx.arc(cx,570,248,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#ffd166";ctx.shadowColor="#ffd166";ctx.shadowBlur=35;ctx.beginPath();ctx.arc(90,390,48,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;label("LUZ Y SOMBRA",210,30);
+ }else if(stage===7){
+  earth(cx,690,205,-.12+p*.12);
+  ctx.strokeStyle="#75dcff";ctx.lineWidth=5;ctx.setLineDash([14,12]);ctx.beginPath();ctx.ellipse(cx,690,300,105,-.22,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+  const angle=-1.05+p*2.1,sx=cx+300*Math.cos(angle),sy=690+105*Math.sin(angle);
+  ctx.save();ctx.translate(sx,sy);ctx.rotate(angle);ctx.fillStyle="#e6f5ff";ctx.fillRect(-34,-24,68,48);ctx.fillStyle="#4da9df";ctx.fillRect(-82,-18,42,36);ctx.fillRect(40,-18,42,36);ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.strokeRect(-34,-24,68,48);ctx.restore();label("ÓRBITA",220,32);
+ }else if(stage===8){
+  earth(205,590,155,-.1+p*.12);
+  ctx.strokeStyle="#ffd166";ctx.lineWidth=7;ctx.beginPath();ctx.arc(205,590,184,-.7,.7);ctx.stroke();
+  ctx.fillStyle="#142f50";ctx.beginPath();ctx.arc(505,590,145,0,Math.PI*2);ctx.fill();
+  ctx.save();ctx.beginPath();ctx.arc(505,590,145,0,Math.PI*2);ctx.clip();
+  for(let k=0;k<6;k++){ctx.fillStyle=["#287eb2","#63c58d","#a4dc91"][k%3];ctx.beginPath();ctx.ellipse(470+k*18,560+k*25,110,35,k*.2,0,Math.PI*2);ctx.fill();}
+  ctx.restore();ctx.strokeStyle="#8be9ff";ctx.lineWidth=5;ctx.beginPath();ctx.arc(505,590,145,0,Math.PI*2);ctx.stroke();label("DE LO GLOBAL AL DETALLE",220,26);
+ }else if(stage===9){
+  [0,1,2].forEach(k=>{const x=135+k*225;ctx.globalAlpha=.22+k*.3;earth(x,585,112,-.4+p*.5-k*.18);});
+  ctx.globalAlpha=1;arrow(150,820,585,820,"#ffd166",12);label("ROTACIÓN CONTINUA",220,29);
+ }else if(stage===10){
+  earth(cx,760,300,-.12+p*.1);
+  ctx.save();ctx.translate(cx,390+Math.sin(p*8)*8);ctx.fillStyle="#f4c9a2";ctx.beginPath();ctx.arc(0,-45,24,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#f4f7ff";ctx.lineWidth=18;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(0,55);ctx.moveTo(0,5);ctx.lineTo(-38,38);ctx.moveTo(0,5);ctx.lineTo(38,38);ctx.moveTo(0,55);ctx.lineTo(-28,100);ctx.moveTo(0,55);ctx.lineTo(28,100);ctx.stroke();ctx.restore();label("NOS MOVEMOS CON EL PLANETA",205,25);
  }else{
   // Cierre: plano amplio, planeta sereno y horizonte de luz.
   const glow=ctx.createRadialGradient(cx,520,30,cx,520,380);glow.addColorStop(0,"rgba(86,205,255,.25)");glow.addColorStop(1,"rgba(86,205,255,0)");
