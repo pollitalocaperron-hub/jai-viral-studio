@@ -557,8 +557,8 @@ async function getKokoro(){
  if(kokoroEngine)return kokoroEngine;
  if(kokoroLoading)return kokoroLoading;
  kokoroLoading=(async()=>{
-  $("kokoroStatus").textContent="Cargando motor Kokoro desde el CDN…";
-  const mod=await import("https://esm.sh/kokoro-js@1.2.1?bundle");
+  $("kokoroStatus").textContent="Cargando motor Kokoro en su versión optimizada para navegador…";
+  const mod=await import("https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js");
   $("kokoroStatus").textContent="Descargando el modelo neuronal de español. La primera carga puede tardar…";
   kokoroEngine=await mod.KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-v1.0-ONNX",{dtype:"q8",device:"wasm"});
   return kokoroEngine;
