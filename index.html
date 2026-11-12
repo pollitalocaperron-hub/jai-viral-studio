@@ -285,9 +285,11 @@ function buildTimeline(){
   const a=parseTime(m[1]),b=parseTime(m[2]);
   return a===null||b===null||b<=a?null:{start:a,end:b};
  };
- const sceneRanges=currentScenes.map((scene,index)=>{
-  const r=parseRange(scene.time);
-  return r?{...r,index}:{start:index*6,end:(index+1)*6,index};
+ const sceneStarts=currentScenes.map((scene,index)=>{
+  const range=parseRange(scene.time);
+  if(range)return {...range,index};
+  const start=parseTime(String(scene.time??"").trim());
+  return start===null?{start:index*6,end:null,index}:{start,end:null,index};
  }).sort((a,b)=>a.start-b.start);
  const beatRanges=(Array.isArray(currentRetentionMap)?currentRetentionMap:[]).map((beat,index)=>{
   const r=parseRange(beat.time);
@@ -295,8 +297,14 @@ function buildTimeline(){
   const start=parseTime(beat.time);
   return {...(start===null?{start:index*3,end:index*3+3}:{start,end:start+3}),beat,index};
  }).sort((a,b)=>a.start-b.start);
- const storyEnd=Math.max(...sceneRanges.map(r=>r.end),0);
  const mapEnd=Math.max(...beatRanges.map(r=>r.end),0);
+ const sceneRanges=sceneStarts.map((scene,index)=>{
+  if(Number.isFinite(scene.end))return scene;
+  const next=sceneStarts[index+1];
+  const inferredEnd=next?next.start:(mapEnd>scene.start?mapEnd:scene.start+6);
+  return {...scene,end:inferredEnd>scene.start?inferredEnd:scene.start+6};
+ });
+ const storyEnd=Math.max(...sceneRanges.map(r=>r.end),0);
  // El storyboard es la fuente de verdad: el mapa nunca puede acortar ni alargar el montaje.
  const totalSeconds=storyEnd>0?storyEnd:mapEnd;
  const count=Math.ceil(totalSeconds/3),usedModes=new Set(),usedActions=new Set();
