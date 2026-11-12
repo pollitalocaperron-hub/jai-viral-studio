@@ -48,7 +48,7 @@ function draw(ctx,canvas,item,index,progress){
  // nunca permitir que una descripción ambigua deje todos los bloques en el mismo plano genérico.
  const oceanColorTopic=/oceano|mar/.test(all)&&/agua|azul|luz|color/.test(all);
  if(oceanColorTopic){
-  const oceanSequence=["paradox","sunbeam","spectrum","molecules","absorb","bluepath","scatter","depth","compare","skytest","drop","finalblue"];
+  const oceanSequence=["paradox","sunbeam","spectrum","molecules","absorb","bluepath","scatter","depth","compare","skytest","drop","rays","filter","finalblue"];
   mode=oceanSequence[((Number(index)||0)%oceanSequence.length)];
  }
  else if(/vaso|vidrio|cristal/.test(sceneText))mode="glass";
