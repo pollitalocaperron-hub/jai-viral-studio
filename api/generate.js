@@ -4,18 +4,17 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Método no permitido." });
   }
 
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) {
-    console.error("[JAI][Gemini] GEMINI_API_KEY no está configurada.");
-    return res.status(500).json({ error: "Falta configurar GEMINI_API_KEY en Vercel.", diagnosticCode: "MISSING_API_KEY" });
+  const { topic, notes = "", duration = "45–60 segundos", platform = "Reels", learning_memory = "" } = req.body || {};
+  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
+    console.error("[JAI] No hay claves de proveedor configuradas.");
+    return res.status(500).json({ error: "Falta configurar un proveedor de IA en Vercel.", diagnosticCode: "NO_AI_PROVIDER" });
   }
-
-  const { topic, notes = "", duration = "45–60 segundos", platform = "Reels" } = req.body || {};
   if (typeof topic !== "string" || !topic.trim() || topic.length > 500) {
     return res.status(400).json({ error: "Escribe un tema válido (máximo 500 caracteres)." });
   }
 
   const safeNotes = typeof notes === "string" ? notes.slice(0, 6000) : "";
+  const safeLearningMemory = typeof learning_memory === "string" ? learning_memory.slice(0, 9000) : "";
   const prompt = `
 Eres el director editorial, guionista y estratega de retención de J.A.I. Viral Studio.
 Diseña un plan de producción de alta calidad para un video educativo vertical 9:16.
@@ -81,6 +80,15 @@ Duración objetivo: ${duration}
 Plataforma: ${platform}
 Notas del usuario:
 ${safeNotes}
+
+MEMORIA EDITORIAL ACUMULADA DE J.A.I. (solo para diversidad y mejora creativa; NO es fuente científica):
+${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
+- Revisa esta memoria antes de diseñar el plan.
+- Evita repetir literalmente temas, hooks, ángulos, revelaciones, secuencias, objetos protagonistas y composiciones visuales recientes.
+- Si el tema actual coincide con uno anterior, aporta un enfoque nuevo y explica un mecanismo o perspectiva diferente; no cambies solo el título.
+- Alterna estructuras narrativas, escalas, acciones y encuadres. No repitas fórmulas visuales por inercia.
+- La memoria registra lo que J.A.I. produjo, no demuestra que algo funcionó ni verifica hechos. No uses sus afirmaciones como evidencia.
+- Si el usuario incluye correcciones en sus notas, dales prioridad y conviértelas en reglas para este plan.
 `;
 
   try {
