@@ -329,11 +329,13 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     if (Array.isArray(plan.fact_audit)) plan.fact_audit = plan.fact_audit.map(item => {
       const claimTokens = String(item.claim || "").toLowerCase().match(/[a-záéíóúüñ]{5,}/g) || [];
       const keyTerms = [...new Set(claimTokens)].filter(word => !auditStopWords.has(word));
+      const aliases = { azucar: ["sugar","sucrose"], sacarosa: ["sucrose"], caramelizacion: ["caramelization"], fusion: ["melting","fusion"], calor: ["heat","heating","thermal"], enlaces: ["bonds"], hidrogeno: ["hydrogen"], vibracion: ["vibration"], descomposicion: ["decomposition"], cristalina: ["crystalline","crystal"], moleculas: ["molecules"], humedad: ["moisture","water"], temperatura: ["temperature"] };
+      const expandedTerms = keyTerms.flatMap(word => [word, ...(aliases[word] || [])]);
       const ids = (Array.isArray(item.source_ids) ? item.source_ids : []).filter(id => {
         const source = researchSources.find(entry => entry.id === id);
         if (!source) return false;
-        const sourceText = (source.title + " " + source.abstract).toLowerCase();
-        return keyTerms.filter(word => sourceText.includes(word)).length >= 2;
+        const sourceText = (source.title + " " + source.abstract).toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
+        return expandedTerms.filter(word => sourceText.includes(word)).length >= 2;
       });
       const originalStatus = String(item.status || "").toLowerCase();
       const unresolved = /pendient|pending|no resuelt|no verific|provisional|incertid|bajo|moderad/.test(originalStatus);
