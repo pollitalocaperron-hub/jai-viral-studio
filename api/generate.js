@@ -34,7 +34,8 @@ export default async function handler(req, res) {
       }).filter(item => item.title && (item.url || item.abstract));
     } catch (error) { console.warn("[JAI][Research] OpenAlex no disponible:", error && error.message); return []; }
   }
-  const researchSources = await fetchResearchSources(topic.trim());
+  const researchQuery = /az[uú]car|sacarosa/i.test(topic) ? "sucrose thermal decomposition melting caramelization glass transition" : /maillard|carne|bistec/i.test(topic) ? "Maillard reaction food chemistry amino acids reducing sugars" : topic.trim();
+  const researchSources = await fetchResearchSources(researchQuery);
   const researchContext = researchSources.length ? researchSources.map(s => "[" + s.id + "] " + s.title + " (" + (s.year || "año no indicado") + "). Autores: " + (s.authors || "no disponibles") + ". DOI/URL: " + (s.url || "no disponible") + ". Resumen: " + (s.abstract || "sin resumen recuperado")).join("\n") : "No se recuperaron fuentes académicas. No afirmes que la investigación fue verificada."
   const prompt = `FUENTES ACADÉMICAS RECUPERADAS AUTOMÁTICAMENTE (OpenAlex):
 ${researchContext}
