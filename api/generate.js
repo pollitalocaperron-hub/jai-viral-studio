@@ -299,7 +299,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
           const ch = candidate[i];
           if (inString) {
             if (escaped) escaped = false;
-            else if (ch === "\\\\") escaped = true;
+            else if (ch === "\\") escaped = true;
             else if (ch === '"') inString = false;
             continue;
           }
