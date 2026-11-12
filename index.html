@@ -473,7 +473,7 @@ async function makePlan(){
   renderRetentionMap(normalizedRetention);
   currentPlan=currentPlan.replace(readable(data.retention_map),readable(normalizedRetention));
   $("output").classList.add("show");$("status").textContent="¡Plan generado! Revisa las escenas, verificaciones y control de calidad antes de producir."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
- }catch(error){$("status").textContent=error.message||"Ocurrió un error al generar el plan.";if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{planningInProgress=false;$("create").disabled=false;}
+ }catch(error){const networkFailure=error&&((error.name==="TypeError")||/failed to fetch|networkerror|load failed/i.test(error.message||""));$("status").textContent=networkFailure?"No se pudo conectar con el motor de generación de J.A.I. La solicitud no devolvió el guion. Recarga la página e inténtalo una vez más; si persiste, revisaremos el servicio de Vercel.":(error.message||"Ocurrió un error al generar el plan.");if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{planningInProgress=false;$("create").disabled=false;}
 }
 
 let kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioDuration=0,kokoroSampleRate=24000,kokoroSource=null,kokoroAudioContext=null;
