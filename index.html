@@ -60,12 +60,12 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <audio id="kokoroAudio" controls style="display:none;width:100%;margin-top:12px"></audio>
  <a id="downloadNarration" class="secondary" hidden download="jai-narracion.wav">Descargar narración WAV</a>
 </section>
-<div style="height:13px"></div><label>Storyboard visual 2D</label><div id="story"></div><div style="height:13px"></div><label>Mapa de retención · estímulo nuevo cada 3 segundos</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Fotogramas IA · Estilo científico</span></div><p class="hint">Genera una imagen científica cinematográfica diferente por cada bloque de 3 segundos. Todas las tomas comparten la misma dirección de arte; después se animan sin inventar contenido.</p><button class="primary" id="makeVisuals" type="button">Generar fotogramas cinematográficos</button><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Editor de escenas · Línea de tiempo</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza las escenas del storyboard en orden. Esta etapa prepara la secuencia y sus tiempos; todavía no exporta el MP4.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Revisar secuencia</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar video de prueba</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video WebM</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Kokoro, se mezclará dentro del WebM. La exportación MP4 sigue pendiente.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
-<div class="steps"><div class="step"><b>01 · Investigación</b><span>Verificar afirmaciones y fuentes.</span></div><div class="step"><b>02 · Diseño 2D</b><span>Objetos, diagramas y movimiento.</span></div><div class="step"><b>03 · Voz</b><span>Narración y sincronización.</span></div><div class="step"><b>04 · Montaje</b><span>Ritmo, subtítulos y sonido.</span></div><div class="step"><b>05 · Revisión</b><span>Exactitud y originalidad.</span></div><div class="step"><b>06 · Exportación</b><span>MP4 vertical 9:16.</span></div></div>
+<div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de retención · estímulo nuevo cada 3 segundos</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Fotogramas IA · Estilo científico</span></div><p class="hint">Genera una imagen científica cinematográfica diferente por cada bloque de 3 segundos. Todas las tomas comparten la misma dirección de arte; después se animan sin inventar contenido.</p><button class="primary" id="makeVisuals" type="button">Generar fotogramas cinematográficos</button><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Editor de escenas · Línea de tiempo</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza las escenas del storyboard en orden. Esta etapa prepara la secuencia y sus tiempos; todavía no exporta el MP4.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Revisar secuencia</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar video de prueba</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video WebM</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Kokoro, se mezclará dentro del WebM. La exportación MP4 sigue pendiente.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
+<div class="steps"><div class="step"><b>01 · Investigación</b><span>Verificar afirmaciones y fuentes.</span></div><div class="step"><b>02 · Dirección visual</b><span>Objetos, diagramas y movimiento.</span></div><div class="step"><b>03 · Voz</b><span>Narración y sincronización.</span></div><div class="step"><b>04 · Montaje</b><span>Ritmo, subtítulos y sonido.</span></div><div class="step"><b>05 · Revisión</b><span>Exactitud y originalidad.</span></div><div class="step"><b>06 · Exportación</b><span>MP4 vertical 9:16.</span></div></div>
 <div class="row" style="margin-top:14px"><button class="secondary" id="copy">Copiar plan</button><button class="secondary" id="save">Guardar proyecto</button></div></section>
 <section class="card"><h3 class="section-title">Proyectos guardados</h3><div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div></section>
 <footer>J.A.I. Viral Studio · Producción editorial con Gemini · Exportación MP4 en desarrollo.</footer></div>
-<script src="/scene-engine.js"></script>
+
 <script>
 const $=id=>document.getElementById(id);let currentPlan="",currentRetentionMap=[],currentTopic="";
 function readable(value){
@@ -105,25 +105,6 @@ function renderStory(value){
 }
 
 let currentScenes=[],jaiSceneImages=[];
-function visualSvg(scene,index){
- const visual=String(scene?.visual||scene?.objective||"Escena educativa").toLowerCase();
- const water=/agua|mar|oc[eé]ano|olas|acu[aá]t|profund|azul/.test(visual);
- const light=/luz|sol|rayo|color|espectro|rojo|azul|absor|dispers/.test(visual);
- const glass=/vaso|vidrio|cristal/.test(visual);
- const title=escapeHtml(String(scene?.on_screen_text||scene?.objective||("Escena "+(index+1))).slice(0,90));
- const palette=water?["#071a35","#0d5680","#54d7e8"]:["#101a36","#344f83","#70dfc5"];
- let objects="";
- if(water){
-  objects='<path d="M0 230 Q70 205 140 230 T280 230 T420 230 V540 H0Z" fill="#0e6790" opacity=".55"/><path d="M0 285 Q70 260 140 285 T280 285 T420 285 V540 H0Z" fill="#092b57"/><path d="M0 340 Q70 315 140 340 T280 340 T420 340 V540 H0Z" fill="#061d42"/><g class="float" fill="none" stroke="#75e5f0" stroke-width="4" opacity=".8"><path d="M35 270q35-20 70 0t70 0t70 0t70 0"/><path d="M75 325q35-20 70 0t70 0t70 0" opacity=".5"/></g>';
- } else if(glass){
-  objects='<g class="float"><path d="M145 180h130l-13 210q-52 38-104 0z" fill="#8fe8f2" fill-opacity=".13" stroke="#b8f4ff" stroke-width="5"/><path d="M151 270h118l-8 117q-50 32-96 0z" fill="#59cde8" fill-opacity=".32"/><ellipse cx="210" cy="180" rx="65" ry="10" fill="none" stroke="#d5fbff" stroke-width="4"/></g>';
- } else if(light){
-  objects='<g class="drift" stroke-linecap="round" fill="none"><path d="M45 210L370 330" stroke="#fff3a6" stroke-width="12"/><path d="M45 245L260 335" stroke="#ff795e" stroke-width="7" opacity=".9"/><path d="M45 275L345 395" stroke="#68dfff" stroke-width="10"/><path d="M45 305L180 390" stroke="#ffbc63" stroke-width="7" opacity=".7"/></g><g class="pulse" fill="#8deaff"><circle cx="345" cy="395" r="13"/><circle cx="300" cy="377" r="7"/><circle cx="375" cy="420" r="6"/></g>';
- } else {
-  objects='<g class="float"><circle cx="210" cy="300" r="100" fill="#6de0d0" fill-opacity=".12" stroke="#83f1df" stroke-width="3"/><rect x="135" y="245" width="150" height="110" rx="18" fill="#244d78" stroke="#9beadd" stroke-width="3"/><path d="M160 320l34-38 25 24 38-45" fill="none" stroke="#9beadd" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></g>';
- }
- return '<svg class="visual-art" viewBox="0 0 420 560" role="img" aria-label="'+title+'"><defs><linearGradient id="bg'+index+'" x1="0" y1="0" x2="1" y2="1"><stop stop-color="'+palette[0]+'"/><stop offset="1" stop-color="'+palette[1]+'"/></linearGradient><radialGradient id="glow'+index+'"><stop stop-color="'+palette[2]+'" stop-opacity=".5"/><stop offset="1" stop-color="'+palette[2]+'" stop-opacity="0"/></radialGradient></defs><rect width="420" height="560" fill="url(#bg'+index+')"/><circle cx="330" cy="95" r="160" fill="url(#glow'+index+')"/><circle cx="60" cy="450" r="130" fill="url(#glow'+index+')"/>'+objects+'<rect x="22" y="24" width="376" height="512" rx="20" fill="none" stroke="#b8eaff" stroke-opacity=".18"/><text x="32" y="66" fill="#9debdc" font-size="15" font-family="Arial" letter-spacing="3">J.A.I. · ESCENA '+(index+1)+'</text><foreignObject x="30" y="435" width="360" height="78"><div xmlns="http://www.w3.org/1999/xhtml" style="font:700 23px Arial,sans-serif;color:#fff;line-height:1.12;text-shadow:0 2px 8px #06101f">'+title+'</div></foreignObject></svg>';
-}
 function renderVisualScenes(){
  const root=$("visualScenes");root.replaceChildren();
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Genera primero un plan con storyboard.";return;}
@@ -319,7 +300,7 @@ function buildTimeline(){
  });
  renderTimeline();
  const gap=Math.max(0,totalSeconds-mapEnd),overrun=Math.max(0,mapEnd-totalSeconds);
- $("timelineStatus").textContent="Línea de tiempo sincronizada: "+totalSeconds+" segundos exactos del storyboard en "+count+" bloques. "+(gap?gap+" segundos faltantes del mapa se completaron con acciones 2D distintas.":overrun?overrun+" segundos sobrantes del mapa se recortaron para respetar el storyboard.":"Storyboard y mapa cubren la misma duración.");
+ $("timelineStatus").textContent="Línea de tiempo sincronizada: "+totalSeconds+" segundos exactos del storyboard en "+count+" bloques. "+(gap?gap+" segundos faltantes del mapa se completaron con tomas visuales distintas.":overrun?overrun+" segundos sobrantes del mapa se recortaron para respetar el storyboard.":"Storyboard y mapa cubren la misma duración.");
 }
 function previewTimeline(){
  if(!timelineState.items.length)return;
@@ -337,216 +318,6 @@ function previewTimeline(){
 
 const renderCanvas=$("renderCanvas"),renderCtx=renderCanvas.getContext("2d");
 let renderFrame=0,renderRecording=false;
-function drawEarthScene(item,index,progress){
- const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height;
- const p=Math.max(0,Math.min(1,progress)),cx=w/2;
- // Cada bloque de retención obtiene un plano distinto, aunque pertenezca a la misma escena maestra.
- const stage=((Number.isFinite(Number(index))?Number(index):0)%12+12)%12;
- const title=String(item.on_screen_text||"La Tierra y su movimiento");
- const visual=String(item.visual||"").toLowerCase();
- const stimulus=String(item.retentionStimulus||"").toLowerCase();
- const bg=ctx.createLinearGradient(0,0,w,h);
- bg.addColorStop(0,"#061329");bg.addColorStop(.58,"#102b4b");bg.addColorStop(1,"#020817");
- ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
- for(let i=0;i<86;i++){
-  const x=(i*97+31)%w,y=(i*173+67)%h;
-  ctx.globalAlpha=.35+.45*Math.sin(p*7+i);
-  ctx.fillStyle="#d8f4ff";ctx.beginPath();ctx.arc(x,y,i%5===0?2:1,0,Math.PI*2);ctx.fill();
- }
- ctx.globalAlpha=1;
- // Movimiento de cámara editorial: acercamiento suave y paneo alternado entre planos.
- ctx.save();
- const cameraZoom=1.015+0.035*Math.sin(p*Math.PI);
- const cameraPan=((index%2===0)?-1:1)*14*Math.sin(p*Math.PI);
- ctx.translate(cx+cameraPan,640);ctx.scale(cameraZoom,cameraZoom);ctx.translate(-cx,-640);
- const earth=(x,y,r,rotation=0)=>{
-  ctx.save();ctx.translate(x,y);ctx.rotate(rotation);
-  const ocean=ctx.createRadialGradient(-r*.35,-r*.42,r*.05,0,0,r*1.2);
-  ocean.addColorStop(0,"#62d7ed");ocean.addColorStop(.5,"#1679b7");ocean.addColorStop(1,"#052653");
-  ctx.shadowColor="#38c9f4";ctx.shadowBlur=30;ctx.fillStyle=ocean;
-  ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-  ctx.save();ctx.beginPath();ctx.arc(0,0,r-2,0,Math.PI*2);ctx.clip();
-  const land="#68c58d",light="#a5df9b";
-  const shapes=[
-   [[-.78,-.38],[-.62,-.72],[-.25,-.76],[-.12,-.48],[-.34,-.28],[-.42,.02],[-.68,.1],[-.82,-.12]],
-   [[-.42,.08],[-.18,.16],[-.12,.48],[-.32,.86],[-.5,.55],[-.58,.22]],
-   [[-.06,-.68],[.3,-.78],[.68,-.55],[.48,-.32],[.18,-.4]],
-   [[.1,-.3],[.53,-.42],[.82,-.12],[.68,.26],[.42,.34],[.31,.7],[.05,.3],[-.1,-.02]],
-   [[.65,.38],[.88,.4],[.91,.62],[.7,.72]]
-  ];
-  shapes.forEach((poly,k)=>{
-   ctx.beginPath();poly.forEach((pt,j)=>j?ctx.lineTo(pt[0]*r,pt[1]*r):ctx.moveTo(pt[0]*r,pt[1]*r));ctx.closePath();
-   ctx.fillStyle=k%2?land:light;ctx.fill();ctx.strokeStyle="rgba(8,65,54,.5)";ctx.lineWidth=2;ctx.stroke();
-  });
-  ctx.strokeStyle="rgba(190,239,255,.38)";ctx.lineWidth=2;
-  for(let n=-1;n<=1;n++){ctx.beginPath();ctx.ellipse(0,n*r*.38,r*.96,r*.2,0,0,Math.PI*2);ctx.stroke();}
-  ctx.restore();
-  const shade=ctx.createLinearGradient(-r,-r,r,r);shade.addColorStop(0,"rgba(255,255,255,.2)");shade.addColorStop(1,"rgba(0,8,35,.48)");
-  ctx.fillStyle=shade;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle="rgba(141,229,255,.85)";ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,r-2,0,Math.PI*2);ctx.stroke();
-  ctx.restore();
- };
- const arrow=(x1,y1,x2,y2,color="#ffd166",width=8)=>{
-  const a=Math.atan2(y2-y1,x2-x1);ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=width;ctx.lineCap="round";
-  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-  ctx.save();ctx.translate(x2,y2);ctx.rotate(a);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-22,-12);ctx.lineTo(-22,12);ctx.closePath();ctx.fill();ctx.restore();
- };
- const label=(text,y,size=28,color="#d8efff")=>{ctx.fillStyle=color;ctx.font="700 "+size+"px Arial";ctx.textAlign="center";ctx.fillText(text,cx,y);};
- if(stage===0){
-  // Plano de apertura: planeta completo y persona en la superficie.
-  earth(cx,590,245,-.12+p*.08);
-  ctx.save();ctx.translate(cx,315+Math.sin(p*6)*5);ctx.fillStyle="#f2c9a2";ctx.beginPath();ctx.arc(0,-35,17,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle="#f4f7ff";ctx.lineWidth=15;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(0,-15);ctx.lineTo(0,35);ctx.moveTo(0,0);ctx.lineTo(-27,20);ctx.moveTo(0,0);ctx.lineTo(27,18);ctx.moveTo(0,35);ctx.lineTo(-17,66);ctx.moveTo(0,35);ctx.lineTo(18,66);ctx.stroke();ctx.restore();
-  for(let j=0;j<3;j++){const a=p*2.8+j*2.1;arrow(cx+Math.cos(a)*290,590+Math.sin(a)*290,cx+Math.cos(a+.3)*345,590+Math.sin(a+.3)*345,["#ff786c","#ffd166","#63d9f5"][j],6);}
-  label("TODO PARECE ESTAR EN CALMA",190,24);
- }else if(stage===1){
-  // Diagrama físico: la base se frena, el objeto conserva su movimiento.
-  ctx.fillStyle="#315a7d";ctx.fillRect(70,760,580,36);ctx.fillStyle="#8cb8d5";ctx.fillRect(90,796,540,18);
-  const bx=250+p*75,by=675;
-  ctx.fillStyle="#ffca70";ctx.fillRect(bx,by,112,82);ctx.strokeStyle="#fff0c7";ctx.lineWidth=5;ctx.strokeRect(bx,by,112,82);
-  arrow(bx+120,by+38,bx+310,by+38,"#ff786c",10);
-  arrow(470,520,470,700,"#63d9f5",7);
-  label("LA BASE SE DETIENE",350,27);
-  label("EL OBJETO SIGUE",970,34,"#ffd166");
-  ctx.fillStyle="#b6d8ee";ctx.font="24px Arial";ctx.textAlign="center";ctx.fillText("INERCIA",cx,1030);
- }else if(stage===2){
-  // Dato de velocidad: globo grande, ecuador y contador destacado.
-  earth(cx,575,250,-.15+p*.16);
-  ctx.strokeStyle="#ffe08a";ctx.lineWidth=5;ctx.setLineDash([12,10]);ctx.beginPath();ctx.ellipse(cx,575,250,72,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
-  label("VELOCIDAD EN EL ECUADOR",230,26);
-  ctx.fillStyle="#fff";ctx.font="900 66px Arial";ctx.textAlign="center";ctx.fillText("1,670 km/h",cx,960);
-  ctx.fillStyle="#a9c7e2";ctx.font="23px Arial";ctx.fillText("aproximadamente",cx,1005);
- }else if(stage===3){
-  // Capas atmosféricas y océano con movimiento horizontal visible.
-  earth(cx,490,205,-.1);
-  for(let k=0;k<5;k++){
-   const y=280+k*115+Math.sin(p*6+k)*12;
-   ctx.strokeStyle=["#70e5ff","#65b9ee","#9ad7ff","#ffd166","#ff927b"][k];ctx.globalAlpha=.85;ctx.lineWidth=8-k;
-   ctx.beginPath();ctx.moveTo(30,y);
-   for(let x=30;x<690;x+=10)ctx.lineTo(x,y+Math.sin(x/42+p*8+k)*17);
-   ctx.stroke();
-  }
-  ctx.globalAlpha=1;
-  arrow(80,870,610,870,"#ffd166",10);
-  label("ATMÓSFERA Y OCÉANOS",190,27);
-  label("TAMBIÉN ESTÁN EN MOVIMIENTO",1010,22);
- }else if(stage===4){
-  // Corte transversal del planeta y representación del momento angular.
-  earth(cx,570,240,-.08);
-  ctx.fillStyle="#061329";ctx.beginPath();ctx.moveTo(cx,330);ctx.lineTo(620,570);ctx.lineTo(cx,810);ctx.closePath();ctx.fill();
-  ctx.fillStyle="#f08c55";ctx.beginPath();ctx.arc(cx,570,132,-Math.PI/2,Math.PI/2);ctx.lineTo(cx,570);ctx.closePath();ctx.fill();
-  ctx.fillStyle="#ffd166";ctx.beginPath();ctx.arc(cx,570,72,-Math.PI/2,Math.PI/2);ctx.lineTo(cx,570);ctx.closePath();ctx.fill();
-  ctx.strokeStyle="#ffb66e";ctx.lineWidth=9;ctx.beginPath();ctx.ellipse(cx,570,295,95,p*.35,0,Math.PI*2);ctx.stroke();
-  label("MOMENTO ANGULAR",220,30);
-  label("UN PLANETA NO SE FRENA",970,25);
- }else if(stage===5){
-  earth(cx,575,330,-.18+p*.24);
-  ctx.save();ctx.beginPath();ctx.arc(cx,575,330,0,Math.PI*2);ctx.clip();
-  for(let k=0;k<8;k++){const y=300+k*78+Math.sin(p*7+k)*22;ctx.strokeStyle=k%2?"#7ce7ee":"#b7f3ff";ctx.globalAlpha=.65;ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,y);ctx.bezierCurveTo(180,y-70,470,y+80,720,y-35);ctx.stroke();}
-  ctx.restore();label("UN MUNDO EN MOVIMIENTO",205,27);
- }else if(stage===6){
-  earth(cx,570,250,p*.28);
-  const night=ctx.createLinearGradient(cx-20,0,cx+250,0);night.addColorStop(0,"rgba(2,8,28,0)");night.addColorStop(.48,"rgba(2,8,28,.2)");night.addColorStop(1,"rgba(2,8,28,.94)");
-  ctx.fillStyle=night;ctx.beginPath();ctx.arc(cx,570,248,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle="#ffd166";ctx.shadowColor="#ffd166";ctx.shadowBlur=35;ctx.beginPath();ctx.arc(90,390,48,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;label("LUZ Y SOMBRA",210,30);
- }else if(stage===7){
-  earth(cx,690,205,-.12+p*.12);
-  ctx.strokeStyle="#75dcff";ctx.lineWidth=5;ctx.setLineDash([14,12]);ctx.beginPath();ctx.ellipse(cx,690,300,105,-.22,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
-  const angle=-1.05+p*2.1,sx=cx+300*Math.cos(angle),sy=690+105*Math.sin(angle);
-  ctx.save();ctx.translate(sx,sy);ctx.rotate(angle);ctx.fillStyle="#e6f5ff";ctx.fillRect(-34,-24,68,48);ctx.fillStyle="#4da9df";ctx.fillRect(-82,-18,42,36);ctx.fillRect(40,-18,42,36);ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.strokeRect(-34,-24,68,48);ctx.restore();label("ÓRBITA",220,32);
- }else if(stage===8){
-  earth(205,590,155,-.1+p*.12);
-  ctx.strokeStyle="#ffd166";ctx.lineWidth=7;ctx.beginPath();ctx.arc(205,590,184,-.7,.7);ctx.stroke();
-  ctx.fillStyle="#142f50";ctx.beginPath();ctx.arc(505,590,145,0,Math.PI*2);ctx.fill();
-  ctx.save();ctx.beginPath();ctx.arc(505,590,145,0,Math.PI*2);ctx.clip();
-  for(let k=0;k<6;k++){ctx.fillStyle=["#287eb2","#63c58d","#a4dc91"][k%3];ctx.beginPath();ctx.ellipse(470+k*18,560+k*25,110,35,k*.2,0,Math.PI*2);ctx.fill();}
-  ctx.restore();ctx.strokeStyle="#8be9ff";ctx.lineWidth=5;ctx.beginPath();ctx.arc(505,590,145,0,Math.PI*2);ctx.stroke();label("DE LO GLOBAL AL DETALLE",220,26);
- }else if(stage===9){
-  [0,1,2].forEach(k=>{const x=135+k*225;ctx.globalAlpha=.22+k*.3;earth(x,585,112,-.4+p*.5-k*.18);});
-  ctx.globalAlpha=1;arrow(150,820,585,820,"#ffd166",12);label("ROTACIÓN CONTINUA",220,29);
- }else if(stage===10){
-  earth(cx,760,300,-.12+p*.1);
-  ctx.save();ctx.translate(cx,390+Math.sin(p*8)*8);ctx.fillStyle="#f4c9a2";ctx.beginPath();ctx.arc(0,-45,24,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle="#f4f7ff";ctx.lineWidth=18;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(0,55);ctx.moveTo(0,5);ctx.lineTo(-38,38);ctx.moveTo(0,5);ctx.lineTo(38,38);ctx.moveTo(0,55);ctx.lineTo(-28,100);ctx.moveTo(0,55);ctx.lineTo(28,100);ctx.stroke();ctx.restore();label("NOS MOVEMOS CON EL PLANETA",205,25);
- }else{
-  // Cierre: plano amplio, planeta sereno y horizonte de luz.
-  const glow=ctx.createRadialGradient(cx,520,30,cx,520,380);glow.addColorStop(0,"rgba(86,205,255,.25)");glow.addColorStop(1,"rgba(86,205,255,0)");
-  ctx.fillStyle=glow;ctx.fillRect(0,150,w,760);
-  earth(cx,570,260,-.12);
-  ctx.strokeStyle="rgba(128,222,255,.45)";ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(cx,570,330,110,-.12,0,Math.PI*2);ctx.stroke();
-  label("LA TIERRA SIGUE GIRANDO",205,27);
-  label("Y NOSOTROS VIAJAMOS CON ELLA",960,23);
- }
- // Restablecer cámara para mantener títulos y rótulos perfectamente legibles.
- ctx.restore();
- // Texto de apoyo breve: solo copy dirigido al espectador.
- const clean=title.length>72?title.slice(0,69).replace(/\s+\S*$/,"")+"…":title;
- ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font="bold 34px Arial";
- const words=clean.split(/\s+/),lines=[];let line="";
- words.forEach(word=>{const test=line?line+" "+word:word;if(ctx.measureText(test).width>620&&line){lines.push(line);line=word;}else line=test;});
- if(line)lines.push(line);
- lines.slice(0,2).forEach((txt,i)=>ctx.fillText(txt,cx,1080+i*43));
- ctx.fillStyle="#b8c9e5";ctx.font="21px Arial";ctx.fillText(item.segmentLabel||("BLOQUE "+(index+1)),cx,1170);
-}
-function drawStoryBeat(item,index,progress){
- const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height,p=Math.max(0,Math.min(1,progress));
- const cx=w/2,visual=String(item.visualAction||item.visual||item.objective||"").toLowerCase(),title=String(item.on_screen_text||item.objective||"");
- const topic=(String(item.visual||"")+" "+String(item.visualAction||"")+" "+String(item.retentionStimulus||"")+" "+String(item.objective||"")).toLowerCase();
- const water=/agua|mar|oc[eé]ano|ola|líquido|liquido|corriente/.test(topic),light=/luz|rayo|sol|color|fot[oó]n|espectro/.test(topic),earth=/tierra|planeta|rotaci[oó]n|ecuador/.test(topic),human=/persona|humano|cuerpo|observador|viajero/.test(topic);
- const bg=ctx.createLinearGradient(0,0,w,h);bg.addColorStop(0,"#07142b");bg.addColorStop(1,water?"#075477":light?"#38274d":"#142b48");ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
- for(let i=0;i<32;i++){ctx.globalAlpha=.12;ctx.fillStyle="#bcecff";ctx.beginPath();ctx.arc((i*137)%w,(i*211)%h,1+i%3,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
- const rounded=(x,y,ww,hh,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,ww,hh,r);ctx.fill();};
- const text=(s,x,y,size=28,color="#fff")=>{ctx.fillStyle=color;ctx.font="700 "+size+"px Arial";ctx.textAlign="center";ctx.fillText(s,x,y);};
- const arrow=(x1,y1,x2,y2,color="#ffd166",width=9)=>{const a=Math.atan2(y2-y1,x2-x1);ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.save();ctx.translate(x2,y2);ctx.rotate(a);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-24,-13);ctx.lineTo(-24,13);ctx.closePath();ctx.fill();ctx.restore();};
- const orb=(x,y,r,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();};
- const person=(x,y,s=1,pose=0)=>{ctx.save();ctx.translate(x,y);ctx.scale(s,s);ctx.strokeStyle="#f5f7ff";ctx.lineWidth=17;ctx.lineCap="round";orb(0,-70,22,"#f0c49c");ctx.beginPath();ctx.moveTo(0,-43);ctx.lineTo(0,35);ctx.moveTo(0,-20);ctx.lineTo(pose?45:-38,10);ctx.moveTo(0,35);ctx.lineTo(-30,90);ctx.moveTo(0,35);ctx.lineTo(32,90);ctx.stroke();ctx.restore();};
- const objectX=100+p*430;
- const actionText=(String(item.visualAction||"")+" "+String(item.retentionStimulus||"")+" "+String(item.visual||"")+" "+String(item.objective||"")).toLowerCase();
- const mode=(()=>{
-  if(/compar|contrasta|lado a lado|antes y despu[eé]s|diferencia|frente a/.test(actionText))return 3;
-  if(/abre|revela|corte transversal|interior|capas|atraviesa|penetra|descompone/.test(actionText))return 2;
-  if(/choca|impact|colisi|golpea|rompe|cae|rebota|explota/.test(actionText))return 4;
-  if(/[oó]rbita|orbita|gira alrededor|rodea|trayectoria circular/.test(actionText))return 6;
-  if(/corriente|fluye|desplaza|arrastra|viaja|se mueve|avanza|recorre|separa|dispersa/.test(actionText))return 5;
-  if(/acercamiento|primer plano|macro|zoom|detalle|ampl[ií]a/.test(actionText))return 1;
-  if(/persona|humano|escala humana|observador|cuerpo/.test(actionText))return 5;
-  return (index*3+1)%7;
- })();
- ctx.save();
- if(earth){
-  if(mode===0){orb(cx,560,245,"#147db1");orb(cx-72,500,75,"#69c58d");orb(cx+90,620,96,"#79d18d");ctx.strokeStyle="#a8efff";ctx.lineWidth=12;ctx.beginPath();ctx.ellipse(cx,560,310,95,-.2,0,Math.PI*2);ctx.stroke();person(110,870,.8);arrow(175,845,310,820);}
-  else if(mode===1){rounded(55,470,610,55,18,"#456987");rounded(90+p*160,390,115,80,14,"#ffbd63");arrow(250,430,600,430,"#ff786c",13);text("EL MOVIMIENTO CONTINÚA",cx,330,28);}
-  else if(mode===2){orb(cx,560,230,"#167eb6");ctx.save();ctx.beginPath();ctx.arc(cx,560,230,0,Math.PI*2);ctx.clip();ctx.fillStyle="#f0a05a";ctx.beginPath();ctx.moveTo(cx,300);ctx.lineTo(cx+220,560);ctx.lineTo(cx,800);ctx.closePath();ctx.fill();orb(cx,560,90,"#ffd166");ctx.restore();text("MIRA EL INTERIOR",cx,260,30);}
-  else if(mode===3){orb(205,590,145,"#1687bd");orb(505,590,145,"#61c88b");arrow(360,590,410,590);text("ANTES",205,370,27);text("DESPUÉS",505,370,27);}
-  else if(mode===4){orb(cx,570,220,"#167eb6");for(let k=0;k<7;k++){const a=p*6+k*Math.PI*2/7;orb(cx+Math.cos(a)*300,570+Math.sin(a)*250,13,"#ffd166");}text("FUERZAS EN ACCIÓN",cx,250,28);}
-  else if(mode===5){person(cx,690,1.5,1);ctx.fillStyle="#4fc5e9";ctx.fillRect(0,830,w,450);text("ESCALA HUMANA",cx,280,30);}
-  else{orb(cx,560,240,"#1687bd");ctx.strokeStyle="#ffd166";ctx.lineWidth=10;ctx.beginPath();ctx.arc(cx,560,300,-1+p*2,1+p*2);ctx.stroke();arrow(500,350,610,270);}
- }else if(water){
-  if(mode===0){for(let k=0;k<4;k++){ctx.fillStyle=["#28a7c5","#137fa8","#0b527f","#07365d"][k];ctx.beginPath();ctx.moveTo(0,390+k*125);for(let x=0;x<=w;x+=10)ctx.lineTo(x,390+k*125+Math.sin(x/55+p*8+k)*23);ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.fill();}arrow(80,350,600,350);}
-  else if(mode===1){rounded(230,340,260,490,32,"rgba(166,237,255,.18)");ctx.strokeStyle="#d7f8ff";ctx.lineWidth=10;ctx.strokeRect(230,340,260,490);for(let k=0;k<9;k++)orb(270+(k*47)%190,400+((k*71+p*180)%390),8,"#8deaff");}
-  else if(mode===2){orb(cx,570,170,"#1d9fc5");for(let k=0;k<8;k++){ctx.strokeStyle="#a1efff";ctx.lineWidth=5;ctx.beginPath();ctx.arc(cx,570,200+k*22+p*25,0,Math.PI*2);ctx.stroke();}}
-  else if(mode===3){rounded(55,400,280,390,25,"#0e8bb4");rounded(365,400,280,390,25,"#063a68");text("SUPERFICIE",195,360,22);text("PROFUNDIDAD",505,360,22);arrow(330,590,375,590);}
-  else{for(let k=0;k<12;k++){const x=60+k*55,y=420+Math.sin(k+p*8)*110;orb(x,y,13,"#9af0ff");arrow(x,y+30,x+Math.sin(p*5+k)*22,y+105,"#ffd166",5);}}
- }else if(light){
-  if(mode===0){ctx.save();ctx.translate(90,440);ctx.rotate(-.18);["#fff0a3","#ff795e","#67dfff","#b79aff"].forEach((c,k)=>{ctx.fillStyle=c;ctx.fillRect(0,k*60,560,24);});ctx.restore();orb(100,380,65,"#ffd166");}
-  else if(mode===1){rounded(300,390,100,390,12,"rgba(161,236,255,.2)");ctx.strokeStyle="#d7f8ff";ctx.lineWidth=7;ctx.strokeRect(300,390,100,390);arrow(60,500,300,500,"#ffce70",12);arrow(400,500,630,650,"#69dfff",12);}
-  else if(mode===2){orb(cx,570,190,"#ffd166");for(let k=0;k<9;k++){const a=k*Math.PI*2/9+p*2;arrow(cx+Math.cos(a)*210,570+Math.sin(a)*210,cx+Math.cos(a)*350,570+Math.sin(a)*350,["#ff8668","#6de4ff","#fff0a3"][k%3],5);}}
-  else if(mode===3){rounded(65,430,285,330,24,"#f4a34e");rounded(370,430,285,330,24,"#356eae");text("ABSORBE",207,390,24);text("ATRAVIESA",512,390,24);}
-  else{for(let k=0;k<7;k++){const x=90+k*80;ctx.fillStyle=["#ff786c","#ffb85c","#fff09a","#79e3b1","#65d9ff","#799cff","#c69aff"][k];ctx.fillRect(x,500,48,200);}}
- }else{
-  if(mode===0){person(220,700,1.5,1);orb(500,570,95,"#ffbd63");arrow(340,600,410,590);}
-  else if(mode===1){rounded(100,500,220,170,20,"#2e91b7");rounded(400,500,220,170,20,"#db8c55");arrow(320,580,400,580);}
-  else if(mode===2){orb(cx,570,175,"#55b9d6");ctx.strokeStyle="#fff";ctx.lineWidth=8;ctx.beginPath();ctx.arc(cx,570,245,-1+p*3,1+p*3);ctx.stroke();}
-  else if(mode===3){rounded(90,390,240,400,20,"#275a7b");rounded(370,390,240,400,20,"#b16b4d");for(let k=0;k<5;k++)orb(140+k*35,450+k*60,12,"#ffe09a");}
-  else if(mode===4){person(cx,720,1.3,0);for(let k=0;k<6;k++)orb(100+k*90,360+Math.sin(p*7+k)*45,16,"#ffd166");}
-  else{rounded(90,420,540,330,30,"#255b7d");arrow(140,580,550,580,"#ffd166",14);person(560,820,.65,1);}
- }
- ctx.restore();
- const clean=title.length>54?title.slice(0,51).replace(/\s+\S*$/,"")+"…":title;
- rounded(34,62,652,104,22,"rgba(4,12,27,.74)");text(clean,cx,126,clean.length>34?25:32);
- text(item.segmentLabel||("BLOQUE "+(index+1)),cx,1125,23,"#b8d8f0");
- ctx.fillStyle="rgba(255,255,255,.18)";ctx.fillRect(55,1170,610,9);ctx.fillStyle="#65e0bd";ctx.fillRect(55,1170,610*p,9);
-}
 function drawVideoScene(item,index,progress){
  const imageIndex=Number.isInteger(item?.visualIndex)?item.visualIndex:index;
  const generated=jaiSceneImages[imageIndex];
@@ -626,7 +397,7 @@ async function makePlan(){
  try{
   const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value})});
   const data=await response.json();if(!response.ok)throw new Error(data.error||"No se pudo generar el plan.");
-  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Gemini</span><span class="tag">Motion graphics 2D</span>';
+  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Gemini</span><span class="tag">Dirección visual CGI</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma cinematográfico distinto por bloque de 3 segundos.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.");
   currentTopic=topic;jaiSceneImages=[];currentPlan="J.A.I. VIRAL STUDIO\\nTema: "+topic+"\\nCategoría: "+readable(data.category)+"\\nEnfoque: "+readable(data.angle)+"\\nHook: "+readable(data.hook)+"\\n\\n"+readable(data.script)+"\\n\\nSTORYBOARD\\n"+readable(data.story)+"\\n\\nMAPA DE RETENCIÓN\\n"+readable(data.retention_map)+"\\n\\nVERIFICACIONES\\n"+readable(data.verification)+"\\n\\nCONTROL DE CALIDAD\\n"+readable(data.quality_check);
