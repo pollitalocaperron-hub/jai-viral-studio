@@ -157,7 +157,7 @@ function renderVisualScenes(){
   const desc=document.createElement("p");desc.textContent=String(scene.visual_subject||scene.visual||scene.objective||"Visualización científica");
   const proof=document.createElement("p");proof.className="hint";proof.textContent="Demostración: "+String(scene.visual_proof||scene.teaching_point||"Pendiente de definir");
   meta.append(heading,desc,proof);
-  const audit=visualAuditResults[index];if(audit){const verdict=document.createElement("p");verdict.className="hint";verdict.textContent=(audit.status==="pass"?"INSPECCIÓN APROBADA":"REVISAR FOTOGRAMA")+" · "+String(audit.score??"—")+"/100 · "+String(audit.reason||"");meta.appendChild(verdict);if(Array.isArray(audit.issues)&&audit.issues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+audit.issues.join(" · ");meta.appendChild(issues);}if(audit.status!=="pass"){const retry=document.createElement("button");retry.type="button";retry.className="secondary";retry.textContent="Regenerar esta escena";retry.addEventListener("click",()=>regenerateVisualScene(index));meta.appendChild(retry);}}
+  const audit=visualAuditResults[index];if(audit){const verdict=document.createElement("p");verdict.className="hint";verdict.textContent=audit.manual?"APROBACIÓN MANUAL · "+String(audit.reason||""):(audit.status==="pass"?"INSPECCIÓN APROBADA":"REVISAR FOTOGRAMA")+" · "+String(audit.score??"—")+"/100 · "+String(audit.reason||"");meta.appendChild(verdict);if(Array.isArray(audit.issues)&&audit.issues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+audit.issues.join(" · ");meta.appendChild(issues);}}if(!audit||audit.status!=="pass"){const retry=document.createElement("button");retry.type="button";retry.className="secondary";retry.textContent="Regenerar esta escena";retry.addEventListener("click",()=>regenerateVisualScene(index));meta.appendChild(retry);const approve=document.createElement("button");approve.type="button";approve.className="secondary";approve.textContent="Aprobar manualmente";approve.addEventListener("click",()=>approveVisualScene(index));meta.appendChild(approve);}
   const promptDetails=document.createElement("details");promptDetails.style.cssText="margin-top:8px;font-size:12px;color:#b8c9dc";
   const promptSummary=document.createElement("summary");promptSummary.textContent="Ver dirección visual usada";
   const promptText=document.createElement("p");promptText.style.cssText="white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere";promptText.textContent=String(generated?.prompt||scene.visual_prompt_en||"El plan no entregó un prompt visual específico para esta escena.");
@@ -250,6 +250,14 @@ async function inspectVisuals(){
   $("visualAuditStatus").textContent=failed===0?"Inspección completada: todas las escenas superaron la revisión visual. Revisa los detalles de cada tarjeta.": "Inspección completada: "+failed+" de "+visualAuditResults.length+" escenas necesitan revisión. Consulta las observaciones de cada tarjeta.";
  }catch(error){$("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Puedes revisar las imágenes manualmente; no se modificaron ni se descartaron.";}
  finally{$("makeVisuals").disabled=false;button.disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));}
+}
+function approveVisualScene(index){
+ if(!Number.isInteger(index)||!currentScenes[index]||!jaiSceneImages[index]?.image)return;
+ if(visualAuditResults.length!==currentScenes.length)visualAuditResults=Array.from({length:currentScenes.length},(_,i)=>visualAuditResults[i]||null);
+ visualAuditResults[index]={scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar la imagen.",issues:[],manual:true};
+ renderVisualScenes();
+ $("visualAuditStatus").textContent="Escena "+(index+1)+" aprobada manualmente. La exportación se habilitará cuando todas las escenas estén aprobadas por IA o manualmente.";
+ $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,i)=>jaiSceneImages[i]?.image)&&visualAuditPassed());
 }
 async function regenerateVisualScene(index){
  if(!Number.isInteger(index)||!currentScenes[index]||visualGenerationRunning||planningInProgress||narrationGenerating||renderRecording)return;
