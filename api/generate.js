@@ -99,17 +99,30 @@ ${safeNotes}
     let selectedModel = "";
     for (let i = 0; i < modelFallbacks.length; i++) {
       selectedModel = modelFallbacks[i];
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent`,
-        {
-          method: "POST",
-          headers: {
-            "x-goog-api-key": key,
-            "Content-Type": "application/json"
-          },
-          body: requestBody
+      try {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "x-goog-api-key": key,
+              "Content-Type": "application/json"
+            },
+            body: requestBody,
+            signal: AbortSignal.timeout(12000)
+          }
+        );
+      } catch (networkError) {
+        console.warn(`[JAI][Gemini] ${selectedModel} no respondió en 12 segundos:`, networkError?.name || "NetworkError");
+        if (i === modelFallbacks.length - 1) {
+          return res.status(502).json({
+            error: "No se pudo establecer conexión con los modelos de Gemini tras probar los respaldos. Comprueba la conexión e inténtalo de nuevo.",
+            diagnosticCode: "GEMINI_UPSTREAM_TIMEOUT"
+          });
         }
-      );
+        await new Promise(resolve => setTimeout(resolve, 500));
+        continue;
+      }
       if (response.ok || ![503, 504].includes(response.status) || i === modelFallbacks.length - 1) break;
       const retryAfter = Number(response.headers.get("retry-after"));
       const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
