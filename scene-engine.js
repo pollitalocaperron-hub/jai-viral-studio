@@ -22,27 +22,89 @@ function draw(ctx,canvas,item,index,progress){
  // Beat-level action has priority. Broad words such as "comparación" in the scene objective
  // must never override the concrete object/action requested for this three-second beat.
  let mode="ocean";
- if(/vaso|vidrio|cristal/.test(beat))mode="glass";
+ // Specific beat actions win over broad scene descriptions. The same parent scene
+ // can therefore produce a different composition every three-second beat.
+ if(/aparicion simultanea|vaso y el mar|vaso frente al mar|paradoja/.test(beat))mode="paradox";
+ else if(/primer plano.*vaso|vaso|vidrio|cristal/.test(beat))mode="glass";
+ else if(/ingreso.*rayo|rayo de sol|luz solar directa|sol entra|haz de luz/.test(beat))mode="sunbeam";
+ else if(/descomposicion|bandas de colores|espectro|arcoiris/.test(beat))mode="spectrum";
+ else if(/molecula|molecular|contacto de la luz/.test(beat))mode="molecules";
+ else if(/calor|energia roja|transformacion de la energia|se convierte/.test(beat))mode="heat";
+ else if(/camino.*ondas azules|ondas azules|azul penetra|azul sigue|continua avanzando/.test(beat))mode="bluepath";
+ else if(/dispersion|dispersa|hacia arriba|sale hacia la superficie/.test(beat))mode="scatter";
+ else if(/grafico de profundidad|profundidad|metros|distancia recorrida/.test(beat))mode="depth";
+ else if(/comparacion|comparar|lado a lado|volumen|vaso vs|escala/.test(beat))mode="compare";
+ else if(/acercamiento final|columna azul|azul profundo|recompensa final/.test(beat))mode="finalblue";
  else if(/gota|macro|lupa/.test(beat))mode="drop";
- else if(/arcoiris|espectro|franjas de colores|bandas de colores/.test(beat))mode="spectrum";
- else if(/particula|suspension|dispers/.test(beat))mode="particles";
+ else if(/particula|suspension/.test(beat))mode="particles";
  else if(/absor|rojo|naranja|amarillo|se apaga|desvanec/.test(beat))mode="absorb";
- else if(/columna|profund|desciend|capa delgada/.test(beat))mode="column";
- else if(/mirando hacia arriba|observador|sale desde el fondo|perspectiva submarina/.test(beat))mode="observer";
- else if(/filtro|colador|no tine|no crea el color|rechaza los demas/.test(beat))mode="filter";
- else if(/compar|lado a lado|dos estados|contraste/.test(beat))mode="compare";
- else if(/rayo|haz de luz|luz blanca|entra desde arriba|sol/.test(beat))mode="rays";
+ else if(/columna|desciend|capa delgada/.test(beat))mode="column";
+ else if(/observador|mirando hacia arriba|perspectiva submarina/.test(beat))mode="observer";
+ else if(/filtro|colador/.test(beat))mode="filter";
  else if(/superficie|plano general|oceano completo|mar abierto/.test(beat))mode="ocean";
+ else if(/rayo|haz de luz|luz blanca|sol/.test(beat))mode="rays";
  else if(/vaso|vidrio|cristal/.test(sceneText))mode="glass";
- else if(/gota/.test(sceneText))mode="drop";
- else if(/arcoiris|espectro|bandas de colores/.test(sceneText))mode="spectrum";
- else if(/particula|dispers/.test(sceneText))mode="particles";
+ else if(/espectro|bandas de colores/.test(sceneText))mode="spectrum";
  else if(/absor|rojo|naranja/.test(sceneText))mode="absorb";
  else if(/columna|profund/.test(sceneText))mode="column";
- else if(/filtro|colador/.test(sceneText))mode="filter";
  else if(/compar/.test(sceneText))mode="compare";
  ctx.save();
- if(mode==="glass"){
+ if(mode==="paradox"){
+  // Opening hero shot: a clear glass on one side, an expansive ocean on the other.
+  ocean(710);panel(35,300,300,470,"rgba(245,250,255,.96)");panel(385,300,300,470,"rgba(3,29,62,.30)");
+  ctx.save();ctx.translate(185,0);ctx.strokeStyle="#b9eefa";ctx.lineWidth=10;ctx.fillStyle="rgba(66,190,224,.18)";
+  ctx.beginPath();ctx.moveTo(-75,420);ctx.lineTo(75,420);ctx.lineTo(60,675);ctx.quadraticCurveTo(0,705,-60,675);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle="rgba(61,184,222,.32)";ctx.fillRect(-65,530,130,135);ctx.restore();
+  for(let k=0;k<5;k++){ctx.beginPath();ctx.ellipse(535+k*8,470+k*65,115-k*10,18,0,0,Math.PI*2);ctx.strokeStyle="rgba(147,235,255,.7)";ctx.lineWidth=5;ctx.stroke();}
+  label("UN VASO",185,830,26,"#18344d");label("UN OCÉANO",535,830,26);arrow(340,575,380,575);
+ }else if(mode==="sunbeam"){
+  // Dramatic sun entering the ocean; moving beam sweeps diagonally through water.
+  ocean(420);const sx=545-p*120;ctx.fillStyle="#ffe18b";ctx.beginPath();ctx.arc(sx,260,76,0,Math.PI*2);ctx.fill();
+  for(let k=0;k<9;k++){const x=sx-150+k*38;line(sx,335,x+90,1000,"rgba(255,229,151,"+(.12+k*.018)+")",10);}
+  line(0,430,w,430,"#b4f4ff",8);label("LA LUZ ENTRA AL AGUA",cx,230,29);
+ }else if(mode==="molecules"){
+  // Molecular-scale scene: water molecules form a recognizable repeated structure.
+  ocean(390);for(let row=0;row<4;row++)for(let col=0;col<4;col++){
+   const x=115+col*165+(row%2)*35,y=535+row*135;
+   dot(x,y,25,"#e7f8ff");dot(x-25,y-22,13,"#ff7770");dot(x+25,y-22,13,"#ff7770");
+   line(x-17,y-15,x-5,y-5,"#fff",5);line(x+17,y-15,x+5,y-5,"#fff",5);
+  }
+  rays(25,450,180,.7);label("LUZ + MOLÉCULAS DE AGUA",cx,280,26);
+ }else if(mode==="heat"){
+  // Red/orange wavelengths transfer energy; warm particles glow and rise as heat.
+  ocean(410);for(let k=0;k<5;k++){
+   const x=120+k*120,y=570+(k%2)*100;
+   line(65,y,x,y,"#ff695f",15);dot(x,y,17,"#ff9c62");
+   for(let q=0;q<4;q++){const yy=y-55-q*42-p*35;dot(x+Math.sin(q+k)*18,yy,7+q,"rgba(255,178,91,.9)");}
+  }
+  label("ENERGÍA QUE SE TRANSFORMA",cx,280,26);label("CALOR",cx,1030,42,"#ffb56e");
+ }else if(mode==="bluepath"){
+  // Blue wavelengths travel farther through the water while warm light fades early.
+  ocean(390);line(65,500,265,500,"#ff685d",16);for(let q=0;q<5;q++)dot(280+q*16,500,7,"#ff806c");
+  line(65,780,610,780,"#72dcff",19);arrow(500,780,635,780,"#a5edff",11);
+  for(let k=0;k<6;k++)dot(145+k*86,780+Math.sin(p*5+k)*22,7,"#d4f8ff");
+  label("EL AZUL PENETRA MÁS",cx,275,31);
+ }else if(mode==="scatter"){
+  // Scattering redirects blue light in several directions, not off the seabed.
+  ocean(390);const ox=340,oy=720;dot(ox,oy,32,"#d9f7ff");
+  const angles=[-2.8,-2.25,-1.75,-1.25,-.7,-.25,.25];
+  angles.forEach((ang,k)=>{const len=170+(k%3)*65;arrow(ox,oy,ox+Math.cos(ang)*len,oy+Math.sin(ang)*len,"#7fe1ff",7);});
+  line(340,420,340,680,"rgba(255,238,180,.8)",12);
+  label("EL AZUL SE DISPERSA",cx,275,31);label("EN MUCHAS DIRECCIONES",cx,1050,24);
+ }else if(mode==="depth"){
+  // Depth ruler and colored attenuation by depth.
+  ocean(400);line(130,445,130,1060,"#eafaff",6);
+  for(let k=0;k<6;k++){const y=470+k*105;line(115,y,150,y,"#eafaff",5);label((k*10)+" m",205,y+8,21,"#d7f5ff");}
+  const fade=ctx.createLinearGradient(0,420,0,1050);fade.addColorStop(0,"rgba(255,90,75,.9)");fade.addColorStop(.28,"rgba(255,90,75,.15)");fade.addColorStop(.29,"rgba(255,90,75,0)");fade.addColorStop(.55,"rgba(78,190,255,.42)");fade.addColorStop(1,"rgba(38,132,255,.08)");
+  ctx.fillStyle=fade;ctx.fillRect(270,430,330,620);label("LA PROFUNDIDAD FILTRA LA LUZ",cx,285,25);
+ }else if(mode==="finalblue"){
+  // Final payoff: a cinematic blue water column with rays fading through depth.
+  ocean(340);const g=ctx.createLinearGradient(0,350,0,1100);g.addColorStop(0,"rgba(114,229,255,.75)");g.addColorStop(.45,"rgba(29,151,218,.28)");g.addColorStop(1,"rgba(1,16,53,.05)");
+  ctx.fillStyle=g;ctx.fillRect(80,360,560,720);
+  for(let k=0;k<7;k++){const x=100+k*88;line(x,380,x+70,930,"rgba(159,237,255,.24)",13);}
+  for(let k=0;k<5;k++){ctx.beginPath();ctx.ellipse(360,570+k*105,210-k*23,22,0,0,Math.PI*2);ctx.strokeStyle="rgba(139,230,255,"+(0.65-k*.1)+")";ctx.lineWidth=5;ctx.stroke();}
+  label("EL OCÉANO SE VE AZUL",cx,260,31);
+ }else if(mode==="glass"){
   // Large transparent tumbler, waterline, refracted highlight; it slides into frame.
   const x=115+(1-p)*180;ctx.save();ctx.translate(x,0);
   ctx.fillStyle="rgba(117,226,245,.10)";ctx.strokeStyle="#d5fbff";ctx.lineWidth=10;
