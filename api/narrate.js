@@ -86,6 +86,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error("[JAI][TTS] Error de conexión:", error?.name || "Error", error?.message || "Sin detalle");
-    return res.status(502).json({ error: "No se pudo conectar con el servicio gratuito de voz de Gemini." });
+    const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
+    return res.status(502).json({ error: timedOut ? "Gemini tardó demasiado en generar la voz. Inténtalo de nuevo en unos momentos." : "No se pudo conectar con el servicio gratuito de voz de Gemini." });
   }
 }
