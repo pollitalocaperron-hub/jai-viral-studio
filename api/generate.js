@@ -327,7 +327,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     plan.research_sources = researchSources;
     const auditStopWords = new Set(["cuando","porque","sobre","durante","entre","despues","proceso","afirmacion","conocimiento","general","temperatura","molecular","cambio","forma"]);
     if (Array.isArray(plan.fact_audit)) plan.fact_audit = plan.fact_audit.map(item => {
-      const claimTokens = String(item.claim || "").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").match(/[a-z]{5,}/g) || [];
+      const claimTokens = String(item.claim || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").match(/[a-z]{5,}/g) || [];
       const keyTerms = [...new Set(claimTokens)].filter(word => !auditStopWords.has(word));
       const aliases = { azucar: ["sugar","sucrose"], sacarosa: ["sucrose"], caramelizacion: ["caramelization"], fusion: ["melting","fusion"], calor: ["heat","heating","thermal"], enlaces: ["bonds"], hidrogeno: ["hydrogen"], vibracion: ["vibration"], descomposicion: ["decomposition"], cristalina: ["crystalline","crystal"], moleculas: ["molecules"], humedad: ["moisture","water"], temperatura: ["temperature"] };
       const expandedTerms = keyTerms.flatMap(word => [word, ...(aliases[word] || [])]);
