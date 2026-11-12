@@ -563,7 +563,7 @@ $("generateNarration").addEventListener("click",async()=>{
  try{
   $("kokoroStatus").textContent="Conectando con Gemini y generando la narración en español…";
   const response=await fetch("/api/narrate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voice:$("kokoroVoice").value})});
-  const data=await response.json();
+  const data=await readJsonResponse(response,"Generador de voz Gemini");
   if(!response.ok)throw new Error(data.error||"No se pudo generar la narración.");
   if(!data.audioBase64)throw new Error("El servicio no devolvió audio.");
   kokoroSampleRate=data.sampleRate||24000;
