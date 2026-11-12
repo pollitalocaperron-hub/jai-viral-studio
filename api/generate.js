@@ -54,6 +54,11 @@ REGLAS EDITORIALES Y CIENTÍFICAS:
 - Usa composiciones editoriales completas: primer plano, plano general, corte transversal, comparación, diagrama, cambio de perspectiva y detalle. No bases el video en círculos, líneas decorativas o elementos flotando.
 - No solicites actores reales, simulaciones físicas complejas, multitudes, hiperrealismo ni 3D difícil. Incluye ritmo de edición, subtítulos y diseño sonoro gratuitos.
 - Ajusta el guion a la duración elegida.
+- COHERENCIA TEMPORAL OBLIGATORIA: elige una duración final concreta dentro del rango solicitado y úsala idéntica en script, storyboard y retention_map. La última escena del storyboard y el último bloque de retention_map deben terminar en el mismo segundo. No entregues un storyboard de 39 segundos con un mapa de solo 30 segundos.
+- retention_map debe cubrir desde 0:00 hasta el final exacto del storyboard, en bloques consecutivos de máximo 3 segundos, sin huecos ni solapamientos. Para 39 segundos, por ejemplo, debe contener 13 bloques; para 36 segundos, 12 bloques.
+- Cada bloque de retención debe describir una composición y acción realmente distintas. No reutilices el mismo rayo solar, vaso, gota, ojo, columna o esquema en bloques consecutivos ni en el cierre. Si el tema requiere volver a un elemento anterior, cambia claramente la escala, perspectiva y acción, y explica qué información nueva revela.
+- PRECISIÓN SOBRE EL COLOR DEL OCÉANO: explica que el agua absorbe con mayor intensidad las longitudes de onda rojas y anaranjadas, mientras que la luz azul puede penetrar más y parte de ella se dispersa de vuelta hacia el observador. No digas que el azul se acumula por rebotar en el fondo ni que los rayos rebotan repetidamente como mecanismo general. El reflejo del cielo puede contribuir, pero no es la explicación principal del azul del agua limpia y profunda.
+- En el ejemplo del océano, termina con una comparación física entre una pequeña cantidad de agua y una gran columna de agua, no con kilómetros de agua que acumulan luz azul.
 
 Devuelve SOLAMENTE JSON válido con estas claves:
 category, angle, hook, script, story, retention_map, verification, quality_check.
