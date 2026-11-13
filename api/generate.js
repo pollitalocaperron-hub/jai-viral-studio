@@ -19,7 +19,7 @@ async function generatePlanHandler(req, res) {
   async function fetchResearchSources(query) {
     try {
       const url = "https://api.openalex.org/works?search=" + encodeURIComponent(query) + "&filter=type:article,from_publication_date:2000-01-01&sort=relevance_score:desc&per-page=6&select=id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count";
-      const response = await fetch(url, { signal: AbortSignal.timeout(3500), headers: { "Accept": "application/json" } });
+      const response = await fetch(url, { signal: AbortSignal.timeout(2500), headers: { "Accept": "application/json" } });
       if (!response.ok) throw new Error("OpenAlex HTTP " + response.status);
       const body = await response.json();
       return (body.results || []).slice(0, 3).map((work, index) => {
@@ -98,7 +98,7 @@ async function generatePlanHandler(req, res) {
             temperature: 0.55,
             max_completion_tokens: 3800
           }),
-          signal: AbortSignal.timeout(22000)
+          signal: AbortSignal.timeout(13000)
         });
         const groqBody = await groqResponse.text();
         let groqData;
@@ -153,7 +153,7 @@ async function generatePlanHandler(req, res) {
                 maxOutputTokens: 3000
               }
             }),
-            signal: AbortSignal.timeout(16000)
+            signal: AbortSignal.timeout(13000)
           }
         );
       } catch (error) {
@@ -313,7 +313,7 @@ async function generatePlanHandler(req, res) {
       for (const scene of candidate.story) {
         if (!scene || typeof scene !== "object") continue;
         const current = String(scene.visual_prompt_en || "").trim();
-        const words = current ? current.split(/\\s+/).length : 0;
+        const words = current ? current.split(/\s+/).length : 0;
         if (words >= 35 && words <= 100) continue;
         const groundedFields = [scene.visual_subject, scene.visual_state, scene.visual_action, scene.visual_composition, scene.visual_environment]
           .filter(value => typeof value === "string" && value.trim())
@@ -321,7 +321,7 @@ async function generatePlanHandler(req, res) {
         if (groundedFields.length < 5) continue;
         const completion = "Single coherent scientific CGI visualization, physically plausible materials, clearly visible subject and action, uncluttered environment, subject fully inside the vertical frame, precise surface and structural details, cinematic depth and controlled volumetric lighting, no text or watermark.";
         let combined = groundedFields.join(". ") + ". " + completion;
-        const tokens = combined.split(/\\s+/);
+        const tokens = combined.split(/\s+/);
         if (tokens.length > 100) combined = tokens.slice(0, 100).join(" ");
         scene.visual_prompt_en = combined;
       }
@@ -363,7 +363,7 @@ Return no other keys and no markdown.`;
                 temperature: 0.25,
                 max_completion_tokens: 3000
               }),
-              signal: AbortSignal.timeout(10000)
+              signal: AbortSignal.timeout(7000)
             });
             const repairRaw = await repairResponse.text();
             let repairBody = {};
@@ -375,7 +375,7 @@ Return no other keys and no markdown.`;
               method: "POST",
               headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
               body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: repairPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 3000 } }),
-              signal: AbortSignal.timeout(10000)
+              signal: AbortSignal.timeout(7000)
             });
             const repairRaw = await repairResponse.text();
             let repairBody = {};
