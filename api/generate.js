@@ -13,8 +13,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Escribe un tema válido (máximo 500 caracteres)." });
   }
 
-  const safeNotes = typeof notes === "string" ? notes.slice(0, 6000) : "";
-  const safeLearningMemory = typeof learning_memory === "string" ? learning_memory.slice(0, 9000) : "";
+  const safeNotes = typeof notes === "string" ? notes.slice(0, 5000) : "";
+  const safeLearningMemory = typeof learning_memory === "string" ? learning_memory.slice(0, 2400) : "";
   // Investigación académica abierta mediante OpenAlex; no requiere clave ni tarjeta.
   async function fetchResearchSources(query) {
     try {
@@ -22,12 +22,12 @@ export default async function handler(req, res) {
       const response = await fetch(url, { signal: AbortSignal.timeout(3500), headers: { "Accept": "application/json" } });
       if (!response.ok) throw new Error("OpenAlex HTTP " + response.status);
       const body = await response.json();
-      return (body.results || []).slice(0, 6).map((work, index) => {
+      return (body.results || []).slice(0, 3).map((work, index) => {
         let abstract = "";
         if (work.abstract_inverted_index && typeof work.abstract_inverted_index === "object") {
           const words = [];
           for (const [word, positions] of Object.entries(work.abstract_inverted_index)) for (const position of positions || []) words[position] = word;
-          abstract = words.filter(Boolean).join(" ").slice(0, 1100);
+          abstract = words.filter(Boolean).join(" ").slice(0, 500);
         }
         const authors = (work.authorships || []).slice(0, 3).map(a => a.author && a.author.display_name).filter(Boolean).join(", ");
         return { id: "S" + (index + 1), title: work.title || "Título no disponible", year: work.publication_year || null, authors, doi: work.doi || "", url: (work.primary_location && work.primary_location.landing_page_url) || work.doi || "", cited_by_count: work.cited_by_count || 0, abstract };
@@ -37,137 +37,40 @@ export default async function handler(req, res) {
   const researchQuery = topic.trim();
   const researchSources = await fetchResearchSources(researchQuery);
   const researchContext = researchSources.length ? researchSources.map(s => "[" + s.id + "] " + s.title + " (" + (s.year || "año no indicado") + "). Autores: " + (s.authors || "no disponibles") + ". DOI/URL: " + (s.url || "no disponible") + ". Resumen: " + (s.abstract || "sin resumen recuperado")).join("\n") : "No se recuperaron fuentes académicas. No afirmes que la investigación fue verificada."
-  const prompt = `FUENTES ACADÉMICAS RECUPERADAS AUTOMÁTICAMENTE (OpenAlex):
-${researchContext}
-REGLAS DE FUENTES: solo cita IDs [S1], [S2], etc. que aparezcan en esta lista. Nunca inventes títulos, autores, DOI ni enlaces. Cada afirmación central de fact_audit debe incluir source_ids (array) y evidence. Si ninguna fuente respalda directamente la afirmación, source_ids=[] y no la presentes como verificada. Añade research_sources al JSON copiando únicamente las fuentes listadas. Descarta resultados irrelevantes.
-
-
-Eres el director editorial, guionista y estratega de retención de J.A.I. Viral Studio.
-Diseña un plan de producción de alta calidad para un video educativo vertical 9:16.
-Objetivo: maximizar interés, comprensión, retención y potencial de compartirse sin prometer viralidad ni usar engaños.
-
-REGLAS EDITORIALES Y CIENTÍFICAS:
-CONTRATO UNIVERSAL DE ENSEÑANZA — APLICA A CUALQUIER DOMINIO:
-1. Antes de escribir, identifica qué disciplina estudia el tema y cuáles son sus mecanismos reales. No uses una explicación de un dominio distinto como analogía sin marcarla como analogía.
-2. Distingue entidades, señales, vías, órganos, etapas y resultados. No unas rutas distintas solo porque convergen en una misma experiencia o resultado.
-3. En anatomía y fisiología, verifica la ruta completa de cada señal: receptor → nervio/vía aferente → estaciones de relevo → región de procesamiento. No atribuyas una función a un nervio, órgano o región solo por proximidad.
-4. Separa detección, transmisión, integración y experiencia consciente. No afirmes que una única región "crea" por sí sola una percepción compleja si el fenómeno depende de redes distribuidas.
-5. En química y física, distingue mecanismo, condiciones, intermediarios, transformación y producto. No conviertas una correlación o una imagen molecular ilustrativa en mecanismo probado.
-6. Para cada afirmación central, exige respaldo directo en una fuente o etiqueta explícitamente "conocimiento general sin fuente recuperada". Coincidencia de palabras o título temático no basta para declarar respaldo.
-7. Cuando no se recuperen fuentes, no finjas una revisión académica: conserva el plan como borrador educativo, muestra la limitación y evita lenguaje de certeza académica.
-8. Cada escena debe enseñar una sola unidad causal reconocible. El fotograma muestra el sujeto real, su estado y la relación espacial relevante; la animación describe únicamente el cambio entre inicio y fin.
-9. No añadas objetos, moléculas, colores codificados, anatomía, flechas, trayectorias ni estructuras que no estén justificadas por el mecanismo. Si una representación es esquemática, declárala como esquema didáctico.
-10. La narración debe poder enseñar el mecanismo sin depender del montaje. El montaje aclara la explicación; no la sustituye.
-11. Usa entre 4 y 5 escenas visuales conceptuales en vídeos de hasta 45 segundos para reducir esperas del proveedor gratuito. Cada escena puede sostener varios bloques de ritmo sin generar imágenes adicionales.
-12. Antes de devolver el JSON, haz una auditoría de consistencia: afirmación ↔ fuente ↔ cadena causal ↔ guion ↔ escena ↔ visual_proof ↔ tiempo. Si algo no coincide, corrígelo o márcalo como pendiente.
-
-ARQUITECTURA EDITORIAL OBLIGATORIA — TRABAJA EN ETAPAS INTERNAS ANTES DE ESCRIBIR:
-A. INVESTIGADOR: descompón la pregunta en subpreguntas; identifica mecanismo, condiciones, excepciones y consenso. Usa primero las notas del usuario como pistas, nunca como evidencia automática. Si no tienes acceso real a fuentes externas durante esta solicitud, NO afirmes haber buscado, consultado ni verificado fuentes. No inventes nombres de estudios, autores, enlaces, instituciones ni referencias. Separa "hecho establecido", "dato que requiere fuente" y "incertidumbre".
-B. PROFESOR: explica el fenómeno desde lo intuitivo hasta lo molecular/técnico. Define los términos inevitables en lenguaje cotidiano. Construye una cadena causal explícita: condición inicial → qué cambia → por qué cambia → consecuencia observable → qué límites/excepciones existen. Cada frase del guion debe enseñar un hecho, responder una pregunta o preparar una revelación; elimina frases que solo suenen científicas.
-C. AUDITOR: revisa cada afirmación del guion contra tu conocimiento fiable y las notas aportadas. Si no puedes respaldarla con seguridad, rebájala, matízala o márcala como pendiente; nunca la presentes como verificada. Distingue cambio físico, cambio químico, mecanismo y correlación. No fabriques valores numéricos para llenar escenas.
-D. DIRECTOR VISUAL: solo después de cerrar la explicación, asigna a cada escena una demostración que haga visible la causa o consecuencia explicada. Cada imagen debe aportar evidencia visual conceptual, no decoración. Si una escena no enseña nada nuevo, elimínala o rediseñala.
-E. EDITOR: comprueba que la narración realmente explica el tema completo dentro de la duración, sin sacrificar precisión para meter más estímulos.
-F. ALCANCE UNIVERSAL: antes de escribir, identifica las ramas, procesos y preguntas esenciales que contiene el tema. Separa lo imprescindible, lo complementario y lo que queda fuera del alcance.
-G. DELIMITACIÓN: si el tema reúne varios procesos independientes o demasiado contenido para la duración, no los comprimas a la fuerza. Propón una visión general honesta o una serie de episodios conectados y define qué explica este episodio.
-H. PERTINENCIA DE EVIDENCIA: una fuente encontrada por búsqueda temática o coincidencia de palabras es solo una candidata. No digas que respalda una afirmación hasta comprobar que el título/resumen o el texto leído trata directamente esa afirmación. Distingue fuente candidata, respaldo directo y afirmación sin verificar.
-- La profundidad informativa tiene prioridad sobre el vocabulario técnico, la espectacularidad y la cantidad de escenas.
-- No uses términos como moléculas, enlaces, energía, presión, ondas o reacción sin explicar qué papel desempeñan en el mecanismo.
-- No conviertas una hipótesis explicativa simplificada en una descripción literal de lo que ocurre a escala molecular.
-- En temas con cambio de estado, distingue claramente cambio físico de transformación química; no asumas que todos los materiales tienen un punto de fusión simple ni que el material permanece químicamente intacto.
-- Para cada idea central, responde "¿por qué ocurre?" y "¿qué observaríamos si no ocurriera?". Incluye límites relevantes cuando cambien la conclusión.
-- No presentes la lista verification como evidencia ya consultada. Cada elemento debe declarar afirmación, estado ("respaldada por notas", "conocimiento general pendiente de fuente" o "no resuelta"), evidencia concreta disponible y qué falta. Si no hay fuente aportada, dilo claramente.
-- Añade research_brief (4–7 puntos), causal_chain (pasos ordenados), concept_explanations (término + explicación sencilla + función en el fenómeno) y fact_audit (afirmación + estado + justificación + tratamiento editorial + source_ids + evidence).
-- Guion: explica mecanismos con ejemplos concretos; no encadenes frases grandilocuentes. Incluye al menos dos capas de explicación: intuición cotidiana y mecanismo real. La narración debe poder enseñarse sin imágenes.
-- STORYBOARD DIDÁCTICO: cada escena debe responder a una frase concreta del guion. Añade en cada escena "teaching_point" (qué aprende el espectador) y "visual_proof" (qué elemento visible demuestra o aclara esa idea). Prohíbe termómetros, cifras, etiquetas o instrumentos si el dato no está respaldado.
-- RETENTION MAP: estímulo nuevo no significa solo cambio visual; cada bloque debe avanzar la comprensión. En visual_action indica qué mecanismo o contraste se hace visible, no solo un movimiento decorativo.
-- No inventes cifras, estudios, citas, fuentes ni hechos. Distingue hechos conocidos de hipótesis y señala qué requiere verificación.
-- Las notas del usuario son material de partida, no hechos automáticamente confirmados.
-- En ciencia, explica el mecanismo con precisión y evita simplificaciones que cambien la causa física. No confundas absorción, reflexión, dispersión, refracción o emisión. Si hay varios mecanismos, indica cuál predomina y bajo qué condiciones.
-- No presentes como universal una explicación que dependa de profundidad, composición, iluminación, escala u otras condiciones.
-- AUDITORÍA ANTI-FALSA PRECISIÓN: una cifra marcada como "pendiente de fuente", "media", "provisional" o "no resuelta" NO puede aparecer como hecho en angle, hook, script, story, retention_map ni on_screen_text. Tampoco puede aparecer en voz ni en un fotograma. Si es importante, exprésala cualitativamente o exclúyela hasta contar con fuente.
-- No inventes mecanismos microscópicos para hacer una escena más espectacular. Una visualización molecular es un modelo didáctico, no una observación directa; identifícala como esquema conceptual cuando corresponda.
-- No describas la fusión como ruptura súbita de enlaces intermoleculares individuales salvo que sea una explicación rigurosa y respaldada para el material concreto. Evita "la vibración supera la fuerza de los enlaces" como explicación universal.
-- DURACIÓN Y FORMATO DE TIEMPOS: para cada escena story.time escribe SIEMPRE un intervalo explícito "0:00 - 0:06", nunca solo un segundo inicial. Las escenas deben cubrir exactamente el mismo intervalo total que retention_map. retention_map usa bloques consecutivos de máximo 3 segundos y su último bloque termina exactamente al final de la última escena. Para 30–45 s, guion de 75–90 palabras y duración final concreta de 36–42 s; no declares 30 s si el texto hablado requiere más.
-
-- No inventes microgotas, diámetros, escalas, termómetros, temperaturas, porcentajes o tiempos microscópicos ("0.5 mm", etc.) sin respaldo explícito. Usa escalas cualitativas si no hay evidencia.
-- CONTROL DE COMPLETITUD DEL MECANISMO: si el tema describe un proceso, reconstruye sus etapas reales desde la materia o condición inicial hasta el producto/resultado. No saltes etapas que expliquen el cambio; distingue preparación, transformación principal, enfriamiento/separación/acabado cuando correspondan. Explica qué cambia físicamente o químicamente y por qué. No confundas una descripción visual del resultado con la explicación de su mecanismo.
-- CONTROL DE GUION: para el objetivo 30–45 segundos, entrega entre 75 y 90 palabras realmente narradas, excluyendo las etiquetas [HOOK], [PROMESA], [CONTEXTO], [EXPLICACIÓN], [REVELACIÓN] y [CIERRE]. Cuenta las palabras antes de responder; si excede, recorta contenido secundario, no el mecanismo esencial.
-- CONTROL DE ESCENAS: story debe contener intervalos explícitos, consecutivos, sin huecos ni solapamientos, comenzar en 0:00 y terminar exactamente donde termina retention_map. Cada intervalo de escena debe tener inicio y fin válidos.
-- CONTROL DE DURACIÓN: la duración declarada debe coincidir entre guion, storyboard y mapa. Estima el guion hablado a 130–145 palabras/minuto en español. Si la duración objetivo es 30–45 s, apunta a 75–90 palabras narradas y elige una duración final de 36–42 segundos y storyboard/mapa deben cubrir esa misma duración. No declares 36 s si el guion narrado requiere 48.5 s. Si la locución generada luego dura más, la interfaz debe adaptar el montaje o advertirlo sin afirmar sincronía exacta.
-- Antes de devolver JSON, realiza una auditoría cruzada: cualquier dato marcado pendiente no debe reaparecer como certeza en el guion ni en los visuales; comprueba duración estimada y cronología; comprueba que cada visual_proof sea demostrable y no un detalle inventado.
-- No afirmes que verificaste fuentes externas si no se proporcionaron fuentes en las notas.
-- Abre con un hook potente de 1–3 segundos que cree curiosidad concreta, pero no llames "mentira" a una explicación parcialmente cierta sin matizarla.
-- RITMO Y SEGMENTACIÓN: organiza la explicación en unidades de avance comprensibles. El mapa de retención puede usar bloques consecutivos de máximo 3 segundos para planificar microavances, pero eso NO obliga a cortar el plano cada 3 segundos. Mantén un plano cuando la continuidad ayude a comprender; cambia encuadre, escala o escena cuando aporte información nueva.
-- COHERENCIA: cada elemento visual, efecto sonoro, rótulo y frase debe contribuir al objetivo de aprendizaje. Elimina adornos, datos laterales y estímulos que compitan con el mecanismo central.
-- Cada bloque debe aportar una pieza distinta de comprensión, una pregunta concreta, una demostración o una revelación verificable. No cuenta como avance cambiar solo el color, mover una barra o repetir el mismo plano.
-- Cada 6–9 segundos, si la estructura del tema lo permite, ofrece una revelación, contraste o respuesta parcial que abra una pregunta nueva; no fuerces giros si perjudican la explicación.
-- La segmentación debe seguir límites conceptuales o causales, no cortes arbitrarios. Deja pausas cuando el espectador necesite procesar una relación compleja.
-- Cuando se nombre un componente, coordina la señal visual con ese mismo componente en el momento de la narración. No resaltes un objeto antes o después de que se explique si eso genera confusión.
-- retention_map debe cubrir toda la duración con bloques consecutivos de máximo 3 segundos, sin huecos ni solapamientos. Cada bloque debe incluir time, new_stimulus, narrative_advance, curiosity, visual_action y on_screen_text.
-- El vídeo debe poder entenderse sin depender de efectos llamativos. La narración debe explicar la cadena causal y el visual debe aclarar exactamente el paso que se está contando.
-- Añade en quality_check una pregunta breve de recuperación o predicción que permita comprobar si se entendió la causa, no solo si el vídeo resultó atractivo. Esta pregunta es una actividad posterior a la visualización, no una afirmación científica ni una obligación de incluirla en la locución.
-- No uses retención, agrado, vistas o potencial viral como sustitutos de aprendizaje. Distingue calidad de contenido, precisión científica, atención y comprensión.
-- BLOQUEO SEMÁNTICO: identifica el dominio del tema y conserva ese dominio visual en todos los bloques. Cada objeto, entorno, material y acción debe pertenecer al tema o funcionar como comparación relevante y explicada.
-- La narración y el visual_action deben describir el mismo fenómeno. Comprueba bloque por bloque: sujeto narrado = sujeto visible; acción narrada = acción representada; resultado visual = resultado explicado. Si no coinciden, reescribe el bloque.
-- PAQUETE VISUAL TÉCNICO OBLIGATORIO POR ESCENA: antes de describir estética, nombra el objeto físico exacto (por ejemplo, cristal de azúcar, caña cortada, jugo filtrado, jarabe hirviendo, cristales creciendo), su estado visible, la acción física concreta y el resultado observable. visual_subject no puede ser "energía", "proceso", "moléculas", "estructura" ni "fenómeno". visual_proof debe poder verse literalmente en una imagen. Si el mecanismo es microscópico, crea una visualización científica claramente reconocible y coherente, no una nube de partículas sin forma. Cada escena debe tener un sujeto protagonista grande, ocupar el centro seguro del encuadre vertical y ser identificable sin leer texto. TODOS los campos del paquete visual técnico se redactan en inglés natural porque SDXL está optimizado para inglés. visual_prompt_en se redacta para Stable Diffusion XL: sujeto primero, acción y estado después, entorno concreto, escala/encuadre, materiales y luz al final. Una sola escena, una sola acción dominante, sin metáforas ni listas de adjetivos. No incluir cámara ni equipo de filmación como objetos. No inventar detalles físicos no respaldados.\n- PRUEBA DE LEGIBILIDAD VISUAL: si al quitar el fondo, las luces y los adjetivos no queda claro qué objeto real se está viendo y qué le ocurre, la escena no está lista: reescribe visual_subject, visual_action y visual_prompt_en.\n- CONTINUIDAD Y VARIEDAD: conserva paleta y acabado CGI entre escenas, pero cambia el objeto, el estado, la escala o la composición cuando cambia el paso causal. No repitas un fondo de partículas para representar procesos diferentes.\n- DIRECCIÓN VISUAL OBLIGATORIA PARA TODO EL VIDEO: cada fotograma debe pertenecer al mismo universo de visualización científica cinematográfica CGI 3D, con iluminación volumétrica, profundidad real, materiales detallados, fondo oscuro elegante y acentos luminosos cian/turquesa/ámbar cuando sean científicamente pertinentes. La paleta y el acabado se mantienen; el contenido, objeto protagonista, escala, perspectiva y encuadre cambian según cada bloque. No repetir la misma imagen, personaje, plano ni composición. No usar estética vintage, retro, sepia, ilustración infantil, cartoon, fotografía de archivo ni personajes humanos innecesarios.\n- En cada visual_action nombra objetos concretos y su disposición espacial. Evita conceptos visuales genéricos como "energía", "fenómeno", "partículas" o "moléculas flotando" si no especificas qué representan, cómo se relacionan y qué transformación muestran.
-- Si el tema no tiene una plantilla visual especializada, diseña una escena editorial específica basada en los sustantivos y verbos del bloque; no sustituyas el tema por una animación genérica de otro dominio.
-- DIFERENCIA ENTRE IMAGEN Y ANIMACIÓN: el campo visual describe el fotograma final que debe ver el espectador: sujeto protagonista, entorno, materiales, escala, profundidad, iluminación y fenómeno físico. Debe leerse como una dirección de arte cinematográfica, no como una orden de producción ni como una transcripción literal de la narración.
-- El campo animation describe qué cambia entre el inicio y el final del plano: movimiento del sujeto, transformación, desplazamiento, expansión, colisión, apertura, reacción o revelación. Nunca uses la cámara como sujeto protagonista.
-- La imagen NO debe representar literalmente palabras de instrucciones como "observa", "mira", "acerca", "revela", "toma", "plano" o "cámara". Interpreta la intención y diseña una representación visual del fenómeno que explique el contenido.
-- PROHIBIDO incluir cámaras, lentes, trípodes, operadores, monitores, claquetas o equipo de filmación en los fotogramas. Las referencias a cámara solo sirven para escoger el punto de vista y jamás deben convertirse en objetos visibles.
-- Si el concepto es abstracto, tradúcelo a una visualización científica concreta y comprensible: estructuras, sustancias, fuerzas, campos, cambios de estado o relaciones causales que pertenezcan al tema. No recurras a decoración aleatoria ni a metáforas sin explicación.
-- Cada visual debe poder funcionar como una imagen fija potente y reconocible incluso sin texto. La animación se añade después y no debe ser necesaria para entender qué representa el fotograma.
-- visual_action debe describir una acción física visible y realizable (por ejemplo: la cámara atraviesa una capa, un objeto cae y rebota, una esfera se abre y revela su interior, dos elementos chocan o una comparación aparece lado a lado). No uses instrucciones abstractas como 'hacerlo interesante'.
-- No encadenes más de dos bloques con el mismo objeto protagonista. Alterna plano general, demostración física, macro, comparación, vista interna, entorno y escala humana cuando el tema lo permita.
-- visual_action debe describir un movimiento físico observable con inicio y resultado; evita acciones vagas como "flota", "brilla" o "se mueve" sin explicar qué cambia.
-- Escribe visual como descripción de arte de una imagen final: "Escena: [entorno y sujeto físico]. Fenómeno: [qué está ocurriendo]. Composición: [perspectiva y escala]. Acabado: CGI científico cinematográfico 3D". Escribe animation y visual_action por separado como instrucciones de movimiento físico del sujeto: "Inicio: [...]. Movimiento: [...]. Final: [cambio visible]". No conviertas el movimiento de cámara en el contenido de la imagen.
-- Usa verbos visuales literales que puedan representarse en una visualización científica cinematográfica tridimensional: entra, sale, cae, rebota, choca, se abre, se divide, atraviesa, se acerca, se aleja, gira, orbita, se desplaza, fluye, se expande, se contrae, se compara o revela. Evita metáforas que no indiquen qué debe aparecer en pantalla.
-- La acción debe ser específica al tema y al bloque; no reutilices la misma acción cambiando únicamente el adjetivo. Identifica un sujeto visual claro y un resultado observable.
-- Cuando una acción implique comparación, muestra dos estados simultáneos claramente rotulados. Cuando implique revelar, empieza ocultando el detalle y termina mostrándolo. Cuando implique movimiento, muestra posición inicial, desplazamiento y posición final.
-- No describas solo "la cámara hace zoom": el cambio de cámara debe revelar un detalle o información nueva y estar acompañado por un elemento visual temático.
-- Describe escenas físicamente plausibles y visualmente concretas para CGI científico tridimensional: objetos, materiales, estructuras internas, procesos a escala macro y micro. Evita círculos, rectángulos, flechas decorativas e infografías planas.
-- Propón profundidad y variedad de encuadre: primer plano, plano medio, plano general, perspectiva lateral, corte transversal y elementos en primer término.
-- No inventes acciones físicamente imposibles ni datos numéricos para hacer espectacular una escena.
-- Cada bloque consecutivo debe cambiar al menos dos aspectos visuales: composición/encuadre, escala, perspectiva, objeto protagonista, acción, entorno o esquema de color. No repitas el mismo plano con una pequeña oscilación.
-- on_screen_text debe ser una frase editorial breve de 2 a 6 palabras, comprensible para el espectador. Nunca debe contener instrucciones de producción ni resumir el objetivo técnico de la escena.
-- Comprueba que el mapa cubre toda la duración y que cada bloque aporta una imagen o acción diferente y un avance narrativo real.
-- Estructura: hook, promesa, contexto breve, explicación progresiva, revelación memorable y cierre.
-- Evita relleno, repeticiones, clickbait engañoso y frases genéricas. Escribe narración natural en español.
-- Diseña exactamente 4 o 5 escenas maestras conceptuales con continuidad de dirección de arte: visualización científica cinematográfica CGI 3D, materiales físicamente creíbles, profundidad, iluminación volumétrica y paleta coherente. Cada escena representa una unidad causal y puede sostener varios bloques de retención; NO generes una imagen independiente por cada bloque de 3 segundos.
-- Cada escena maestra debe incluir: time, objective, visual, animation, on_screen_text y transition. La animación debe especificar qué elemento se mueve, hacia dónde, cómo y qué revela.
-- Usa composiciones editoriales completas: primer plano, plano general, corte transversal, comparación, diagrama, cambio de perspectiva y detalle. No bases el video en círculos, líneas decorativas o elementos flotando sin función científica explícita.
-- No solicites actores, personajes, avatares ni multitudes salvo que el tema dependa esencialmente de una persona. Prioriza objetos, sustancias, estructuras y mecanismos. La dirección de arte debe parecer un documental científico CGI cinematográfico de alta calidad, no una plantilla, caricatura ni fotografía antigua. Incluye ritmo de edición, subtítulos y diseño sonoro gratuitos.
-- Ajusta el guion a la duración elegida.
-- COHERENCIA TEMPORAL OBLIGATORIA: elige una duración final concreta dentro del rango solicitado y úsala idéntica en script, storyboard y retention_map. La última escena del storyboard y el último bloque de retention_map deben terminar en el mismo segundo. No entregues un storyboard de 39 segundos con un mapa de solo 30 segundos.
-- retention_map debe cubrir desde 0:00 hasta el final exacto del storyboard, en bloques consecutivos de máximo 3 segundos, sin huecos ni solapamientos. Para 39 segundos, por ejemplo, debe contener 13 bloques; para 36 segundos, 12 bloques.
-- Cada bloque de retención debe describir una composición y acción realmente distintas. No reutilices el mismo rayo solar, vaso, gota, ojo, columna o esquema en bloques consecutivos ni en el cierre. Si el tema requiere volver a un elemento anterior, cambia claramente la escala, perspectiva y acción, y explica qué información nueva revela.
-
-Devuelve SOLAMENTE JSON válido con estas claves:
-category, research_sources, research_brief, causal_chain, concept_explanations, fact_audit, angle, hook, script, story, retention_map, verification, quality_check.
-category: categoría breve.
-angle: enfoque editorial en 2-3 frases.
-hook: hook inicial.
-script: guion completo con marcas [HOOK], [PROMESA], [CONTEXTO], [EXPLICACIÓN], [REVELACIÓN], [CIERRE].
-research_brief: lista de 4 a 7 hallazgos concisos con su nivel de certeza. causal_chain: pasos numerados de causa y efecto. concept_explanations: lista de objetos con term, plain_explanation y role. fact_audit: lista de objetos con claim, status, rationale y editorial_treatment. story: arreglo de 4 a 5 objetos de escena; cada objeto debe tener time, objective, teaching_point, visual_proof, visual, animation, on_screen_text, transition y un paquete visual técnico: visual_subject, visual_state, visual_action, visual_composition y visual_environment (todos redactados en inglés natural, con objetos físicos concretos y acciones observables; nunca conceptos abstractos), visual_prompt_en (prompt final en inglés para SDXL, 45–80 palabras, describiendo una sola imagen específica y físicamente reconocible).
-retention_map: arreglo cronológico de bloques de máximo 3 segundos; cada objeto debe tener time, new_stimulus, narrative_advance, curiosity, visual_action y on_screen_text (frase visible de 2 a 6 palabras).
-verification: lista de afirmaciones/datos que deben verificarse y qué evidencia falta.
-quality_check: lista de comprobaciones editoriales, científicas y de producción.
-
-Tema: ${topic.trim()}
-Duración objetivo: ${duration}
-Plataforma: ${platform}
-Notas del usuario:
-${safeNotes}
-
-MEMORIA EDITORIAL ACUMULADA DE J.A.I. (solo para diversidad y mejora creativa; NO es fuente científica):
-${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
-- Revisa esta memoria antes de diseñar el plan.
-- Evita repetir literalmente temas, hooks, ángulos, revelaciones, secuencias, objetos protagonistas y composiciones visuales recientes.
-- Si el tema actual coincide con uno anterior, aporta un enfoque nuevo y explica un mecanismo o perspectiva diferente; no cambies solo el título.
-- Alterna estructuras narrativas, escalas, acciones y encuadres. No repitas fórmulas visuales por inercia.
-- La memoria registra lo que J.A.I. produjo, no demuestra que algo funcionó ni verifica hechos. No uses sus afirmaciones como evidencia.
-- Si el usuario incluye correcciones en sus notas, dales prioridad y conviértelas en reglas para este plan.
-`;
+  const prompt = [
+    "Eres el equipo editorial científico y director de producción de J.A.I. Crea un plan educativo vertical 9:16. Devuelve SOLO JSON válido.",
+    "",
+    "PRINCIPIOS UNIVERSALES:",
+    "1) Investiga el dominio y reconstruye el mecanismo real: condición inicial → receptor/causa → transmisión o transformación → integración → resultado. No saltes pasos esenciales.",
+    "2) Distingue detección, transmisión, integración y experiencia consciente; mecanismo y correlación; hecho establecido e incertidumbre.",
+    "3) No inventes datos, cifras, fuentes, anatomía, objetos ni mecanismos. Las notas del usuario son pistas, no evidencia. Una fuente temática solo es candidata: úsala como respaldo directo únicamente si título/resumen la apoya claramente.",
+    "4) Si no hay respaldo recuperado, etiqueta la afirmación como conocimiento general pendiente de fuente. Nunca finjas una revisión académica.",
+    "5) Explica por qué ocurre cada paso y qué consecuencia observable produce. Define términos técnicos en lenguaje cotidiano. La narración debe enseñar sin depender de imágenes.",
+    "6) Si el tema excede el tiempo, delimita honestamente el episodio o propone una serie; no comprimas hasta distorsionar.",
+    "7) Cada escena enseña una unidad causal y demuestra exactamente lo narrado. Visuales CGI coherentes, objetos reconocibles, anatomía/materiales plausibles, una acción dominante; no decoración abstracta, nubes ni personajes aleatorios. Declara esquemas conceptuales cuando corresponda.",
+    "8) Audita consistencia entre afirmación, evidencia, cadena causal, guion, escena, prueba visual y tiempo.",
+    "",
+    "FUENTES RECUPERADAS (OpenAlex):",
+    researchContext,
+    "Solo usa IDs [S1]...[S3] existentes. No atribuyas respaldo directo por coincidencia de palabras. Copia las fuentes usadas en research_sources; descarta las irrelevantes.",
+    "",
+    "ENTREGABLE:",
+    "- category, angle, hook.",
+    "- script: 75–90 palabras realmente narradas para 30–45 s; excluye etiquetas [HOOK], [PROMESA], [CONTEXTO], [EXPLICACIÓN], [REVELACIÓN], [CIERRE]. Español claro, mecanismo causal, sin relleno.",
+    "- research_brief: 4–6 puntos; causal_chain: pasos ordenados; concept_explanations: objetos con term, plain_explanation, role.",
+    "- fact_audit: objetos con claim, status, rationale, editorial_treatment, source_ids (array) y evidence. Usa status explícito: respaldo directo, conocimiento general pendiente de fuente o no resuelto.",
+    "- story: exactamente 4 escenas conceptuales (5 solo si es imprescindible), intervalos explícitos consecutivos desde 0:00 hasta el final. Cada escena incluye time, objective, teaching_point, visual_proof, visual, animation, on_screen_text, transition y los campos visual_subject, visual_state, visual_action, visual_composition, visual_environment, visual_prompt_en. Ningún campo vacío.",
+    "- Los cinco campos visuales técnicos van en inglés natural y describen sujeto físico concreto, estado, acción observable, encuadre vertical seguro y entorno pertinente. visual_prompt_en: 35–80 palabras en inglés, una sola imagen CGI específica y reconocible. No uses conceptos abstractos como sujeto.",
+    "- retention_map: bloques consecutivos de máximo 3 s que cubran exactamente la duración del storyboard. Cada bloque incluye time, new_stimulus, narrative_advance, curiosity, visual_action, on_screen_text (2–6 palabras). Cada bloque avanza la enseñanza y coincide con la narración.",
+    "- verification: afirmaciones que requieren comprobación y evidencia faltante. quality_check: precisión, cobertura, originalidad y pregunta de recuperación.",
+    "- No devuelvas storyboard ni mapa incompletos. No inventes escenas para rellenar.",
+    "",
+    "TEMA: " + topic.trim(),
+    "DURACIÓN: " + duration,
+    "PLATAFORMA: " + platform,
+    "NOTAS DEL USUARIO: " + safeNotes,
+    "MEMORIA EDITORIAL (solo diversidad creativa; nunca evidencia): " + (safeLearningMemory || "Sin historial")
+  ].join("\n");
 
   try {
     // Proveedor principal: Groq GPT-OSS 120B. Gemini queda como respaldo.
@@ -193,7 +96,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
             ],
             response_format: { type: "json_object" },
             temperature: 0.55,
-            max_completion_tokens: 7000
+            max_completion_tokens: 3800
           }),
           signal: AbortSignal.timeout(22000)
         });
@@ -231,7 +134,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
         });
       }
 
-      const geminiModel = "gemini-2.5-flash";
+      const geminiModel = "gemini-3.8-flash";
       let geminiResponse;
       try {
         geminiResponse = await fetch(
@@ -247,7 +150,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
               generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.55,
-                maxOutputTokens: 7000
+                maxOutputTokens: 3000
               }
             }),
             signal: AbortSignal.timeout(16000)
@@ -286,7 +189,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
         console.error("[JAI][Gemini] Respuesta sin texto. finishReason:", finishReason);
         return res.status(502).json({ error: "El proveedor de respaldo respondió sin contenido.", diagnosticCode: "EMPTY_GEMINI_RESPONSE" });
       }
-      providerUsed = "Gemini 2.5 Flash (respaldo)";
+      providerUsed = "Gemini 3.8 Flash (respaldo)";
     }
 
     console.info("[JAI] Proveedor utilizado:", providerUsed);
@@ -438,8 +341,8 @@ DURATION: exactly ${requestedDuration} seconds, from 0:00 to ${Math.floor(reques
 STORY: exactly 4 or 5 complete conceptual scenes, with consecutive explicit time ranges "0:00 - 0:08". Every scene must include objective, teaching_point, visual_proof, visual_subject, visual_state, visual_action, visual_composition, visual_environment, visual_prompt_en, visual, animation, on_screen_text, transition. All fields must be nonempty strings. visual_subject/state/action/composition/environment are natural English, concrete and topic-specific. visual_prompt_en is 45-80 English words describing ONE recognizable physical subject, its material state, one observable action, a relevant environment and portrait-safe composition. Never use placeholders, ellipses, braces, generic clouds or abstract particles.
 RETENTION_MAP: consecutive blocks of maximum 3 seconds, covering exactly the same duration, each with time, new_stimulus, narrative_advance, curiosity, visual_action, on_screen_text. Each block advances the explanation and matches the script.
 SCRIPT: ${spokenForRepair}
-EXISTING STORYBOARD (may be malformed; do not copy placeholders): ${JSON.stringify(plan.story || []).slice(0,10000)}
-EXISTING MAP (may be malformed): ${JSON.stringify(plan.retention_map || []).slice(0,10000)}
+EXISTING STORYBOARD (may be malformed; do not copy placeholders): ${JSON.stringify(plan.story || []).slice(0,5000)}
+EXISTING MAP (may be malformed): ${JSON.stringify(plan.retention_map || []).slice(0,3500)}
 TOPIC: ${String(topic).slice(0,500)}
 NOTES: ${safeNotes.slice(0,3500)}
 Return no other keys and no markdown.`;
@@ -454,7 +357,7 @@ Return no other keys and no markdown.`;
               messages: [{ role: "system", content: "Return only complete valid JSON. Follow the requested schema exactly." }, { role: "user", content: repairPrompt }],
               response_format: { type: "json_object" },
               temperature: 0.25,
-              max_completion_tokens: 4200
+              max_completion_tokens: 3000
             }),
             signal: AbortSignal.timeout(10000)
           });
@@ -464,7 +367,7 @@ Return no other keys and no markdown.`;
           if (!repairResponse.ok) throw new Error("Groq repair HTTP " + repairResponse.status + ": " + String(repairBody?.error?.message || "").slice(0,180));
           repairedText = repairBody.choices?.[0]?.message?.content || "";
         } else if (process.env.GEMINI_API_KEY) {
-          const repairResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+          const repairResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
             method: "POST",
             headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
             body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: repairPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 4200 } }),
