@@ -270,8 +270,8 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
       }
 
       if (!geminiResponse.ok) {
-        const detail = String(geminiData?.error?.message || "Sin detalle").replace(/[\\r\\n\\t]+/g, " ").slice(0, 240);
-        const groqDetail = String(groqFailure || "Groq no disponible").replace(/[\\r\\n\\t]+/g, " ").slice(0, 180);
+        const detail = String(geminiData?.error?.message || "Sin detalle").replace(/[\r\n\t]+/g, " ").slice(0, 240);
+        const groqDetail = String(groqFailure || "Groq no disponible").replace(/[\r\n\t]+/g, " ").slice(0, 180);
         console.error("[JAI][Gemini] HTTP", geminiResponse.status, detail.slice(0, 500), "| Groq:", groqDetail);
         return res.status(502).json({
           error: "Fallaron los dos motores. Groq: " + groqDetail + " | Gemini HTTP " + geminiResponse.status + ": " + detail,
