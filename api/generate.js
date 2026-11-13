@@ -347,39 +347,51 @@ TOPIC: ${String(topic).slice(0,500)}
 NOTES: ${safeNotes.slice(0,3500)}
 Return no other keys and no markdown.`;
       let repairedText = "";
-      try {
-        if (providerUsed.startsWith("Groq") && groqKey) {
-          const repairResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "openai/gpt-oss-120b",
-              messages: [{ role: "system", content: "Return only complete valid JSON. Follow the requested schema exactly." }, { role: "user", content: repairPrompt }],
-              response_format: { type: "json_object" },
-              temperature: 0.25,
-              max_completion_tokens: 3000
-            }),
-            signal: AbortSignal.timeout(10000)
-          });
-          const repairRaw = await repairResponse.text();
-          let repairBody = {};
-          try { repairBody = JSON.parse(repairRaw); } catch {}
-          if (!repairResponse.ok) throw new Error("Groq repair HTTP " + repairResponse.status + ": " + String(repairBody?.error?.message || "").slice(0,180));
-          repairedText = repairBody.choices?.[0]?.message?.content || "";
-        } else if (process.env.GEMINI_API_KEY) {
-          const repairResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
-            method: "POST",
-            headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: repairPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 4200 } }),
-            signal: AbortSignal.timeout(12000)
-          });
-          const repairRaw = await repairResponse.text();
-          let repairBody = {};
-          try { repairBody = JSON.parse(repairRaw); } catch {}
-          if (!repairResponse.ok) throw new Error("Gemini repair HTTP " + repairResponse.status);
-          repairedText = repairBody.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("") || "";
+      const repairErrors = [];
+      const repairOrder = providerUsed.startsWith("Groq") ? ["Groq", "Gemini"] : ["Gemini", "Groq"];
+      for (const repairProvider of repairOrder) {
+        if (repairedText) break;
+        try {
+          if (repairProvider === "Groq" && groqKey) {
+            const repairResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: "openai/gpt-oss-120b",
+                messages: [{ role: "system", content: "Return only complete valid JSON. Follow the requested schema exactly." }, { role: "user", content: repairPrompt }],
+                response_format: { type: "json_object" },
+                temperature: 0.25,
+                max_completion_tokens: 3000
+              }),
+              signal: AbortSignal.timeout(10000)
+            });
+            const repairRaw = await repairResponse.text();
+            let repairBody = {};
+            try { repairBody = JSON.parse(repairRaw); } catch {}
+            if (!repairResponse.ok) throw new Error("Groq HTTP " + repairResponse.status + ": " + String(repairBody?.error?.message || "").replace(/[\\r\\n\\t]+/g, " ").slice(0, 160));
+            repairedText = repairBody.choices?.[0]?.message?.content || "";
+          } else if (repairProvider === "Gemini" && process.env.GEMINI_API_KEY) {
+            const repairResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
+              method: "POST",
+              headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
+              body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: repairPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 3000 } }),
+              signal: AbortSignal.timeout(10000)
+            });
+            const repairRaw = await repairResponse.text();
+            let repairBody = {};
+            try { repairBody = JSON.parse(repairRaw); } catch {}
+            if (!repairResponse.ok) throw new Error("Gemini HTTP " + repairResponse.status + ": " + String(repairBody?.error?.message || "").replace(/[\\r\\n\\t]+/g, " ").slice(0, 160));
+            repairedText = repairBody.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("") || "";
+          }
+          if (!repairedText) throw new Error("El proveedor no devolvió el storyboard reparado.");
+          console.info("[JAI][Storyboard] Reparación solicitada a", repairProvider);
+        } catch (repairError) {
+          repairErrors.push(repairProvider + ": " + (repairError?.message || "error desconocido"));
+          repairedText = "";
+          console.warn("[JAI][Storyboard] Falló reparación con", repairProvider, repairError?.message || repairError);
         }
-        const repaired = parseModelObject(repairedText);
+      }
+      const repaired = parseModelObject(repairedText);
         if (repaired && Array.isArray(repaired.story) && Array.isArray(repaired.retention_map)) {
           plan.story = repaired.story;
           plan.retention_map = repaired.retention_map;
@@ -389,7 +401,7 @@ Return no other keys and no markdown.`;
         console.error("[JAI][Storyboard] Falló la reparación automática:", repairError?.message || repairError);
       }
       if (!storyboardCheck.ok) {
-        console.error("[JAI][Storyboard] Bloqueo de producción:", storyboardCheck.reason);
+        console.error("[JAI][Storyboard] Bloqueo de producción:", storyboardCheck.reason, "Errores de reparación:", repairErrors.join(" | "));
         return res.status(502).json({
           error: "J.A.I. detectó un storyboard incompleto y no pudo repararlo automáticamente. No se generarán escenas falsas ni una línea de tiempo incorrecta. Diagnóstico: " + storyboardCheck.reason,
           diagnosticCode: "STORYBOARD_REPAIR_FAILED"
