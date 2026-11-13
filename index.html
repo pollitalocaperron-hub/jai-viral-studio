@@ -67,7 +67,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <div class="hint" id="captionStatus" aria-live="polite">J.A.I. generará subtítulos automáticamente al crear la narración. Los tiempos son una estimación editable basada en el guion y la duración real del audio; no requiere subir archivos.</div>
  <div id="captionEditor" style="display:grid;gap:9px;margin-top:10px"></div>
 </section>
-<div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de ritmo · microavance cada 3 segundos, sin cortes obligatorios</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Fotogramas IA · Estilo científico</span></div><p class="hint">Genera una imagen CGI por escena conceptual (4–5 escenas en vídeos cortos). El servicio gratuito limita las solicitudes: J.A.I. muestra progreso real, reintenta fallos temporales y conserva cada imagen terminada. Cada toma debe mostrar un objeto físico reconocible y la transformación exacta que enseña. La cámara mantiene movimiento continuo durante toda la escena; las transiciones conectan los fotogramas.</p><button class="primary" id="makeVisuals" type="button">Generar fotogramas cinematográficos</button><button class="secondary" id="inspectVisuals" type="button" disabled>Auditar fotogramas con IA</button><div class="hint" id="visualAuditStatus">La inspección envía los fotogramas generados a Gemini 2.5 Flash. Usa el nivel gratuito disponible y está sujeta a sus límites.</div><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Secuencia de montaje · Vista previa</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza automáticamente las escenas del storyboard. En esta versión puedes revisar la secuencia, pero todavía no arrastrar, reordenar ni recortar clips. La exportación usa MP4 si tu navegador lo admite o WebM como respaldo.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Revisar secuencia</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar y exportar video</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Gemini, se integrará al vídeo. El formato MP4 se usará si tu navegador lo admite; de lo contrario se descargará WebM.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Alertas editoriales</label><div class="result" id="editorialWarnings">No hay alertas adicionales.</div><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
+<div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de ritmo · microavance cada 3 segundos, sin cortes obligatorios</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Fotogramas IA · Estilo científico</span></div><p class="hint">Genera una imagen CGI por escena conceptual (4–5 escenas en vídeos cortos). El servicio gratuito limita las solicitudes: J.A.I. muestra progreso real, reintenta fallos temporales y conserva cada imagen terminada. Cada toma debe mostrar un objeto físico reconocible y la transformación exacta que enseña. La cámara mantiene movimiento continuo durante toda la escena; las transiciones conectan los fotogramas.</p><button class="primary" id="makeVisuals" type="button">Generar fotogramas cinematográficos</button><div class="row"><button class="secondary" id="inspectVisuals" type="button" disabled>Auditar fotogramas con IA</button><button class="secondary" id="approveAllVisuals" type="button" disabled>Aprobar todas manualmente</button></div><div class="hint" id="visualAuditStatus">La inspección compara cada imagen con su enseñanza. Si el servicio no responde, puedes revisar las imágenes y aprobarlas manualmente en conjunto.</div><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Secuencia de montaje · Vista previa</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza automáticamente las escenas del storyboard. En esta versión puedes revisar la secuencia, pero todavía no arrastrar, reordenar ni recortar clips. La exportación usa MP4 si tu navegador lo admite o WebM como respaldo.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Revisar secuencia</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar y exportar video</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Gemini, se integrará al vídeo. El formato MP4 se usará si tu navegador lo admite; de lo contrario se descargará WebM.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Alertas editoriales</label><div class="result" id="editorialWarnings">No hay alertas adicionales.</div><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
 <div class="steps"><div class="step"><b>01 · Investigación</b><span>Verificar afirmaciones y fuentes.</span></div><div class="step"><b>02 · Dirección visual</b><span>Objetos, diagramas y movimiento.</span></div><div class="step"><b>03 · Voz</b><span>Narración y sincronización.</span></div><div class="step"><b>04 · Montaje</b><span>Ritmo, subtítulos y sonido.</span></div><div class="step"><b>05 · Revisión</b><span>Exactitud y originalidad.</span></div><div class="step"><b>06 · Exportación</b><span>MP4/WebM vertical 9:16.</span></div></div>
 <div class="row" style="margin-top:14px"><button class="secondary" id="copy">Copiar plan</button><button class="secondary" id="save">Guardar proyecto</button></div></section>
 <section class="card"><h3 class="section-title">Proyectos guardados</h3><div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div></section>
@@ -185,7 +185,8 @@ function renderVisualScenes(){
   promptDetails.append(promptSummary,promptText);meta.appendChild(promptDetails);card.appendChild(meta);root.appendChild(card);
  });
  const ready=jaiSceneImages.filter(Boolean).length;
- $("visualStatus").textContent=ready+" de "+currentScenes.length+" escenas visuales únicas listas. "+(ready<currentScenes.length?"Puedes salir y volver: las imágenes terminadas permanecen disponibles en esta sesión.":"Todas las escenas están generadas.");
+ $("visualStatus").textContent=ready+" de "+currentScenes.length+" escenas visuales únicas listas. "+(ready<currentScenes.length?"Puedes reanudar sin repetir las imágenes terminadas.":"Todas las escenas están generadas.");
+ const approveAll=$("approveAllVisuals");if(approveAll)approveAll.disabled=ready!==currentScenes.length||renderRecording||planningInProgress||visualGenerationRunning||narrationGenerating;
 }
 async function requestVisualImage(prompt,sceneNumber){
  const endpoint="https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations";
@@ -287,6 +288,16 @@ async function inspectVisuals(){
  }catch(error){$("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Puedes revisar las imágenes manualmente; no se modificaron ni se descartaron.";}
  finally{$("makeVisuals").disabled=false;button.disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));}
 }
+function approveAllVisualScenes(){
+ if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){
+  $("visualAuditStatus").textContent="No se puede aprobar: primero deben estar generadas las imágenes de todas las escenas.";return;
+ }
+ visualAuditResults=currentScenes.map((scene,index)=>({scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar el fotograma.",issues:[],manual:true}));
+ renderVisualScenes();
+ $("visualAuditStatus").textContent="Las "+currentScenes.length+" escenas quedaron aprobadas manualmente. La exportación ya puede prepararse.";
+ $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&visualAuditPassed());
+}
+$("approveAllVisuals").addEventListener("click",approveAllVisualScenes);
 function approveVisualScene(index){
  if(!Number.isInteger(index)||!currentScenes[index]||!jaiSceneImages[index]?.image)return;
  if(visualAuditResults.length!==currentScenes.length)visualAuditResults=Array.from({length:currentScenes.length},(_,i)=>visualAuditResults[i]||null);
@@ -528,64 +539,86 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
 }
 async function renderVideo(){
  if(planningInProgress||visualGenerationRunning||narrationGenerating){$("renderStatus").textContent="Espera a que terminen las tareas de producción antes de renderizar.";return;}
- if(renderRecording||!timelineState.items.length)return;
+ if(renderRecording)return;
+ if(!timelineState.items.length){$("renderStatus").textContent="Prepara la línea de tiempo antes de exportar.";return;}
  if(!currentDurationValidation?.within_tolerance){$("renderStatus").textContent="Render bloqueado: corrige primero la duración y la cronología del plan editorial.";return;}
- if(!visualAuditPassed()){$("renderStatus").textContent="Render bloqueado: inspecciona los fotogramas y corrige las escenas que no hayan sido aprobadas.";return;}
- if(jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,i)=>jaiSceneImages[i]?.image)){ $("renderStatus").textContent="Primero genera y revisa todos los fotogramas cinematográficos. No se usarán dibujos de respaldo.";return;}
- const supported=window.MediaRecorder&&renderCanvas.captureStream;
- if(!supported){$("renderStatus").textContent="Este navegador no permite grabar el lienzo. Prueba con Chrome actualizado.";return;}
- const mime=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(type=>MediaRecorder.isTypeSupported(type));
+ if(!visualAuditPassed()){$("renderStatus").textContent="Render bloqueado: audita las escenas o revísalas y usa «Aprobar todas manualmente».";return;}
+ if(jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,i)=>jaiSceneImages[i]?.image)){$("renderStatus").textContent="Faltan fotogramas. Genera todas las escenas antes de exportar.";return;}
+ if(!window.MediaRecorder||typeof renderCanvas.captureStream!=="function"){$("renderStatus").textContent="Este navegador no permite grabar el lienzo. Prueba con Chrome actualizado.";return;}
+ const mimeCandidates=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
+ const mime=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
  if(!mime){$("renderStatus").textContent="Este navegador no admite grabación MP4 ni WebM desde el editor.";return;}
- renderRecording=true;$("renderVideo").disabled=true;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
- let stream=renderCanvas.captureStream(30),audioBuffer=null,audioSource=null;
+ renderRecording=true;$("renderVideo").disabled=true;$("approveAllVisuals").disabled=true;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
+ let stream=null,audioBuffer=null,audioSource=null,recorder=null,animationId=null,finished=false;
+ const cleanup=()=>{
+  if(animationId!==null)cancelAnimationFrame(animationId);
+  if(audioSource){try{audioSource.stop();}catch{}}
+  if(stream)stream.getTracks().forEach(track=>track.stop());
+  renderRecording=false;
+  $("approveAllVisuals").disabled=!(jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
+  $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
+ };
+ const fail=message=>{if(finished)return;finished=true;$("renderStatus").textContent=message;cleanup();};
  try{
+  stream=renderCanvas.captureStream(30);
   if(kokoroAudioBlob){
    const AudioCtx=window.AudioContext||window.webkitAudioContext;
-   if(AudioCtx){
-    kokoroAudioContext=kokoroAudioContext||new AudioCtx();
-    await kokoroAudioContext.resume();
-    audioBuffer=await kokoroAudioContext.decodeAudioData(await kokoroAudioBlob.arrayBuffer());
-    const destination=kokoroAudioContext.createMediaStreamDestination();
-    audioSource=kokoroAudioContext.createBufferSource();audioSource.buffer=audioBuffer;audioSource.connect(destination);
-    destination.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
+   if(!AudioCtx)throw new Error("Este navegador no permite preparar el audio de narración.");
+   kokoroAudioContext=kokoroAudioContext||new AudioCtx();
+   await kokoroAudioContext.resume();
+   if(kokoroAudioContext.state!=="running")throw new Error("El sistema de audio sigue suspendido. Toca de nuevo exportar para autorizar la reproducción.");
+   audioBuffer=await kokoroAudioContext.decodeAudioData(await kokoroAudioBlob.arrayBuffer());
+   if(!audioBuffer||!Number.isFinite(audioBuffer.duration)||audioBuffer.duration<=0)throw new Error("La narración no contiene una duración de audio válida.");
+   const destination=kokoroAudioContext.createMediaStreamDestination();
+   audioSource=kokoroAudioContext.createBufferSource();audioSource.buffer=audioBuffer;audioSource.connect(destination);
+   destination.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
+  }
+  recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:4500000});
+  const chunks=[];
+  recorder.ondataavailable=event=>{if(event.data&&event.data.size)chunks.push(event.data);};
+  recorder.onerror=event=>{const detail=event?.error?.message||"Error del grabador multimedia.";fail("Falló la grabación del navegador: "+detail+" No se creó un archivo incompleto.");};
+  recorder.onstop=()=>{
+   if(finished)return;
+   finished=true;
+   const blob=new Blob(chunks,{type:mime});
+   cleanup();
+   if(!blob.size){$("renderStatus").textContent="El navegador terminó la grabación sin generar datos. Prueba Chrome actualizado y mantén esta pestaña visible durante el render.";return;}
+   const previous=$("downloadVideo").dataset.objectUrl;if(previous)URL.revokeObjectURL(previous);
+   const url=URL.createObjectURL(blob);$("downloadVideo").dataset.objectUrl=url;
+   const isMp4=mime.includes("mp4"),extension=isMp4?"mp4":"webm";
+   $("downloadVideo").href=url;$("downloadVideo").download="jai-viral-studio."+extension;$("downloadVideo").textContent="Descargar video "+extension.toUpperCase();$("downloadVideo").hidden=false;
+   $("renderStatus").textContent="Vídeo renderizado correctamente ("+(blob.size/1048576).toFixed(1)+" MB), formato "+extension.toUpperCase()+(audioBuffer?" con narración integrada ("+audioBuffer.duration.toFixed(1)+" s).":" sin narración.")+(isMp4?"":" Este navegador exportó WebM porque no admite MP4 directo.");
+  };
+  const timelineDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
+  const totalDuration=Math.max(timelineDuration,audioBuffer?audioBuffer.duration:0);
+  const visualTimeScale=timelineDuration/Math.max(.1,totalDuration);
+  let startedAt=null;
+  const draw=now=>{
+   if(!renderRecording||finished)return;
+   if(startedAt===null){startedAt=now;if(audioSource)audioSource.start();}
+   const elapsed=Math.max(0,(now-startedAt)/1000);
+   const visualElapsed=Math.min(timelineDuration,elapsed*visualTimeScale);
+   let cursor=0,blockIndex=timelineState.items.length-1,blockProgress=1;
+   for(let i=0;i<timelineState.items.length;i++){
+    const seconds=Math.max(.1,Number(timelineState.items[i].seconds)||0);
+    if(visualElapsed<cursor+seconds){blockIndex=i;blockProgress=Math.max(0,Math.min(1,(visualElapsed-cursor)/seconds));break;}
+    cursor+=seconds;
    }
-  }
- }catch(error){$("renderStatus").textContent="No se pudo preparar el audio. Se canceló el render para evitar un vídeo sin voz.";renderRecording=false;$("renderVideo").disabled=false;stream.getTracks().forEach(t=>t.stop());return;}
- const chunks=[],recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:4500000});
- recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
- recorder.onerror=()=>{$("renderStatus").textContent="No se pudo completar el renderizado. Inténtalo de nuevo.";renderRecording=false;$("renderVideo").disabled=false;stream.getTracks().forEach(t=>t.stop());};
- recorder.onstop=()=>{
-  stream.getTracks().forEach(t=>t.stop());const blob=new Blob(chunks,{type:mime});const url=URL.createObjectURL(blob);const isMp4=mime.includes("mp4"),extension=isMp4?"mp4":"webm";
-  $("downloadVideo").href=url;$("downloadVideo").download="jai-viral-studio."+extension;$("downloadVideo").textContent="Descargar video "+extension.toUpperCase();$("downloadVideo").hidden=false;
-  $("renderStatus").textContent="Vídeo listo ("+(blob.size/1048576).toFixed(1)+" MB), formato "+extension.toUpperCase()+(audioBuffer?" con narración Gemini integrada":" sin narración. Genera la narración Gemini para incluir audio")+(isMp4?".":" · Este navegador no admite exportación MP4 directa; se entregó WebM.");
-  renderRecording=false;$("renderVideo").disabled=false;
- };
- const timelineDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(1,item.seconds),0);
- // La pista visual se estira o comprime proporcionalmente para cubrir la duración real del audio.
- const totalDuration=audioBuffer?audioBuffer.duration:timelineDuration;
- const visualTimeScale=timelineDuration/Math.max(.1,totalDuration);
- let started=0;
- const draw=now=>{
-  if(!renderRecording)return;
-  if(!started){started=now;if(audioSource)audioSource.start();}
-  const elapsed=(now-started)/1000;
-  const visualElapsed=Math.min(timelineDuration,elapsed*visualTimeScale);
-  let cursor=0,blockIndex=timelineState.items.length-1,blockProgress=1;
-  for(let i=0;i<timelineState.items.length;i++){
-   const seconds=Math.max(1,timelineState.items[i].seconds);
-   if(visualElapsed<cursor+seconds){blockIndex=i;blockProgress=(visualElapsed-cursor)/seconds;break;}
-   cursor+=seconds;
-  }
-  const activeItem=timelineState.items[blockIndex],sceneIndex=Number.isInteger(activeItem.sceneIndex)?activeItem.sceneIndex:0;
-  let sceneStart=0,sceneDuration=0;
-  timelineState.items.forEach((item,index)=>{if(item.sceneIndex===sceneIndex){if(index<blockIndex)sceneStart+=item.seconds;sceneDuration+=item.seconds;}});
-  const sceneProgress=Math.max(0,Math.min(1,(sceneStart+blockProgress*activeItem.seconds)/Math.max(1,sceneDuration)));
-  drawVideoScene(activeItem,sceneIndex,sceneProgress,elapsed);
-  $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+(audioBuffer?" · sincronizada con audio ("+Math.round(totalDuration)+" s)":"")+"…";
-  if(elapsed>=totalDuration){recorder.stop();return;}
-  renderFrame=requestAnimationFrame(draw);
- };
- recorder.start(250);renderFrame=requestAnimationFrame(draw);
+   const activeItem=timelineState.items[blockIndex],sceneIndex=Number.isInteger(activeItem.sceneIndex)?activeItem.sceneIndex:0;
+   let sceneStart=0,sceneDuration=0;
+   timelineState.items.forEach((item,index)=>{if(item.sceneIndex===sceneIndex){if(index<blockIndex)sceneStart+=Math.max(.1,Number(item.seconds)||0);sceneDuration+=Math.max(.1,Number(item.seconds)||0);}});
+   const sceneProgress=Math.max(0,Math.min(1,(sceneStart+blockProgress*Math.max(.1,Number(activeItem.seconds)||0))/Math.max(.1,sceneDuration)));
+   drawVideoScene(activeItem,sceneIndex,sceneProgress,elapsed);
+   $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";
+   if(elapsed>=totalDuration){try{recorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
+   animationId=requestAnimationFrame(draw);
+  };
+  recorder.start(250);
+  animationId=requestAnimationFrame(draw);
+  $("renderStatus").textContent="Render iniciado. Mantén la pestaña abierta y visible hasta que aparezca el enlace de descarga.";
+ }catch(error){
+  fail("No se pudo iniciar el renderizado: "+(error?.message||"error desconocido")+". No se generó un archivo incompleto.");
+ }
 }
 $("renderVideo").addEventListener("click",renderVideo);
 
