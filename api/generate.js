@@ -317,7 +317,7 @@ async function generatePlanHandler(req, res) {
         if (words >= 35 && words <= 100) continue;
         const groundedFields = [scene.visual_subject, scene.visual_state, scene.visual_action, scene.visual_composition, scene.visual_environment]
           .filter(value => typeof value === "string" && value.trim())
-          .map(value => value.trim().replace(/[.\\s]+$/g, ""));
+          .map(value => value.trim().replace(/[.\s]+$/g, ""));
         if (groundedFields.length < 5) continue;
         const completion = "Single coherent scientific CGI visualization, physically plausible materials, clearly visible subject and action, uncluttered environment, subject fully inside the vertical frame, precise surface and structural details, cinematic depth and controlled volumetric lighting, no text or watermark.";
         let combined = groundedFields.join(". ") + ". " + completion;
