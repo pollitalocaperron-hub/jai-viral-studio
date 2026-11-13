@@ -384,7 +384,13 @@ Return no other keys and no markdown.`;
             repairedText = repairBody.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("") || "";
           }
           if (!repairedText) throw new Error("El proveedor no devolvió el storyboard reparado.");
-          console.info("[JAI][Storyboard] Reparación solicitada a", repairProvider);
+          const candidateRepair = parseModelObject(repairedText);
+          if (!candidateRepair || !Array.isArray(candidateRepair.story) || !Array.isArray(candidateRepair.retention_map)) {
+            throw new Error("El proveedor devolvió una reparación JSON incompleta.");
+          }
+          const candidateCheck = inspectStoryboard({ ...plan, story: candidateRepair.story, retention_map: candidateRepair.retention_map });
+          if (!candidateCheck.ok) throw new Error(candidateCheck.reason);
+          console.info("[JAI][Storyboard] Reparación válida recibida de", repairProvider);
         } catch (repairError) {
           repairErrors.push(repairProvider + ": " + (repairError?.message || "error desconocido"));
           repairedText = "";
@@ -395,6 +401,7 @@ Return no other keys and no markdown.`;
         if (repaired && Array.isArray(repaired.story) && Array.isArray(repaired.retention_map)) {
           plan.story = repaired.story;
           plan.retention_map = repaired.retention_map;
+          completeShortVisualPrompts(plan);
           storyboardCheck = inspectStoryboard(plan);
         }
       } catch (repairError) {
