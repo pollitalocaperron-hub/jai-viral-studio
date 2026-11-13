@@ -133,7 +133,7 @@ H. PERTINENCIA DE EVIDENCIA: una fuente encontrada por búsqueda temática o coi
 - Comprueba que el mapa cubre toda la duración y que cada bloque aporta una imagen o acción diferente y un avance narrativo real.
 - Estructura: hook, promesa, contexto breve, explicación progresiva, revelación memorable y cierre.
 - Evita relleno, repeticiones, clickbait engañoso y frases genéricas. Escribe narración natural en español.
-- Diseña de 5 a 8 escenas maestras con continuidad de dirección de arte: visualización científica cinematográfica CGI 3D, materiales físicamente creíbles, profundidad, iluminación volumétrica y paleta coherente. Cada bloque de retención debe convertirse en un fotograma independiente, con encuadre y momento distintos.
+- Diseña exactamente 4 o 5 escenas maestras conceptuales con continuidad de dirección de arte: visualización científica cinematográfica CGI 3D, materiales físicamente creíbles, profundidad, iluminación volumétrica y paleta coherente. Cada escena representa una unidad causal y puede sostener varios bloques de retención; NO generes una imagen independiente por cada bloque de 3 segundos.
 - Cada escena maestra debe incluir: time, objective, visual, animation, on_screen_text y transition. La animación debe especificar qué elemento se mueve, hacia dónde, cómo y qué revela.
 - Usa composiciones editoriales completas: primer plano, plano general, corte transversal, comparación, diagrama, cambio de perspectiva y detalle. No bases el video en círculos, líneas decorativas o elementos flotando sin función científica explícita.
 - No solicites actores, personajes, avatares ni multitudes salvo que el tema dependa esencialmente de una persona. Prioriza objetos, sustancias, estructuras y mecanismos. La dirección de arte debe parecer un documental científico CGI cinematográfico de alta calidad, no una plantilla, caricatura ni fotografía antigua. Incluye ritmo de edición, subtítulos y diseño sonoro gratuitos.
@@ -342,6 +342,136 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
         diagnosticCode: incomplete ? "INCOMPLETE_MODEL_JSON" : "INVALID_MODEL_JSON",
         finishReason
       });
+    }
+
+    // Reparación automática del storyboard: nunca se devuelve una producción visual incompleta.
+    const parseModelObject = rawText => {
+      const textValue = String(rawText || "").replace(/^\\uFEFF/, "").replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/, "").trim();
+      try { const value = JSON.parse(textValue); return value && typeof value === "object" && !Array.isArray(value) ? value : null; } catch {}
+      const first = textValue.indexOf("{");
+      if (first < 0) return null;
+      let depth = 0, inString = false, escaped = false;
+      for (let i = first; i < textValue.length; i++) {
+        const ch = textValue[i];
+        if (inString) {
+          if (escaped) escaped = false;
+          else if (ch === "\\\\") escaped = true;
+          else if (ch === '"') inString = false;
+          continue;
+        }
+        if (ch === '"') inString = true;
+        else if (ch === "{") depth++;
+        else if (ch === "}" && --depth === 0) {
+          try { return JSON.parse(textValue.slice(first, i + 1).replace(/,\\s*([}\\]])/g, "$1")); } catch { return null; }
+        }
+      }
+      return null;
+    };
+    const inspectStoryboard = candidate => {
+      const scenes = Array.isArray(candidate?.story) ? candidate.story : [];
+      const beats = Array.isArray(candidate?.retention_map) ? candidate.retention_map : [];
+      const range = value => {
+        const match = String(value || "").match(/(\\d+):(\\d{2})\\s*[-–—]\\s*(\\d+):(\\d{2})/);
+        if (!match) return null;
+        const start = Number(match[1]) * 60 + Number(match[2]);
+        const end = Number(match[3]) * 60 + Number(match[4]);
+        return end > start ? { start, end } : null;
+      };
+      if (scenes.length < 4 || scenes.length > 5) return { ok: false, reason: "Se requieren 4 o 5 escenas conceptuales completas; llegaron " + scenes.length + "." };
+      let cursor = 0;
+      for (let i = 0; i < scenes.length; i++) {
+        const scene = scenes[i] && typeof scenes[i] === "object" ? scenes[i] : {};
+        const r = range(scene.time);
+        if (!r || r.start !== cursor) return { ok: false, reason: "La cronología de escenas está incompleta o tiene huecos en la escena " + (i + 1) + "." };
+        cursor = r.end;
+        const required = ["objective","teaching_point","visual_proof","visual_subject","visual_state","visual_action","visual_composition","visual_environment","visual_prompt_en"];
+        const missing = required.filter(key => typeof scene[key] !== "string" || !scene[key].trim() || /pendiente|por definir|\\.\\.\\.|\\{.*\\}/i.test(scene[key]));
+        if (missing.length) return { ok: false, reason: "La escena " + (i + 1) + " tiene campos incompletos: " + missing.join(", ") + "." };
+        const promptWords = scene.visual_prompt_en.trim().split(/\\s+/).length;
+        if (promptWords < 35 || promptWords > 100) return { ok: false, reason: "El prompt visual de la escena " + (i + 1) + " debe tener entre 35 y 100 palabras." };
+      }
+      if (!beats.length) return { ok: false, reason: "Falta el mapa de ritmo." };
+      let beatCursor = 0;
+      for (let i = 0; i < beats.length; i++) {
+        const r = range(beats[i]?.time);
+        if (!r || r.start !== beatCursor || r.end - r.start > 3) return { ok: false, reason: "El mapa de ritmo tiene huecos o bloques mayores de tres segundos en el bloque " + (i + 1) + "." };
+        const fields = ["new_stimulus","narrative_advance","visual_action","on_screen_text"];
+        if (fields.some(key => typeof beats[i][key] !== "string" || !beats[i][key].trim())) return { ok: false, reason: "El bloque " + (i + 1) + " no explica un avance visual y narrativo completo." };
+        beatCursor = r.end;
+      }
+      if (beatCursor !== cursor) return { ok: false, reason: "El mapa de ritmo termina en " + beatCursor + " s y el storyboard en " + cursor + " s." };
+      return { ok: true, seconds: cursor };
+    };
+    let storyboardCheck = inspectStoryboard(plan);
+    if (!storyboardCheck.ok) {
+      console.warn("[JAI][Storyboard] Respuesta incompleta; se intentará reparar:", storyboardCheck.reason, "Proveedor original:", providerUsed, "finishReason:", finishReason);
+      const spokenForRepair = String(plan.script || "").replace(/\\[[^\\]]+\\]/g, " ");
+      const repairWords = (spokenForRepair.match(/[a-záéíóúüñ0-9]+/gi) || []).length;
+      const estimatedForRepair = Math.round(repairWords / 140 * 60);
+      const requestedDuration = /30\\s*[-–—]\\s*45/.test(String(duration))
+        ? Math.max(36, Math.min(42, Math.round((estimatedForRepair || 39) / 3) * 3))
+        : Math.max(36, Math.min(90, Math.round((estimatedForRepair || 48) / 3) * 3));
+      const repairPrompt = `Repair ONLY the storyboard and retention map for this existing Spanish educational video. Preserve the script's meaning and scientific scope. Return ONLY valid JSON: {"story":[...],"retention_map":[...]}.
+DURATION: exactly ${requestedDuration} seconds, from 0:00 to ${Math.floor(requestedDuration/60)}:${String(requestedDuration%60).padStart(2,"0")}.
+STORY: exactly 4 or 5 complete conceptual scenes, with consecutive explicit time ranges "0:00 - 0:08". Every scene must include objective, teaching_point, visual_proof, visual_subject, visual_state, visual_action, visual_composition, visual_environment, visual_prompt_en, visual, animation, on_screen_text, transition. All fields must be nonempty strings. visual_subject/state/action/composition/environment are natural English, concrete and topic-specific. visual_prompt_en is 45-80 English words describing ONE recognizable physical subject, its material state, one observable action, a relevant environment and portrait-safe composition. Never use placeholders, ellipses, braces, generic clouds or abstract particles.
+RETENTION_MAP: consecutive blocks of maximum 3 seconds, covering exactly the same duration, each with time, new_stimulus, narrative_advance, curiosity, visual_action, on_screen_text. Each block advances the explanation and matches the script.
+SCRIPT: ${spokenForRepair}
+EXISTING STORYBOARD (may be malformed; do not copy placeholders): ${JSON.stringify(plan.story || []).slice(0,10000)}
+EXISTING MAP (may be malformed): ${JSON.stringify(plan.retention_map || []).slice(0,10000)}
+TOPIC: ${String(topic).slice(0,500)}
+NOTES: ${safeNotes.slice(0,3500)}
+Return no other keys and no markdown.`;
+      let repairedText = "";
+      try {
+        if (groqKey) {
+          const repairResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "openai/gpt-oss-120b",
+              messages: [{ role: "system", content: "Return only complete valid JSON. Follow the requested schema exactly." }, { role: "user", content: repairPrompt }],
+              response_format: { type: "json_object" },
+              temperature: 0.25,
+              max_completion_tokens: 4200
+            }),
+            signal: AbortSignal.timeout(12000)
+          });
+          const repairRaw = await repairResponse.text();
+          let repairBody = {};
+          try { repairBody = JSON.parse(repairRaw); } catch {}
+          if (!repairResponse.ok) throw new Error("Groq repair HTTP " + repairResponse.status + ": " + String(repairBody?.error?.message || "").slice(0,180));
+          repairedText = repairBody.choices?.[0]?.message?.content || "";
+        } else if (process.env.GEMINI_API_KEY) {
+          const repairResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+            method: "POST",
+            headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: repairPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 4200 } }),
+            signal: AbortSignal.timeout(12000)
+          });
+          const repairRaw = await repairResponse.text();
+          let repairBody = {};
+          try { repairBody = JSON.parse(repairRaw); } catch {}
+          if (!repairResponse.ok) throw new Error("Gemini repair HTTP " + repairResponse.status);
+          repairedText = repairBody.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("") || "";
+        }
+        const repaired = parseModelObject(repairedText);
+        if (repaired && Array.isArray(repaired.story) && Array.isArray(repaired.retention_map)) {
+          plan.story = repaired.story;
+          plan.retention_map = repaired.retention_map;
+          storyboardCheck = inspectStoryboard(plan);
+        }
+      } catch (repairError) {
+        console.error("[JAI][Storyboard] Falló la reparación automática:", repairError?.message || repairError);
+      }
+      if (!storyboardCheck.ok) {
+        console.error("[JAI][Storyboard] Bloqueo de producción:", storyboardCheck.reason);
+        return res.status(502).json({
+          error: "J.A.I. detectó un storyboard incompleto y no pudo repararlo automáticamente. No se generarán escenas falsas ni una línea de tiempo incorrecta. Diagnóstico: " + storyboardCheck.reason,
+          diagnosticCode: "STORYBOARD_REPAIR_FAILED"
+        });
+      }
+      plan.editorial_warnings = [...(Array.isArray(plan.editorial_warnings) ? plan.editorial_warnings : []), { claim: "Reparación automática del storyboard", reason: "El primer borrador visual estaba incompleto. J.A.I. reconstruyó y volvió a validar escenas y mapa antes de habilitar producción." }];
+      console.info("[JAI][Storyboard] Reparación completada:", storyboardCheck.seconds, "s");
     }
 
     const validSourceIds = new Set(researchSources.map(source => source.id));
