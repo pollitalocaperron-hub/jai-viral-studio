@@ -346,7 +346,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
 
     // Reparación automática del storyboard: nunca se devuelve una producción visual incompleta.
     const parseModelObject = rawText => {
-      const textValue = String(rawText || "").replace(/^\uFEFF/, "").replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+      const textValue = String(rawText || "").replace(/^\\uFEFF/, "").replace(/^\\s*```(?:json)?\\s*/i, "").replace(/\\s*```\\s*$/, "").trim();
       try { const value = JSON.parse(textValue); return value && typeof value === "object" && !Array.isArray(value) ? value : null; } catch {}
       const first = textValue.indexOf("{");
       if (first < 0) return null;
@@ -355,14 +355,14 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
         const ch = textValue[i];
         if (inString) {
           if (escaped) escaped = false;
-          else if (ch === "\\") escaped = true;
+          else if (ch === "\\\\") escaped = true;
           else if (ch === '"') inString = false;
           continue;
         }
         if (ch === '"') inString = true;
         else if (ch === "{") depth++;
         else if (ch === "}" && --depth === 0) {
-          try { return JSON.parse(textValue.slice(first, i + 1).replace(/,\s*([}\]])/g, "$1")); } catch { return null; }
+          try { return JSON.parse(textValue.slice(first, i + 1).replace(/,\\s*([}\\]])/g, "$1")); } catch { return null; }
         }
       }
       return null;
@@ -371,7 +371,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
       const scenes = Array.isArray(candidate?.story) ? candidate.story : [];
       const beats = Array.isArray(candidate?.retention_map) ? candidate.retention_map : [];
       const range = value => {
-        const match = String(value || "").match(/(\d+):(\d{2})\s*[-–—]\s*(\d+):(\d{2})/);
+        const match = String(value || "").match(/(\\d+):(\\d{2})\\s*[-–—]\\s*(\\d+):(\\d{2})/);
         if (!match) return null;
         const start = Number(match[1]) * 60 + Number(match[2]);
         const end = Number(match[3]) * 60 + Number(match[4]);
@@ -385,9 +385,9 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
         if (!r || r.start !== cursor) return { ok: false, reason: "La cronología de escenas está incompleta o tiene huecos en la escena " + (i + 1) + "." };
         cursor = r.end;
         const required = ["objective","teaching_point","visual_proof","visual_subject","visual_state","visual_action","visual_composition","visual_environment","visual_prompt_en"];
-        const missing = required.filter(key => typeof scene[key] !== "string" || !scene[key].trim() || /pendiente|por definir|\.\.\.|\{.*\}/i.test(scene[key]));
+        const missing = required.filter(key => typeof scene[key] !== "string" || !scene[key].trim() || /pendiente|por definir|\\.\\.\\.|\\{.*\\}/i.test(scene[key]));
         if (missing.length) return { ok: false, reason: "La escena " + (i + 1) + " tiene campos incompletos: " + missing.join(", ") + "." };
-        const promptWords = scene.visual_prompt_en.trim().split(/\s+/).length;
+        const promptWords = scene.visual_prompt_en.trim().split(/\\s+/).length;
         if (promptWords < 35 || promptWords > 100) return { ok: false, reason: "El prompt visual de la escena " + (i + 1) + " debe tener entre 35 y 100 palabras." };
       }
       if (!beats.length) return { ok: false, reason: "Falta el mapa de ritmo." };
@@ -405,10 +405,10 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
     let storyboardCheck = inspectStoryboard(plan);
     if (!storyboardCheck.ok) {
       console.warn("[JAI][Storyboard] Respuesta incompleta; se intentará reparar:", storyboardCheck.reason, "Proveedor original:", providerUsed, "finishReason:", finishReason);
-      const spokenForRepair = String(plan.script || "").replace(/\[[^\]]+\]/g, " ");
+      const spokenForRepair = String(plan.script || "").replace(/\\[[^\\]]+\\]/g, " ");
       const repairWords = (spokenForRepair.match(/[a-záéíóúüñ0-9]+/gi) || []).length;
       const estimatedForRepair = Math.round(repairWords / 140 * 60);
-      const requestedDuration = /30\s*[-–—]\s*45/.test(String(duration))
+      const requestedDuration = /30\\s*[-–—]\\s*45/.test(String(duration))
         ? Math.max(36, Math.min(42, Math.round((estimatedForRepair || 39) / 3) * 3))
         : Math.max(36, Math.min(90, Math.round((estimatedForRepair || 48) / 3) * 3));
       const repairPrompt = `Repair ONLY the storyboard and retention map for this existing Spanish educational video. Preserve the script's meaning and scientific scope. Return ONLY valid JSON: {"story":[...],"retention_map":[...]}.

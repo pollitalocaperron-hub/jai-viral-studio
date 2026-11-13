@@ -150,6 +150,8 @@ function visualText(value,fallback="Pendiente de definir"){
 function renderVisualScenes(){
  const root=$("visualScenes");root.replaceChildren();
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Genera primero un plan con storyboard.";return;}
+ const productionCheck=validateStoryboardForProduction();
+ if(!productionCheck.ok){$("visualStatus").textContent="No hay escenas listas para producción: "+productionCheck.reason;return;}
  if(!timelineState.items.length)buildTimeline();
  currentScenes.forEach((scene,index)=>{
   const card=document.createElement("article");card.className="visual-card";
@@ -366,7 +368,7 @@ function renderTimeline(){
 }
 function validateStoryboardForProduction(){
  const scenes=Array.isArray(currentScenes)?currentScenes:[];
- if(scenes.length<4||scenes.length>5)return {ok:false,reason:"El storyboard debe contener entre 4 y 7 escenas completas; llegaron "+scenes.length+"."};
+ if(scenes.length<4||scenes.length>5)return {ok:false,reason:"El storyboard debe contener entre 4 y 5 escenas completas; llegaron "+scenes.length+"."};
  const parse=value=>{
   const m=String(value||"").replace(/[–—]/g,"-").match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
   if(!m)return null;const sec=x=>Number(x.split(":")[0])*60+Number(x.split(":")[1]);
