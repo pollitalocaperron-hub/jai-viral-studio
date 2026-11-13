@@ -403,6 +403,27 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
       if (beatCursor !== cursor) return { ok: false, reason: "El mapa de ritmo termina en " + beatCursor + " s y el storyboard en " + cursor + " s." };
       return { ok: true, seconds: cursor };
     };
+    // Completa prompts visuales demasiado breves con los campos técnicos ya validados de la propia escena.
+    // Evita un segundo fallo de reparación cuando el modelo sí describió el sujeto, estado y acción.
+    const completeShortVisualPrompts = candidate => {
+      if (!Array.isArray(candidate?.story)) return;
+      for (const scene of candidate.story) {
+        if (!scene || typeof scene !== "object") continue;
+        const current = String(scene.visual_prompt_en || "").trim();
+        const words = current ? current.split(/\\s+/).length : 0;
+        if (words >= 35 && words <= 100) continue;
+        const groundedFields = [scene.visual_subject, scene.visual_state, scene.visual_action, scene.visual_composition, scene.visual_environment]
+          .filter(value => typeof value === "string" && value.trim())
+          .map(value => value.trim().replace(/[.\\s]+$/g, ""));
+        if (groundedFields.length < 5) continue;
+        const completion = "Single coherent scientific CGI visualization, physically plausible materials, clearly visible subject and action, uncluttered environment, subject fully inside the vertical frame, precise surface and structural details, cinematic depth and controlled volumetric lighting, no text or watermark.";
+        let combined = groundedFields.join(". ") + ". " + completion;
+        const tokens = combined.split(/\\s+/);
+        if (tokens.length > 100) combined = tokens.slice(0, 100).join(" ");
+        scene.visual_prompt_en = combined;
+      }
+    };
+    completeShortVisualPrompts(plan);
     let storyboardCheck = inspectStoryboard(plan);
     if (!storyboardCheck.ok) {
       console.warn("[JAI][Storyboard] Respuesta incompleta; se intentará reparar:", storyboardCheck.reason, "Proveedor original:", providerUsed, "finishReason:", finishReason);
