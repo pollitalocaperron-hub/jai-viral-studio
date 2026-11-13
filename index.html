@@ -67,7 +67,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <div class="hint" id="captionStatus" aria-live="polite">J.A.I. generará subtítulos automáticamente al crear la narración. Los tiempos son una estimación editable basada en el guion y la duración real del audio; no requiere subir archivos.</div>
  <div id="captionEditor" style="display:grid;gap:9px;margin-top:10px"></div>
 </section>
-<div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de ritmo · microavance cada 3 segundos, sin cortes obligatorios</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Fotogramas IA · Estilo científico</span></div><p class="hint">Genera una imagen CGI específica por escena conceptual del storyboard (normalmente 5–8 por vídeo), no una imagen por cada bloque de 3 segundos. Cada toma debe mostrar un objeto físico reconocible y la transformación exacta que enseña. La cámara mantiene movimiento continuo durante toda la escena; las transiciones conectan los fotogramas.</p><button class="primary" id="makeVisuals" type="button">Generar fotogramas cinematográficos</button><button class="secondary" id="inspectVisuals" type="button" disabled>Auditar fotogramas con IA</button><div class="hint" id="visualAuditStatus">La inspección envía los fotogramas generados a Gemini 2.5 Flash. Usa el nivel gratuito disponible y está sujeta a sus límites.</div><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Secuencia de montaje · Vista previa</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza automáticamente las escenas del storyboard. En esta versión puedes revisar la secuencia, pero todavía no arrastrar, reordenar ni recortar clips. La exportación usa MP4 si tu navegador lo admite o WebM como respaldo.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Revisar secuencia</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar y exportar video</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Gemini, se integrará al vídeo. El formato MP4 se usará si tu navegador lo admite; de lo contrario se descargará WebM.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Alertas editoriales</label><div class="result" id="editorialWarnings">No hay alertas adicionales.</div><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
+<div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de ritmo · microavance cada 3 segundos, sin cortes obligatorios</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Fotogramas IA · Estilo científico</span></div><p class="hint">Genera una imagen CGI por escena conceptual (4–5 escenas en vídeos cortos). El servicio gratuito limita las solicitudes: J.A.I. muestra progreso real, reintenta fallos temporales y conserva cada imagen terminada. Cada toma debe mostrar un objeto físico reconocible y la transformación exacta que enseña. La cámara mantiene movimiento continuo durante toda la escena; las transiciones conectan los fotogramas.</p><button class="primary" id="makeVisuals" type="button">Generar fotogramas cinematográficos</button><button class="secondary" id="inspectVisuals" type="button" disabled>Auditar fotogramas con IA</button><div class="hint" id="visualAuditStatus">La inspección envía los fotogramas generados a Gemini 2.5 Flash. Usa el nivel gratuito disponible y está sujeta a sus límites.</div><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Secuencia de montaje · Vista previa</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza automáticamente las escenas del storyboard. En esta versión puedes revisar la secuencia, pero todavía no arrastrar, reordenar ni recortar clips. La exportación usa MP4 si tu navegador lo admite o WebM como respaldo.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Revisar secuencia</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar y exportar video</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Gemini, se integrará al vídeo. El formato MP4 se usará si tu navegador lo admite; de lo contrario se descargará WebM.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Alertas editoriales</label><div class="result" id="editorialWarnings">No hay alertas adicionales.</div><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
 <div class="steps"><div class="step"><b>01 · Investigación</b><span>Verificar afirmaciones y fuentes.</span></div><div class="step"><b>02 · Dirección visual</b><span>Objetos, diagramas y movimiento.</span></div><div class="step"><b>03 · Voz</b><span>Narración y sincronización.</span></div><div class="step"><b>04 · Montaje</b><span>Ritmo, subtítulos y sonido.</span></div><div class="step"><b>05 · Revisión</b><span>Exactitud y originalidad.</span></div><div class="step"><b>06 · Exportación</b><span>MP4/WebM vertical 9:16.</span></div></div>
 <div class="row" style="margin-top:14px"><button class="secondary" id="copy">Copiar plan</button><button class="secondary" id="save">Guardar proyecto</button></div></section>
 <section class="card"><h3 class="section-title">Proyectos guardados</h3><div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div></section>
@@ -136,6 +136,17 @@ let planningInProgress=false,visualGenerationRunning=false,narrationGenerating=f
 function visualAuditPassed(){return visualAuditResults.length===currentScenes.length&&currentScenes.length>0&&visualAuditResults.every(item=>item&&item.status==="pass");}
 function readLastImageRequestAt(){try{return Number(localStorage.getItem("jaiImageRequestAtV1"))||0;}catch{return 0;}}
 function saveLastImageRequestAt(value){try{localStorage.setItem("jaiImageRequestAtV1",String(value));}catch{}}
+function visualText(value,fallback="Pendiente de definir"){
+ if(value===null||value===undefined||value==="")return fallback;
+ if(typeof value==="string"||typeof value==="number"||typeof value==="boolean")return String(value);
+ if(Array.isArray(value))return value.map(item=>visualText(item,"")).filter(Boolean).join("; ")||fallback;
+ if(typeof value==="object"){
+  const preferred=["name","title","description","subject","action","text","value"];
+  for(const key of preferred)if(value[key]!==undefined)return visualText(value[key],fallback);
+  return Object.entries(value).map(([key,val])=>key.replace(/_/g," ")+": "+visualText(val,"")).filter(line=>!line.endsWith(": ")).join("; ")||fallback;
+ }
+ return fallback;
+}
 function renderVisualScenes(){
  const root=$("visualScenes");root.replaceChildren();
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Genera primero un plan con storyboard.";return;}
@@ -143,90 +154,112 @@ function renderVisualScenes(){
  currentScenes.forEach((scene,index)=>{
   const card=document.createElement("article");card.className="visual-card";
   const generated=jaiSceneImages[index];
+  const subject=visualText(scene.visual_subject||scene.teaching_point||scene.objective,"Escena "+(index+1));
+  const proof=visualText(scene.visual_proof||scene.teaching_point||scene.visual,"Demostración pendiente");
   if(generated&&generated.src){
-   const img=document.createElement("img");img.src=generated.src;img.alt="Fotograma CGI: "+String(scene.visual_subject||scene.teaching_point||scene.objective||"escena");img.loading="lazy";img.style.cssText="width:100%;aspect-ratio:9/16;object-fit:cover;object-position:center;display:block";card.appendChild(img);
+   const img=document.createElement("img");img.src=generated.src;img.alt="Fotograma CGI: "+subject;img.loading="lazy";img.style.cssText="width:100%;aspect-ratio:9/16;object-fit:cover;object-position:center;display:block";card.appendChild(img);
   }else{
    const placeholder=document.createElement("div");placeholder.style.cssText="aspect-ratio:9/16;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:18px;background:radial-gradient(ellipse at 50% 35%,#173b58,#07101e 72%);color:#eaf7ff;text-align:center";
    const kicker=document.createElement("span");kicker.style.cssText="font-size:10px;letter-spacing:2px;color:#77e6d1";kicker.textContent="FOTOGRAMA PENDIENTE";
-   const title=document.createElement("strong");title.textContent=String(scene.visual_subject||scene.on_screen_text||"Toma "+(index+1));
-   const desc=document.createElement("small");desc.style.cssText="font-size:11px;line-height:1.5;color:#b5c9dc";desc.textContent=String(scene.visual_proof||scene.teaching_point||scene.visual||scene.objective||"Se generará una toma específica");
+   const title=document.createElement("strong");title.textContent=visualText(scene.on_screen_text,subject);
+   const desc=document.createElement("small");desc.style.cssText="font-size:11px;line-height:1.5;color:#b5c9dc";desc.textContent=proof;
    placeholder.append(kicker,title,desc);card.appendChild(placeholder);
   }
   const meta=document.createElement("div");meta.className="visual-meta";
-  const heading=document.createElement("b");heading.textContent="ESCENA "+String(index+1).padStart(2,"0")+" · "+String(scene.time||"Tiempo por definir");
-  const desc=document.createElement("p");desc.textContent=String(scene.visual_subject||scene.visual||scene.objective||"Visualización científica");
-  const proof=document.createElement("p");proof.className="hint";proof.textContent="Demostración: "+String(scene.visual_proof||scene.teaching_point||"Pendiente de definir");
-  meta.append(heading,desc,proof);
-  const audit=visualAuditResults[index];if(audit){const verdict=document.createElement("p");verdict.className="hint";verdict.textContent=audit.manual?"APROBACIÓN MANUAL · "+String(audit.reason||""):(audit.status==="pass"?"INSPECCIÓN APROBADA":"REVISAR FOTOGRAMA")+" · "+String(audit.score??"—")+"/100 · "+String(audit.reason||"");meta.appendChild(verdict);if(Array.isArray(audit.issues)&&audit.issues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+audit.issues.join(" · ");meta.appendChild(issues);}}const retry=document.createElement("button");retry.type="button";retry.className="secondary";retry.textContent="Regenerar esta escena";retry.addEventListener("click",()=>regenerateVisualScene(index));meta.appendChild(retry);if(!audit||audit.status!=="pass"){const approve=document.createElement("button");approve.type="button";approve.className="secondary";approve.textContent="Aprobar manualmente";approve.addEventListener("click",()=>approveVisualScene(index));meta.appendChild(approve);}
+  const heading=document.createElement("b");heading.textContent="ESCENA "+String(index+1).padStart(2,"0")+" · "+visualText(scene.time,"Tiempo por definir");
+  const desc=document.createElement("p");desc.textContent=subject;
+  const proofLine=document.createElement("p");proofLine.className="hint";proofLine.textContent="Demostración: "+proof;
+  meta.append(heading,desc,proofLine);
+  const audit=visualAuditResults[index];
+  if(audit){
+   const verdict=document.createElement("p");verdict.className="hint";verdict.textContent=audit.manual?"APROBACIÓN MANUAL · "+visualText(audit.reason,""):(audit.status==="pass"?"INSPECCIÓN APROBADA":"REVISAR FOTOGRAMA")+" · "+visualText(audit.score,"—")+"/100 · "+visualText(audit.reason,"");meta.appendChild(verdict);
+   if(Array.isArray(audit.issues)&&audit.issues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+audit.issues.map(x=>visualText(x,"")).join(" · ");meta.appendChild(issues);}
+  }
+  const retry=document.createElement("button");retry.type="button";retry.className="secondary";retry.textContent="Regenerar esta escena";retry.addEventListener("click",()=>regenerateVisualScene(index));meta.appendChild(retry);
+  if(!audit||audit.status!=="pass"){const approve=document.createElement("button");approve.type="button";approve.className="secondary";approve.textContent="Aprobar manualmente";approve.addEventListener("click",()=>approveVisualScene(index));meta.appendChild(approve);}
   const promptDetails=document.createElement("details");promptDetails.style.cssText="margin-top:8px;font-size:12px;color:#b8c9dc";
   const promptSummary=document.createElement("summary");promptSummary.textContent="Ver dirección visual usada";
-  const promptText=document.createElement("p");promptText.style.cssText="white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere";promptText.textContent=String(generated?.prompt||scene.visual_prompt_en||"El plan no entregó un prompt visual específico para esta escena.");
+  const promptText=document.createElement("p");promptText.style.cssText="white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere";promptText.textContent=visualText(generated?.prompt||scene.visual_prompt_en,"El plan no entregó un prompt visual específico para esta escena.");
   promptDetails.append(promptSummary,promptText);meta.appendChild(promptDetails);card.appendChild(meta);root.appendChild(card);
  });
  const ready=jaiSceneImages.filter(Boolean).length;
- $("visualStatus").textContent=ready+" de "+currentScenes.length+" escenas visuales únicas listas. Una imagen acompaña cada escena completa; los bloques de 3 segundos ya no disparan imágenes nuevas.";
+ $("visualStatus").textContent=ready+" de "+currentScenes.length+" escenas visuales únicas listas. "+(ready<currentScenes.length?"Puedes salir y volver: las imágenes terminadas permanecen disponibles en esta sesión.":"Todas las escenas están generadas.");
+}
+async function requestVisualImage(prompt,sceneNumber){
+ const endpoint="https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations";
+ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+ let lastError;
+ for(let attempt=1;attempt<=3;attempt++){
+  const previousRequestAt=Math.max(lastImageRequestAt,readLastImageRequestAt());
+  if(previousRequestAt){
+   const remaining=Math.max(0,35000-(Date.now()-previousRequestAt));
+   if(remaining>0){$("visualStatus").textContent="Escena "+sceneNumber+" · espera de seguridad gratuita: "+Math.ceil(remaining/1000)+" s · intento "+attempt+"/3.";await wait(remaining);}
+  }
+  lastImageRequestAt=Date.now();saveLastImageRequestAt(lastImageRequestAt);
+  try{
+   const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,size:"1024x1024"}),signal:AbortSignal.timeout(90000)});
+   const raw=await response.text();
+   if(!response.ok){
+    const detail=raw.replace(/\s+/g," ").slice(0,220);
+    const error=new Error("HTTP "+response.status+(detail?": "+detail:""));
+    error.status=response.status;throw error;
+   }
+   let data;try{data=JSON.parse(raw);}catch{throw new Error("El proveedor respondió con contenido que no es JSON.");}
+   const b64=data?.data?.[0]?.b64_json;
+   if(!b64)throw new Error("El proveedor respondió correctamente, pero no incluyó la imagen.");
+   const src="data:image/png;base64,"+b64,img=new Image();img.src=src;
+   await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error("La imagen recibida no se pudo decodificar."));});
+   return {src,image:img};
+  }catch(error){
+   lastError=error;
+   const status=Number(error?.status||0),retryable=status===408||status===429||status>=500||status===0||error?.name==="TimeoutError"||error?.name==="AbortError";
+   if(!retryable||attempt===3)break;
+   const delay=status===429?65000:status>=500?20000:15000;
+   $("visualStatus").textContent="Escena "+sceneNumber+" · intento "+attempt+" falló ("+(status===429?"límite gratuito":status?"HTTP "+status:"conexión/tiempo de espera")+"). Reintento automático en "+Math.ceil(delay/1000)+" s; no se perderán las imágenes anteriores.";
+   await wait(delay);
+  }
+ }
+ throw new Error("Escena "+sceneNumber+" sin completar tras 3 intentos. "+(lastError?.message||"Error desconocido")+". Las demás escenas conservadas.");
 }
 async function generateAIVisuals(){
  if(planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualStatus").textContent="Espera a que termine la tarea actual antes de generar imágenes.";return;}
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Primero genera el guion y storyboard.";return;}
  if(!timelineState.items.length)buildTimeline();
- const scenes=currentScenes,button=$("makeVisuals"),endpoint="https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations";
- if(!scenes.length){$("visualStatus").textContent="No hay escenas para generar.";return;}
+ const scenes=currentScenes,button=$("makeVisuals");
  visualGenerationRunning=true;$("create").disabled=true;button.disabled=true;$("renderVideo").disabled=true;
  if(jaiSceneImages.length!==scenes.length)jaiSceneImages=scenes.map((scene,index)=>jaiSceneImages[index]||null);
  renderVisualScenes();
- const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
  const style="Premium scientific CGI documentary still, physically plausible materials, photorealistic 3D rendering, sophisticated cinematic lighting, deep graphite and midnight-blue environment, restrained cyan and amber accents only where scientifically meaningful, crisp subject detail, realistic depth and scale.";
  const avoid="No abstract fog, no amorphous clouds, no random glowing blobs, no decorative particle field, no generic galaxy, no unrelated objects, no text, no labels, no watermark, no people, no characters, no cameras or filming equipment, no collage, no split screen, no cartoon, no flat vector illustration.";
  try{
   let generatedCount=jaiSceneImages.filter(Boolean).length;
   for(let i=0;i<scenes.length;i++){
    if(jaiSceneImages[i]?.image)continue;
-   const previousRequestAt=Math.max(lastImageRequestAt,readLastImageRequestAt());
-   if(previousRequestAt){
-    const remaining=Math.max(0,35000-(Date.now()-previousRequestAt));
-    if(remaining>0){$("visualStatus").textContent="Escena "+(i+1)+" de "+scenes.length+" · pausa de seguridad del servicio gratuito ("+Math.ceil(remaining/1000)+" s).";await wait(remaining);}
-   }
    const scene=scenes[i];
-   const subject=String(scene.visual_subject||scene.visual_proof||scene.teaching_point||scene.objective||"the exact physical subject described in the scene").slice(0,260);
-   const state=String(scene.visual_state||scene.visual||scene.objective||"").slice(0,380);
-   const action=String(scene.visual_action||scene.animation||scene.visual_proof||scene.teaching_point||"").slice(0,380);
-   const environment=String(scene.visual_environment||scene.visual||"a scientifically relevant physical environment").slice(0,280);
-   const composition=String(scene.visual_composition||"single dominant subject, close cinematic three-quarter view, centered portrait-safe composition").slice(0,260);
-   const proof=String(scene.visual_proof||scene.teaching_point||"the physical change described by the scene").slice(0,320);
-   const authored=String(scene.visual_prompt_en||"").trim().slice(0,1300);
-   const prompt=[
-    style,
-    authored?"SHOT DESCRIPTION: "+authored:"",
-    "EXACT SUBJECT: "+subject+".",
-    "VISIBLE MATERIAL STATE: "+state+".",
-    "ONE OBSERVABLE PHYSICAL ACTION: "+action+".",
-    "VISIBLE SCIENTIFIC PROOF: "+proof+".",
-    "PHYSICAL ENVIRONMENT: "+environment+".",
-    "COMPOSITION: "+composition+".",
-    "The main object must be unmistakable, large, sharply focused and placed inside the central portrait-safe area so a square source can be cropped vertically without cutting it off. Show a concrete recognizable object and its actual material, not an abstract metaphor. One scene and one dominant action only. "+avoid
-   ].filter(Boolean).join(" ");
-   $("visualStatus").textContent="Generando escena "+(i+1)+" de "+scenes.length+" · "+subject.slice(0,90)+"…";
-   lastImageRequestAt=Date.now();saveLastImageRequestAt(lastImageRequestAt);
-   const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,size:"1024x1024"}),signal:AbortSignal.timeout(90000)});
-   const raw=await response.text();
-   if(!response.ok)throw new Error("El generador respondió HTTP "+response.status+" en la escena "+(i+1)+". "+raw.slice(0,220));
-   const data=JSON.parse(raw),b64=data&&data.data&&data.data[0]&&data.data[0].b64_json;
-   if(!b64)throw new Error("El generador no devolvió una imagen para la escena "+(i+1)+".");
-   const src="data:image/png;base64,"+b64,img=new Image();img.src=src;
-   await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error("No se pudo abrir la imagen de la escena "+(i+1)+"."));});
-   jaiSceneImages[i]={src,image:img,shot:scene.visual_subject||scene.visualAction||scene.objective,time:scene.time,sceneIndex:i,prompt};
+   const subject=visualText(scene.visual_subject||scene.visual_proof||scene.teaching_point||scene.objective,"the exact physical subject described in the scene").slice(0,260);
+   const state=visualText(scene.visual_state||scene.visual||scene.objective,"").slice(0,380);
+   const action=visualText(scene.visual_action||scene.animation||scene.visual_proof||scene.teaching_point,"").slice(0,380);
+   const environment=visualText(scene.visual_environment||scene.visual,"a scientifically relevant physical environment").slice(0,280);
+   const composition=visualText(scene.visual_composition,"single dominant subject, close cinematic three-quarter view, centered portrait-safe composition").slice(0,260);
+   const proof=visualText(scene.visual_proof||scene.teaching_point,"the physical change described by the scene").slice(0,320);
+   const authored=visualText(scene.visual_prompt_en,"").trim().slice(0,1300);
+   const prompt=[style,authored?"SHOT DESCRIPTION: "+authored:"","EXACT SUBJECT: "+subject+".","VISIBLE MATERIAL STATE: "+state+".","ONE OBSERVABLE PHYSICAL ACTION: "+action+".","VISIBLE SCIENTIFIC PROOF: "+proof+".","PHYSICAL ENVIRONMENT: "+environment+".","COMPOSITION: "+composition+".","The main object must be unmistakable, large, sharply focused and placed inside the central portrait-safe area so a square source can be cropped vertically without cutting it off. Show a concrete recognizable object and its actual material, not an abstract metaphor. One scene and one dominant action only. "+avoid].filter(Boolean).join(" ");
+   $("visualStatus").textContent="Generando escena "+(i+1)+" de "+scenes.length+" · "+generatedCount+" listas · "+subject.slice(0,75);
+   const generated=await requestVisualImage(prompt,i+1);
+   jaiSceneImages[i]={...generated,shot:subject,time:scene.time,sceneIndex:i,prompt};
    generatedCount++;renderVisualScenes();
   }
-  $("visualStatus").textContent="Producción visual lista: "+generatedCount+" escenas únicas. El vídeo reutiliza cada fotograma durante su escena completa con movimiento continuo, no una imagen nueva cada 3 segundos.";
+  $("visualStatus").textContent="Producción visual lista: "+generatedCount+" escenas únicas. Se conservaron las imágenes de esta sesión.";
   $("inspectVisuals").disabled=!scenes.every((scene,index)=>jaiSceneImages[index]?.image);
   $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&scenes.every((scene,index)=>jaiSceneImages[index]?.image)&&visualAuditPassed());
  }catch(error){
-  $("visualStatus").textContent="La generación se detuvo: "+error.message+" · "+jaiSceneImages.filter(Boolean).length+" de "+scenes.length+" escenas listas. Las imágenes ya terminadas se conservaron; vuelve a pulsar para continuar sin repetirlas.";
+  $("visualStatus").textContent="Producción parcial: "+jaiSceneImages.filter(Boolean).length+" de "+scenes.length+" escenas listas. "+error.message+" Pulsa «Generar fotogramas» para reanudar; las imágenes terminadas no se repetirán.";
   renderVisualScenes();
- }finally{visualGenerationRunning=false;$("create").disabled=false;button.disabled=false;$("inspectVisuals").disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));}
+ }finally{
+  visualGenerationRunning=false;$("create").disabled=false;button.disabled=false;
+  $("inspectVisuals").disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
+ }
 }
-
 async function inspectVisuals(){
  if(planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualAuditStatus").textContent="Espera a que termine la tarea actual.";return;}
  if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){ $("visualAuditStatus").textContent="Primero genera todos los fotogramas.";return;}
@@ -264,24 +297,14 @@ async function regenerateVisualScene(index){
  const scene=currentScenes[index],button=$("makeVisuals");visualGenerationRunning=true;button.disabled=true;$("inspectVisuals").disabled=true;$("renderVideo").disabled=true;
  $("visualAuditStatus").textContent="Regenerando la escena "+(index+1)+" con su dirección visual corregida…";
  try{
-  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-  const previousRequestAt=Math.max(lastImageRequestAt,readLastImageRequestAt());if(previousRequestAt){const remaining=Math.max(0,35000-(Date.now()-previousRequestAt));if(remaining>0){$("visualAuditStatus").textContent="Esperando el límite gratuito antes de regenerar la escena "+(index+1)+" ("+Math.ceil(remaining/1000)+" s).";await wait(remaining);}}
   const style="Premium scientific CGI documentary still, physically plausible materials, photorealistic 3D rendering, sophisticated cinematic lighting, deep graphite and midnight-blue environment, restrained cyan and amber accents only where scientifically meaningful, crisp subject detail, realistic depth and scale.";
   const avoid="No abstract fog, no amorphous clouds, no random glowing blobs, no decorative particle field, no generic galaxy, no unrelated objects, no text, no labels, no watermark, no people, no characters, no cameras or filming equipment, no collage, no split screen, no cartoon, no flat vector illustration.";
-  const subject=String(scene.visual_subject||scene.visual_proof||scene.teaching_point||scene.objective||"the exact physical subject described in the scene").slice(0,260);
-  const state=String(scene.visual_state||scene.visual||scene.objective||"").slice(0,380);
-  const action=String(scene.visual_action||scene.animation||scene.visual_proof||scene.teaching_point||"").slice(0,380);
-  const environment=String(scene.visual_environment||scene.visual||"a scientifically relevant physical environment").slice(0,280);
-  const composition=String(scene.visual_composition||"single dominant subject, close cinematic three-quarter view, centered portrait-safe composition").slice(0,260);
-  const proof=String(scene.visual_proof||scene.teaching_point||"the physical change described by the scene").slice(0,320);
-  const authored=String(scene.visual_prompt_en||"").trim().slice(0,1300);
-  const prompt=[style,authored?"SHOT DESCRIPTION: "+authored:"","EXACT SUBJECT: "+subject+".","VISIBLE MATERIAL STATE: "+state+".","ONE OBSERVABLE PHYSICAL ACTION: "+action+".","VISIBLE SCIENTIFIC PROOF: "+proof+".","PHYSICAL ENVIRONMENT: "+environment+".","COMPOSITION: "+composition+".","The main object must be unmistakable, large, sharply focused and placed inside the central portrait-safe area so a square source can be cropped vertically without cutting it off. Show a concrete recognizable object and its actual material, not an abstract metaphor. One scene and one dominant action only. "+avoid].filter(Boolean).join(" ");
-  lastImageRequestAt=Date.now();saveLastImageRequestAt(lastImageRequestAt);
-  const response=await fetch("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,size:"1024x1024"}),signal:AbortSignal.timeout(90000)});
-  const raw=await response.text();if(!response.ok)throw new Error("El generador respondió HTTP "+response.status+". "+raw.slice(0,220));
-  const data=JSON.parse(raw),b64=data?.data?.[0]?.b64_json;if(!b64)throw new Error("El generador no devolvió un fotograma.");
-  const src="data:image/png;base64,"+b64,img=new Image();img.src=src;await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error("No se pudo abrir el fotograma regenerado."));});
-  jaiSceneImages[index]={src,image:img,shot:subject,time:scene.time,sceneIndex:index,prompt};visualAuditResults[index]=null;renderVisualScenes();
+  const subject=visualText(scene.visual_subject||scene.visual_proof||scene.teaching_point||scene.objective,"the exact physical subject described in the scene").slice(0,260);
+  const authored=visualText(scene.visual_prompt_en,"").trim().slice(0,1300);
+  const prompt=[style,authored?"SHOT DESCRIPTION: "+authored:"","EXACT SUBJECT: "+subject,"VISIBLE SCIENTIFIC PROOF: "+visualText(scene.visual_proof||scene.teaching_point,"the physical change described by the scene"),"One recognizable subject, one dominant physical action, centered portrait-safe composition. "+avoid].filter(Boolean).join(" ");
+  $("visualAuditStatus").textContent="Regenerando escena "+(index+1)+" con reintentos automáticos si el servicio gratuito falla…";
+  const generated=await requestVisualImage(prompt,index+1);
+  jaiSceneImages[index]={...generated,shot:subject,time:scene.time,sceneIndex:index,prompt};visualAuditResults[index]=null;renderVisualScenes();
   $("visualAuditStatus").textContent="Escena "+(index+1)+" regenerada. Vuelve a auditar el conjunto antes de exportar.";
  }catch(error){$("visualAuditStatus").textContent="No se pudo regenerar la escena "+(index+1)+": "+error.message;}
  finally{visualGenerationRunning=false;button.disabled=false;$("inspectVisuals").disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((item,i)=>jaiSceneImages[i]?.image));}

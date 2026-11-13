@@ -47,6 +47,20 @@ Diseña un plan de producción de alta calidad para un video educativo vertical 
 Objetivo: maximizar interés, comprensión, retención y potencial de compartirse sin prometer viralidad ni usar engaños.
 
 REGLAS EDITORIALES Y CIENTÍFICAS:
+CONTRATO UNIVERSAL DE ENSEÑANZA — APLICA A CUALQUIER DOMINIO:
+1. Antes de escribir, identifica qué disciplina estudia el tema y cuáles son sus mecanismos reales. No uses una explicación de un dominio distinto como analogía sin marcarla como analogía.
+2. Distingue entidades, señales, vías, órganos, etapas y resultados. No unas rutas distintas solo porque convergen en una misma experiencia o resultado.
+3. En anatomía y fisiología, verifica la ruta completa de cada señal: receptor → nervio/vía aferente → estaciones de relevo → región de procesamiento. No atribuyas una función a un nervio, órgano o región solo por proximidad.
+4. Separa detección, transmisión, integración y experiencia consciente. No afirmes que una única región "crea" por sí sola una percepción compleja si el fenómeno depende de redes distribuidas.
+5. En química y física, distingue mecanismo, condiciones, intermediarios, transformación y producto. No conviertas una correlación o una imagen molecular ilustrativa en mecanismo probado.
+6. Para cada afirmación central, exige respaldo directo en una fuente o etiqueta explícitamente "conocimiento general sin fuente recuperada". Coincidencia de palabras o título temático no basta para declarar respaldo.
+7. Cuando no se recuperen fuentes, no finjas una revisión académica: conserva el plan como borrador educativo, muestra la limitación y evita lenguaje de certeza académica.
+8. Cada escena debe enseñar una sola unidad causal reconocible. El fotograma muestra el sujeto real, su estado y la relación espacial relevante; la animación describe únicamente el cambio entre inicio y fin.
+9. No añadas objetos, moléculas, colores codificados, anatomía, flechas, trayectorias ni estructuras que no estén justificadas por el mecanismo. Si una representación es esquemática, declárala como esquema didáctico.
+10. La narración debe poder enseñar el mecanismo sin depender del montaje. El montaje aclara la explicación; no la sustituye.
+11. Usa entre 4 y 5 escenas visuales conceptuales en vídeos de hasta 45 segundos para reducir esperas del proveedor gratuito. Cada escena puede sostener varios bloques de ritmo sin generar imágenes adicionales.
+12. Antes de devolver el JSON, haz una auditoría de consistencia: afirmación ↔ fuente ↔ cadena causal ↔ guion ↔ escena ↔ visual_proof ↔ tiempo. Si algo no coincide, corrígelo o márcalo como pendiente.
+
 ARQUITECTURA EDITORIAL OBLIGATORIA — TRABAJA EN ETAPAS INTERNAS ANTES DE ESCRIBIR:
 A. INVESTIGADOR: descompón la pregunta en subpreguntas; identifica mecanismo, condiciones, excepciones y consenso. Usa primero las notas del usuario como pistas, nunca como evidencia automática. Si no tienes acceso real a fuentes externas durante esta solicitud, NO afirmes haber buscado, consultado ni verificado fuentes. No inventes nombres de estudios, autores, enlaces, instituciones ni referencias. Separa "hecho establecido", "dato que requiere fuente" y "incertidumbre".
 B. PROFESOR: explica el fenómeno desde lo intuitivo hasta lo molecular/técnico. Define los términos inevitables en lenguaje cotidiano. Construye una cadena causal explícita: condición inicial → qué cambia → por qué cambia → consecuencia observable → qué límites/excepciones existen. Cada frase del guion debe enseñar un hecho, responder una pregunta o preparar una revelación; elimina frases que solo suenen científicas.
@@ -134,7 +148,7 @@ category: categoría breve.
 angle: enfoque editorial en 2-3 frases.
 hook: hook inicial.
 script: guion completo con marcas [HOOK], [PROMESA], [CONTEXTO], [EXPLICACIÓN], [REVELACIÓN], [CIERRE].
-research_brief: lista de 4 a 7 hallazgos concisos con su nivel de certeza. causal_chain: pasos numerados de causa y efecto. concept_explanations: lista de objetos con term, plain_explanation y role. fact_audit: lista de objetos con claim, status, rationale y editorial_treatment. story: arreglo de 5 a 8 objetos de escena; cada objeto debe tener time, objective, teaching_point, visual_proof, visual, animation, on_screen_text, transition y un paquete visual técnico: visual_subject, visual_state, visual_action, visual_composition y visual_environment (todos redactados en inglés natural, con objetos físicos concretos y acciones observables; nunca conceptos abstractos), visual_prompt_en (prompt final en inglés para SDXL, 45–80 palabras, describiendo una sola imagen específica y físicamente reconocible).
+research_brief: lista de 4 a 7 hallazgos concisos con su nivel de certeza. causal_chain: pasos numerados de causa y efecto. concept_explanations: lista de objetos con term, plain_explanation y role. fact_audit: lista de objetos con claim, status, rationale y editorial_treatment. story: arreglo de 4 a 5 objetos de escena; cada objeto debe tener time, objective, teaching_point, visual_proof, visual, animation, on_screen_text, transition y un paquete visual técnico: visual_subject, visual_state, visual_action, visual_composition y visual_environment (todos redactados en inglés natural, con objetos físicos concretos y acciones observables; nunca conceptos abstractos), visual_prompt_en (prompt final en inglés para SDXL, 45–80 palabras, describiendo una sola imagen específica y físicamente reconocible).
 retention_map: arreglo cronológico de bloques de máximo 3 segundos; cada objeto debe tener time, new_stimulus, narrative_advance, curiosity, visual_action y on_screen_text (frase visible de 2 a 6 palabras).
 verification: lista de afirmaciones/datos que deben verificarse y qué evidencia falta.
 quality_check: lista de comprobaciones editoriales, científicas y de producción.
