@@ -404,9 +404,6 @@ Return no other keys and no markdown.`;
           completeShortVisualPrompts(plan);
           storyboardCheck = inspectStoryboard(plan);
         }
-      } catch (repairError) {
-        console.error("[JAI][Storyboard] Falló la reparación automática:", repairError?.message || repairError);
-      }
       if (!storyboardCheck.ok) {
         console.error("[JAI][Storyboard] Bloqueo de producción:", storyboardCheck.reason, "Errores de reparación:", repairErrors.join(" | "));
         return res.status(502).json({
