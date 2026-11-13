@@ -195,7 +195,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
             temperature: 0.55,
             max_completion_tokens: 7000
           }),
-          signal: AbortSignal.timeout(26000)
+          signal: AbortSignal.timeout(22000)
         });
         const groqBody = await groqResponse.text();
         let groqData;
@@ -250,7 +250,7 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
                 maxOutputTokens: 7000
               }
             }),
-            signal: AbortSignal.timeout(20000)
+            signal: AbortSignal.timeout(16000)
           }
         );
       } catch (error) {
@@ -423,7 +423,7 @@ NOTES: ${safeNotes.slice(0,3500)}
 Return no other keys and no markdown.`;
       let repairedText = "";
       try {
-        if (groqKey) {
+        if (providerUsed.startsWith("Groq") && groqKey) {
           const repairResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
@@ -434,7 +434,7 @@ Return no other keys and no markdown.`;
               temperature: 0.25,
               max_completion_tokens: 4200
             }),
-            signal: AbortSignal.timeout(12000)
+            signal: AbortSignal.timeout(10000)
           });
           const repairRaw = await repairResponse.text();
           let repairBody = {};
