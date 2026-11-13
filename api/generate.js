@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+async function generatePlanHandler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Método no permitido." });
@@ -500,5 +500,20 @@ Return no other keys and no markdown.`;
   } catch (error) {
     console.error("[JAI] Error de conexión:", error?.name || "Error", error?.message || "Sin detalle");
     return res.status(502).json({ error: "No se pudo completar la generación. Revisa Runtime Logs; no compartas claves ni secretos.", diagnosticCode: "AI_GENERATION_ERROR" });
+  }
+}
+
+
+export default async function handler(req, res) {
+  try {
+    return await generatePlanHandler(req, res);
+  } catch (error) {
+    console.error("[JAI][Fatal] Excepción no controlada en api/generate:", error?.stack || error?.message || error);
+    if (res && !res.headersSent) {
+      return res.status(500).json({
+        error: "J.A.I. encontró un error interno controlado al preparar el plan. El equipo técnico recibió el diagnóstico; inténtalo nuevamente más tarde.",
+        diagnosticCode: "PLAN_HANDLER_UNCAUGHT"
+      });
+    }
   }
 }
