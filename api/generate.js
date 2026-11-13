@@ -270,10 +270,11 @@ ${safeLearningMemory || "Todavía no hay planes anteriores registrados."}
       }
 
       if (!geminiResponse.ok) {
-        const detail = geminiData?.error?.message || "Sin detalle";
-        console.error("[JAI][Gemini] HTTP", geminiResponse.status, detail.slice(0, 500));
+        const detail = String(geminiData?.error?.message || "Sin detalle").replace(/[\\r\\n\\t]+/g, " ").slice(0, 240);
+        const groqDetail = String(groqFailure || "Groq no disponible").replace(/[\\r\\n\\t]+/g, " ").slice(0, 180);
+        console.error("[JAI][Gemini] HTTP", geminiResponse.status, detail.slice(0, 500), "| Groq:", groqDetail);
         return res.status(502).json({
-          error: "Groq no estuvo disponible y Gemini también respondió con un error. Vuelve a intentarlo.",
+          error: "Fallaron los dos motores. Groq: " + groqDetail + " | Gemini HTTP " + geminiResponse.status + ": " + detail,
           diagnosticCode: "ALL_AI_PROVIDERS_FAILED",
           providerStatus: geminiResponse.status
         });
