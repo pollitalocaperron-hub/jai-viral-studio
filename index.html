@@ -270,7 +270,7 @@ async function inspectVisuals(){
    const image=jaiSceneImages[index].image,canvas=document.createElement("canvas"),max=640,scale=Math.min(1,max/Math.max(image.width,image.height));
    canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));
    canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);
-   return {scene_index:index,subject:String(scene.visual_subject||scene.visual||scene.objective||"").slice(0,220),state:String(scene.visual_state||"").slice(0,220),action:String(scene.visual_action||scene.animation||"").slice(0,220),proof:String(scene.visual_proof||scene.teaching_point||"").slice(0,220),image_base64:canvas.toDataURL("image/jpeg",0.76).split(",")[1]};
+   return {scene_index:index,subject:visualText(scene.visual_subject||scene.visual||scene.objective,"").slice(0,220),state:visualText(scene.visual_state,"").slice(0,220),action:visualText(scene.visual_action||scene.animation,"").slice(0,220),proof:visualText(scene.visual_proof||scene.teaching_point,"").slice(0,220),image_base64:canvas.toDataURL("image/jpeg",0.76).split(",")[1]};
   });
   const response=await fetch("/api/inspect-visual",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images}),signal:AbortSignal.timeout(45000)});
   const data=await readJsonResponse(response,"Inspector visual");
