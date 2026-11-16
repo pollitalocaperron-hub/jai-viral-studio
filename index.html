@@ -137,11 +137,15 @@ function setPipelineStage(key,percent,label,status){
  $("pipelineOverall").textContent=done+" de 6 etapas"+(Object.values(pipelineState).some(x=>x.status==="running")?" · en proceso":"");
 }
 function updateRenderGate(){
- const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);const ready=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&voiceReady&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
+ const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);
+ const timelineDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
+ const audioTiming=voiceReady&&timelineDuration?getAudioTrackTiming(timelineDuration):null;
+ const audioFits=!audioTiming||audioTiming.withinRateRange;
+ const ready=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&voiceReady&&audioFits&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
  $("renderVideo").disabled=!ready||renderRecording;
  if(timelineState.items.length){const imagesReady=jaiSceneImages.length===currentScenes.length&&currentScenes.length>0&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);const montageReady=imagesReady&&voiceReady&&visualAuditPassed();setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje completo · imagen, narración y revisión integradas": "Estructura creada · pendiente de fotogramas, narración y revisión",montageReady?"done":"idle");}
  if(!ready&&!renderRecording){
-  const reason=!currentScenes.length?"genera primero un plan":!jaiSceneImages.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)?"genera los fotogramas que faltan":!voiceReady?"genera y revisa la narración antes de exportar":!visualAuditPassed()?"la revisión visual está pendiente: inspecciona o aprueba las escenas manualmente":!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":"faltan recursos";
+  const reason=!currentScenes.length?"genera primero un plan":!jaiSceneImages.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)?"genera los fotogramas que faltan":!voiceReady?"genera y revisa la narración antes de exportar":!visualAuditPassed()?"la revisión visual está pendiente: inspecciona o aprueba las escenas manualmente":!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":!audioFits?"la narración no cabe en la duración del montaje sin alterar demasiado su tono; ajusta la duración o vuelve a generar la voz":"faltan recursos";
   $("renderStatus").textContent="Exportación bloqueada: "+reason+".";
  }else if(ready)$("renderStatus").textContent="Todo listo para exportar. Pulsa «Renderizar y exportar video».";
 }
@@ -973,6 +977,9 @@ async function renderVideo(){
  if(!timelineState.items.length){$("renderStatus").textContent="Prepara la línea de tiempo antes de exportar.";return;}
  if(!currentDurationValidation?.within_tolerance){$("renderStatus").textContent="Render bloqueado: corrige primero la duración y la cronología del plan editorial.";return;}
  if(!kokoroAudioBlob||!(kokoroAudioDuration>0)){$("renderStatus").textContent="Render bloqueado: genera primero la narración neuronal para que el vídeo tenga voz.";return;}
+ const requestedTimelineDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
+ const requestedAudioTiming=getAudioTrackTiming(requestedTimelineDuration);
+ if(!requestedAudioTiming.withinRateRange){$("renderStatus").textContent="Render bloqueado: la voz necesita una velocidad de "+requestedAudioTiming.requestedRate.toFixed(2)+"× para caber en el montaje. Ajusta la duración de la línea de tiempo o vuelve a generar la narración; no recortaremos ni deformaremos la voz automáticamente.";return;}
  if(!visualAuditPassed()){$("renderStatus").textContent="Render bloqueado: audita las escenas o revísalas y usa «Aprobar todas manualmente».";return;}
  if(jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,i)=>jaiSceneImages[i]?.image)){$("renderStatus").textContent="Faltan fotogramas. Genera todas las escenas antes de exportar.";return;}
  if(!window.MediaRecorder||typeof renderCanvas.captureStream!=="function"){$("renderStatus").textContent="Este navegador no permite grabar el lienzo. Prueba con Chrome actualizado.";return;}
@@ -1204,7 +1211,7 @@ let audioTrackOffset=0,subtitleTrackOffset=0;
 function getAudioTrackTiming(total){
  const duration=Math.max(.1,Number(total)||.1),offset=Math.max(0,Math.min(duration-.1,Number(audioTrackOffset)||0)),edit=getAudioEdit();
  const requestedRate=edit.duration/Math.max(.1,duration-offset),rate=Math.max(.75,Math.min(1.35,requestedRate));
- return {offset,activeDuration:edit.duration/rate,rate,requestedRate,rateAdjusted:Math.abs(rate-requestedRate)>.001};
+ return {offset,activeDuration:edit.duration/rate,rate,requestedRate,rateAdjusted:Math.abs(rate-requestedRate)>.001,withinRateRange:requestedRate>=.75&&requestedRate<=1.35};
 }
 function getAudioEdit(){
  const start=Math.max(0,Math.min(Math.max(0,kokoroAudioDuration-.1),Number(audioEdit.trimStart)||0));
