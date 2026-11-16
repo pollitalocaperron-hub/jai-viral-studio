@@ -200,7 +200,8 @@ async function restoreJaiRecovery(){
     }
    }));
   }
-  visualAuditResults=Array.isArray(snapshot.audit)?snapshot.audit:[];
+  visualAuditResults=Array.isArray(snapshot.audit)?snapshot.audit.map((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)?item:null):[];
+  if(visualAuditResults.length!==currentScenes.length)visualAuditResults=Array.from({length:currentScenes.length},(_,index)=>visualAuditResults[index]||null);
   jaiSceneImages.forEach((item,index)=>{if(!item?.image&&visualAuditResults[index])visualAuditResults[index]=null;});
   if(snapshot.audio instanceof Blob){
    kokoroAudioBlob=snapshot.audio;
@@ -301,7 +302,7 @@ function renderStory(value){
 
 let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,lastImageRequestAt=0;
 let planningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
-function visualAuditPassed(){return visualAuditResults.length===currentScenes.length&&currentScenes.length>0&&visualAuditResults.every(item=>item&&item.status==="pass");}
+function visualAuditPassed(){return visualAuditResults.length===currentScenes.length&&currentScenes.length>0&&visualAuditResults.every((item,index)=>item&&item.scene_index===index&&item.status==="pass");}
 function readLastImageRequestAt(){try{return Number(localStorage.getItem("jaiImageRequestAtV1"))||0;}catch{return 0;}}
 function saveLastImageRequestAt(value){try{localStorage.setItem("jaiImageRequestAtV1",String(value));}catch{}}
 function visualText(value,fallback="Pendiente de definir"){
@@ -453,6 +454,7 @@ async function inspectVisuals(){
   const data=await readJsonResponse(response,"Inspector visual");
   if(!response.ok)throw new Error(data.error||"No se pudo completar la inspección visual.");
   if(!Array.isArray(data.results)||data.results.length!==currentScenes.length)throw new Error("El inspector no devolvió un resultado por cada escena.");
+  if(!data.results.every((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)))throw new Error("El inspector devolvió resultados desordenados o asociados a otra escena; la aprobación se descartó.");
   visualAuditResults=data.results;setPipelineStage("audit",100,"Inspección terminada: "+data.results.filter(x=>x.status==="pass").length+" aprobadas","done");
   renderVisualScenes();
   updateRenderGate();
