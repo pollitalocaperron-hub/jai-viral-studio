@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import http from "node:http";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -19,9 +20,10 @@ const server = http.createServer((req, res) => {
 
 await new Promise((resolve) => server.listen(4173, "127.0.0.1", resolve));
 let browser;
+const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "jai-persistence-"));
 try {
-  browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  browser = await chromium.launchPersistentContext(userDataDir, { headless: true });
+  let page = await browser.newPage();
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded" });
@@ -176,6 +178,25 @@ try {
     });
     localStorage.setItem("jaiProjects", JSON.stringify([project]));
   }, uiProject);
+  // A real browser-process restart: close the persistent profile, reopen it, and recover the same IndexedDB/localStorage data.
+  await browser.close();
+  browser = await chromium.launchPersistentContext(userDataDir, { headless: true });
+  page = await browser.newPage();
+  const restartedPageErrors = [];
+  page.on("pageerror", (error) => restartedPageErrors.push(error.message));
+  await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded" });
+  await page.locator("#topic").waitFor();
+  assert.match(await page.locator("#projects").innerText(), /Proyecto recuperado desde interfaz/,
+    "The saved project must remain available after closing and reopening the browser context");
+  await page.getByRole("button", { name: "Cargar" }).click();
+  await page.waitForFunction(() => document.querySelector("#status")?.textContent.includes("Proyecto restaurado con"), null, { timeout: 10000 });
+  assert.equal(await page.locator("#topic").inputValue(), uiProject.topic,
+    "The project topic must survive a complete browser-context restart");
+  assert.equal(await page.locator("#script").innerText(), "Guion persistido",
+    "The script must survive a complete browser-context restart");
+  assert.equal(await page.locator("#kokoroAudio").isVisible(), true,
+    "The recovered audio track must be available after a complete browser-context restart");
+  assert.deepEqual(restartedPageErrors, [], "Browser restart recovery must not introduce uncaught page errors");
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Cargar" }).click();
   await page.waitForFunction(() => document.querySelector("#status")?.textContent.includes("Proyecto restaurado con"), null, { timeout: 10000 });
@@ -324,5 +345,6 @@ try {
   console.log("PASS: API-independent Chromium recovery, full storyboard-to-timeline construction, scene editing, wipe transition, audio/subtitle synchronization, and real portrait video export.");
 } finally {
   if (browser) await browser.close();
+  fs.rmSync(userDataDir, { recursive: true, force: true });
   await new Promise((resolve) => server.close(resolve));
 }
