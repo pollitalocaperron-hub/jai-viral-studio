@@ -136,7 +136,11 @@ try {
   {
     const plan = makeValidPlan();
     globalThis.fetch = async url => {
-      if (String(url).includes("api.openalex.org")) return response({ results: [] });
+      if (String(url).includes("api.openalex.org")) return response({ results: [{
+        title: "Historical foundational work", type: "book", publication_year: 1890,
+        authorships: [], primary_location: { landing_page_url: "https://example.org/historical-work", source: { display_name: "Historical Archive" } },
+        abstract_inverted_index: { Historical: [0], foundational: [1], evidence: [2] }, cited_by_count: 12
+      }] });
       if (String(url).includes("api.groq.com")) {
         return response({ choices: [{ message: { content: JSON.stringify(plan) }, finish_reason: "stop" }] });
       }
@@ -152,7 +156,10 @@ try {
     assert.equal(res.body.retention_map.length, 12);
     assert.equal(res.body.duration_validation.within_tolerance, true);
     assert.equal(res.body.duration_validation.script_word_count, 84);
-    assert.equal(res.body.research_sources.length, 0);
+    assert.equal(res.body.research_sources.length, 1);
+    assert.equal(res.body.research_sources[0].type, "book");
+    assert.equal(res.body.research_sources[0].year, 1890);
+    assert.equal(res.body.research_sources[0].source_name, "Historical Archive");
   }
 
   // An incomplete model storyboard must be repaired and revalidated before production.
