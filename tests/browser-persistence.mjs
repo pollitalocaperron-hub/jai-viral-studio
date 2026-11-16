@@ -123,7 +123,36 @@ try {
     }
   };
   await page.evaluate(async (project) => {
-    const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lV8AAAAASUVORK5CYII=";
+    const makeFrame = (index) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 640;
+      canvas.height = 640;
+      const context = canvas.getContext("2d");
+      const gradient = context.createLinearGradient(0, 0, 640, 640);
+      gradient.addColorStop(0, ["#12304a", "#244a36", "#4a2c55", "#59432b"][index]);
+      gradient.addColorStop(1, ["#2879a0", "#77a95c", "#9a5c91", "#b98b49"][index]);
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 640, 640);
+      context.fillStyle = "rgba(255,255,255,.85)";
+      context.beginPath();
+      context.arc(320, 300, 110 + index * 8, 0, Math.PI * 2);
+      context.fill();
+      context.fillStyle = "rgba(5,15,28,.7)";
+      context.fillRect(80, 490, 480, 70);
+      return canvas.toDataURL("image/png");
+    };
+    const makeWav = (seconds, sampleRate) => {
+      const sampleCount = seconds * sampleRate;
+      const buffer = new ArrayBuffer(44 + sampleCount * 2);
+      const view = new DataView(buffer);
+      const write = (offset, value) => { for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i)); };
+      write(0, "RIFF"); view.setUint32(4, 36 + sampleCount * 2, true); write(8, "WAVE");
+      write(12, "fmt "); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true); view.setUint16(34, 16, true); write(36, "data"); view.setUint32(40, sampleCount * 2, true);
+      for (let i = 0; i < sampleCount; i++) view.setInt16(44 + i * 2, Math.round(Math.sin(2 * Math.PI * 220 * i / sampleRate) * 1800), true);
+      return new Blob([buffer], { type: "audio/wav" });
+    };
     await writeJaiRecoveryKey(project.snapshotKey, {
       savedAt: project.savedAt,
       topic: project.topic,
@@ -131,10 +160,10 @@ try {
       plan: project.plan,
       data: project.data,
       retentionMap: project.data.retention_map,
-      images: project.data.story.map((scene, sceneIndex) => ({ src: png, sceneIndex, shot: sceneIndex, time: scene.time })),
+      images: project.data.story.map((scene, sceneIndex) => ({ src: makeFrame(sceneIndex), sceneIndex, shot: sceneIndex, time: scene.time })),
       audit: project.data.story.map((scene, scene_index) => ({ scene_index, status: "pass", score: 92, explanation: "La imagen corresponde a la escena y explica el concepto.", issues: [] })),
       timeline: project.data.story.map((scene, index) => ({ id: "scene-" + (index + 1), sceneIndex: index, scene_index: index, visualIndex: index, time: scene.time, on_screen_text: scene.on_screen_text, seconds: 3, transition: "fade" })),
-      audio: new Blob([new Uint8Array([10, 20, 30, 40])], { type: "audio/wav" }),
+      audio: makeWav(12, 24000),
       audioDuration: 12,
       audioSampleRate: 24000,
       audioEdit: { trimStart: 0, trimEnd: 12, gain: 1 },
@@ -183,8 +212,37 @@ try {
   assert.equal(await page.locator("#subtitleTrackOffset").inputValue(), "0.5", "Subtitle offset must remain editable after recovery");
   assert.equal(await page.locator("#mediaTracks .media-clip.audio").count(), 1, "The edited narration must remain on its own track");
   assert.equal(await page.locator("#mediaTracks .media-clip.subtitle").count(), 1, "The edited subtitle cue must remain on its own track");
-  assert.deepEqual(pageErrors, [], "The application must not throw uncaught browser errors during recovery, timeline editing, or audio synchronization");
-  console.log("PASS: blank startup, IndexedDB recovery, full project/media restoration, timeline reorder/duration/transitions, narration trim/gain/offset, subtitle offset, and synchronized media tracks.");
+  const renderButton = page.locator("#renderVideo");
+  assert.equal(await renderButton.isEnabled(), true, "A complete, audited project with valid images and decodable narration must unlock export");
+  await renderButton.click();
+  await page.waitForFunction(() => {
+    const status = document.querySelector("#renderStatus")?.textContent || "";
+    return status.includes("Vídeo renderizado correctamente") || status.startsWith("Falló") || status.includes("Error:") || status.includes("Render bloqueado");
+  }, null, { timeout: 45000 });
+  const renderStatus = await page.locator("#renderStatus").innerText();
+  assert.match(renderStatus, /Vídeo renderizado correctamente/, "Chromium must produce a completed video export, not merely enable the render button");
+  const download = page.locator("#downloadVideo");
+  assert.equal(await download.isVisible(), true, "A completed render must expose its downloadable file");
+  const exported = await page.evaluate(async () => {
+    const link = document.querySelector("#downloadVideo");
+    const blob = await fetch(link.href).then(response => response.blob());
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.src = link.href;
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = resolve;
+      video.onerror = () => reject(new Error("Exported video metadata could not be decoded"));
+      setTimeout(() => reject(new Error("Timed out reading exported video metadata")), 8000);
+    });
+    return { type: blob.type, size: blob.size, width: video.videoWidth, height: video.videoHeight, duration: video.duration };
+  });
+  assert.match(exported.type, /^video\/(mp4|webm)/, "The export must be a real MP4 or WebM media blob");
+  assert.ok(exported.size > 1000, "The exported media file must contain encoded data");
+  assert.equal(exported.width, 720, "The exported video must be 720 pixels wide");
+  assert.equal(exported.height, 1280, "The exported video must be portrait 9:16");
+  assert.ok(exported.duration >= 9 && exported.duration <= 12, "The exported video duration must match the edited ten-second timeline");
+  assert.deepEqual(pageErrors, [], "The application must not throw uncaught browser errors during recovery, editing, synchronization, or export");
+  console.log("PASS: recovery, scene/timeline editing, audio/subtitle synchronization, and real Chromium 720x1280 video export with decodable media metadata.");
 } finally {
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));
