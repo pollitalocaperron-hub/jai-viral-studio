@@ -64,6 +64,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
    <label>Recorte inicial (s)<input id="audioTrimStart" type="number" min="0" step="0.1" value="0"></label>
    <label>Recorte final (s)<input id="audioTrimEnd" type="number" min="0" step="0.1" value="0"></label>
    <label>Volumen <span id="audioGainValue">100%</span><input id="audioGain" type="range" min="0" max="150" step="5" value="100"></label>
+   <label>Desfase de audio (s)<input id="audioTrackOffset" type="number" min="0" max="10" step="0.1" value="0"></label>
    <button class="secondary" id="resetAudioEdit" type="button">Restablecer audio</button>
   </div>
   <div class="hint" id="audioEditStatus">Ajusta el fragmento y el volumen que se integrarán al vídeo. El WAV original permanece intacto.</div>
@@ -75,6 +76,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
   <button class="secondary" id="downloadSrt" type="button" disabled>Descargar SRT</button>
  </div>
  <div class="hint" id="captionStatus" aria-live="polite">J.A.I. generará subtítulos automáticamente al crear la narración. Los tiempos son una estimación editable basada en el guion y la duración real del audio; no requiere subir archivos.</div>
+ <div class="scene" style="margin-top:10px"><label>Desfase de subtítulos (s)<input id="subtitleTrackOffset" type="number" min="-5" max="5" step="0.1" value="0"></label><div class="hint">Negativo adelanta los subtítulos; positivo los retrasa. El ajuste también se aplica a la pista y al archivo SRT.</div></div>
  <div id="captionEditor" style="display:grid;gap:9px;margin-top:10px"></div>
 </section>
 <div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de ritmo · microavance cada 3 segundos, sin cortes obligatorios</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">CGI adaptado al tema</span></div><p class="hint">Genera una imagen CGI por escena conceptual (4–5 escenas en vídeos cortos). El montaje interpreta las 2–4 fases de movimiento de cada escena y las convierte en trazos, recorridos, órbitas, transformaciones y resaltados cuando la acción lo justifica. También aplica movimiento de cámara sobre el CGI. Es animación procedural 2D/2.5D: todavía no articula ni separa automáticamente los objetos dentro de la imagen como un sistema 3D por capas. El servicio gratuito limita las solicitudes y J.A.I. conserva cada imagen terminada.</p><button class="primary" id="makeVisuals" type="button">Generar escenas CGI</button><div class="row"><button class="secondary" id="inspectVisuals" type="button" disabled>Auditar fotogramas con IA</button><button class="secondary" id="approveAllVisuals" type="button" disabled>Aprobar todas manualmente</button></div><div class="hint" id="visualAuditStatus">La inspección compara cada imagen con su enseñanza. Si el servicio no responde, puedes revisar las imágenes y aprobarlas manualmente en conjunto.</div><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Secuencia de montaje · Vista previa</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza los bloques del storyboard: cambia su duración, reordénalos, elimina los que no necesites y ajusta qué tramo del movimiento de la escena se reproduce. El recorte controla la animación procedural de la imagen generada; todavía no recorta metraje de vídeo independiente. Los tiempos se recalculan automáticamente. La exportación usa MP4 si tu navegador lo admite o WebM como respaldo.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="mediaTracks" style="display:grid;gap:10px;margin:12px 0"></div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Reproducir secuencia</button><button class="secondary" id="pausePreview" type="button" disabled>Pausar</button><button class="secondary" id="stopPreview" type="button" disabled>Detener</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar y exportar video</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. Si generas la narración Gemini, se integrará al vídeo. El formato MP4 se usará si tu navegador lo admite; de lo contrario se descargará WebM.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Alertas editoriales</label><div class="result" id="editorialWarnings">No hay alertas adicionales.</div><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
@@ -421,9 +423,9 @@ function renderMediaTracks(){
  let cursor=0;
  const videoClips=timelineState.items.map((item,index)=>{const clip={start:cursor,end:cursor+Math.max(.1,Number(item.seconds)||0),label:"V"+(index+1),title:(item.on_screen_text||"Video")+" · "+item.seconds+" s"};cursor=clip.end;return clip;});
  addTrack("VÍDEO",videoClips,total?total+" s · "+timelineState.items.length+" bloques visuales":"Prepara la línea de tiempo");
- const audioClips=audioDuration?[{start:0,end:audioDuration,label:"NARRACIÓN · "+Math.round(audioEditState.gain*100)+"%",title:"Narración recortada · "+audioEditState.trimStart.toFixed(1)+"–"+audioEditState.trimEnd.toFixed(1)+" s",kind:"audio"}]:[];
+ const audioTiming=getAudioTrackTiming(total),audioClips=audioDuration?[{start:audioTiming.offset,end:Math.min(total,audioTiming.offset+audioTiming.activeDuration),label:"NARRACIÓN · "+Math.round(audioEditState.gain*100)+"%",title:"Narración recortada · inicio "+audioTiming.offset.toFixed(1)+" s",kind:"audio"}]:[];
  addTrack("AUDIO",audioClips,audioDuration?"Gemini WAV · "+audioDuration.toFixed(1)+" s · "+(total&&Math.abs(audioDuration-total)>.15?"se ajusta a la duración visual":"duración alineada"):"Genera la narración para añadir la pista de audio");
- const subtitleClips=captionCues.map((cue,index)=>({start:Math.max(0,Number(cue.start)||0),end:Math.max(Number(cue.start)||0,Number(cue.end)||0),label:"S"+(index+1),title:String(cue.text||"Subtítulo")+" · "+Number(cue.start||0).toFixed(1)+"–"+Number(cue.end||0).toFixed(1)+" s",kind:"subtitle"})).filter(clip=>clip.end>clip.start);
+ const subtitleClips=captionCues.map((cue,index)=>({start:Math.max(0,Number(cue.start)||0)+subtitleTrackOffset,end:Math.max(Number(cue.start)||0,Number(cue.end)||0)+subtitleTrackOffset,label:"S"+(index+1),title:String(cue.text||"Subtítulo")+" · "+Number(cue.start||0).toFixed(1)+"–"+Number(cue.end||0).toFixed(1)+" s",kind:"subtitle"})).filter(clip=>clip.end>clip.start&&clip.end>0);
  addTrack("SUBTÍTULOS",subtitleClips,subtitleClips.length?subtitleClips.length+" cues editables · tiempos estimados y ajustables":"Los subtítulos aparecerán al generar la narración");
 }
 function renderTimeline(){
@@ -445,6 +447,12 @@ function renderTimeline(){
   moveDown.addEventListener("click",()=>{const [moved]=timelineState.items.splice(index,1);timelineState.items.splice(index+1,0,moved);updateTimelineDurations();renderTimeline();$("timelineStatus").textContent="Bloque movido después. Se conserva su imagen y su escena original; los tiempos se recalcularon.";});
   const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="Eliminar";remove.title="Eliminar este bloque del montaje";remove.setAttribute("aria-label","Eliminar bloque "+(index+1));remove.disabled=timelineState.items.length<=1;remove.style.padding="8px 10px";
   remove.addEventListener("click",()=>{timelineState.items.splice(index,1);updateTimelineDurations();renderTimeline();$("timelineStatus").textContent="Bloque eliminado del montaje. El audio y los subtítulos conservan su pista original; revisa el ritmo antes de exportar.";});
+  const transitionLabel=document.createElement("label");transitionLabel.style.cssText="display:flex;align-items:center;gap:5px;font-size:12px;color:#a9bfd4";transitionLabel.textContent="Transición";
+  const transitionSelect=document.createElement("select");transitionSelect.style.cssText="width:auto;min-width:100px;padding:7px";transitionSelect.setAttribute("aria-label","Transición del bloque "+(index+1));
+  [["cut","Corte"],["fade","Fundido"],["wipe","Barrido"]].forEach(([value,label])=>{const option=document.createElement("option");option.value=value;option.textContent=label;option.selected=(item.transition||"fade")===value;transitionSelect.appendChild(option);});
+  transitionSelect.addEventListener("change",()=>{item.transition=transitionSelect.value;$("timelineStatus").textContent="Transición actualizada para este bloque; se aplicará en vista previa y exportación.";});transitionLabel.appendChild(transitionSelect);
+  const transitionDurationLabel=document.createElement("label");transitionDurationLabel.style.cssText="display:flex;align-items:center;gap:5px;font-size:12px;color:#a9bfd4";transitionDurationLabel.textContent="Duración transición (s)";
+  const transitionDuration=document.createElement("input");transitionDuration.type="number";transitionDuration.min="0.1";transitionDuration.max="1";transitionDuration.step="0.1";transitionDuration.value=String(Math.max(.1,Math.min(1,Number(item.transitionDuration)||.3)));transitionDuration.style.width="68px";transitionDuration.addEventListener("change",()=>{item.transitionDuration=Math.max(.1,Math.min(1,Number(transitionDuration.value)||.3));transitionDuration.value=item.transitionDuration.toFixed(1);});transitionDurationLabel.appendChild(transitionDuration);
   const trimLabel=document.createElement("span");trimLabel.textContent="Recorte de movimiento";trimLabel.style.cssText="font-size:12px;color:#a9bfd4;margin-left:4px";
   const trimInLabel=document.createElement("label");trimInLabel.style.cssText="display:flex;align-items:center;gap:5px;font-size:12px;color:#a9bfd4";trimInLabel.textContent="Entrada %";
   const trimIn=document.createElement("input");trimIn.type="number";trimIn.min="0";trimIn.max="95";trimIn.step="5";trimIn.value=String(Math.round((Number(item.trimStart)||0)*100));trimIn.style.width="68px";trimIn.setAttribute("aria-label","Entrada de movimiento del bloque "+(index+1));
@@ -454,7 +462,7 @@ function renderTimeline(){
   trimIn.addEventListener("change",()=>{applyTrim("in");$("timelineStatus").textContent="Entrada del movimiento ajustada. El bloque reproducirá una parte distinta de la animación de su escena.";});
   trimOut.addEventListener("change",()=>{applyTrim("out");$("timelineStatus").textContent="Salida del movimiento ajustada. El bloque reproducirá una parte distinta de la animación de su escena.";});
   const preview=document.createElement("button");preview.type="button";preview.className="secondary";preview.textContent="Vista previa";preview.title="Reproducir este bloque en el monitor";preview.setAttribute("aria-label","Vista previa del bloque "+(index+1));preview.style.padding="8px 10px";preview.addEventListener("click",()=>previewTimeline(index,true));
-  control.append(durationLabel,preview,moveUp,moveDown,remove);info.append(heading,desc,control);
+  control.append(durationLabel,transitionLabel,transitionDurationLabel,preview,moveUp,moveDown,remove);info.append(heading,desc,control);
   const trimControls=document.createElement("div");trimControls.className="row";trimControls.style.cssText="align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap";trimControls.append(trimLabel,trimInLabel,trimIn,trimOutLabel,trimOut);info.appendChild(trimControls);
   const duration=document.createElement("span");duration.className="tag";duration.textContent=item.seconds+" s";
   row.append(info,duration);row.dataset.sceneIndex=String(index);root.appendChild(row);
@@ -576,9 +584,9 @@ function seekTimelineAt(seconds){
  stopTimelinePreview("");
  timelineState.previewElapsed=target;timelineState.previewEnd=null;timelineState.previewStartedAt=performance.now();timelineState.previewPlaying=true;renderCanvas.style.display="block";
  if(kokoroAudioBlob){
-  const audio=$("kokoroAudio"),edit=getAudioEdit(),rate=edit.duration/Math.max(.1,total);
-  audio.pause();audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+target*rate);audio.playbackRate=Math.max(.25,Math.min(4,rate));audio.volume=Math.min(1,edit.gain);
-  audio.play().catch(()=>{$("timelineStatus").textContent="Reproducción visual iniciada; el navegador bloqueó el audio.";});
+  const audio=$("kokoroAudio"),edit=getAudioEdit(),timing=getAudioTrackTiming(total);
+  audio.pause();audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,target-timing.offset)*timing.rate);audio.playbackRate=Math.max(.25,Math.min(4,timing.rate));audio.volume=Math.min(1,edit.gain);
+  if(target>=timing.offset)audio.play().catch(()=>{$("timelineStatus").textContent="Reproducción visual iniciada; el navegador bloqueó el audio.";});
  }
  $("pausePreview").textContent="Pausar";$("pausePreview").disabled=false;$("stopPreview").disabled=false;runTimelinePreview();
 }
@@ -595,7 +603,7 @@ function previewTimeline(startIndex=0,singleBlock=false){
  timelineState.previewElapsed=timelineState.items.slice(0,start).reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
  timelineState.previewEnd=singleBlock?timelineState.previewElapsed+Math.max(.1,Number(timelineState.items[start].seconds)||0):null;
  timelineState.previewStartedAt=performance.now();timelineState.previewPlaying=true;renderCanvas.style.display="block";
- if(kokoroAudioBlob){const duration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0),edit=getAudioEdit(),rate=edit.duration/Math.max(.1,duration),audio=$("kokoroAudio");audio.pause();audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+timelineState.previewElapsed*rate);audio.playbackRate=Math.max(.25,Math.min(4,rate));audio.volume=Math.min(1,edit.gain);audio.play().catch(()=>{$("timelineStatus").textContent="Vista previa visual activa; el navegador bloqueó el audio.";});}
+ if(kokoroAudioBlob){const duration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0),edit=getAudioEdit(),timing=getAudioTrackTiming(duration),audio=$("kokoroAudio");audio.pause();audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,timelineState.previewElapsed-timing.offset)*timing.rate);audio.playbackRate=Math.max(.25,Math.min(4,timing.rate));audio.volume=Math.min(1,edit.gain);if(timelineState.previewElapsed>=timing.offset)audio.play().catch(()=>{$("timelineStatus").textContent="Vista previa visual activa; el navegador bloqueó el audio.";});}
  $("pausePreview").textContent="Pausar";$("pausePreview").disabled=false;$("stopPreview").disabled=false;runTimelinePreview();
 }
 function runTimelinePreview(){
@@ -627,10 +635,10 @@ function resumeTimelinePreview(){
  const total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
  if(timelineState.previewElapsed>=(timelineState.previewEnd??total)){previewTimeline(0);return;}
  if(kokoroAudioBlob){
-  const audio=$("kokoroAudio"),edit=getAudioEdit(),rate=edit.duration/Math.max(.1,total);
-  audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+timelineState.previewElapsed*rate);
-  audio.playbackRate=Math.max(.25,Math.min(4,edit.duration/Math.max(.1,total)));audio.volume=Math.min(1,edit.gain);
-  audio.play().catch(()=>{$("timelineStatus").textContent="Vista previa visual activa; el navegador bloqueó el audio.";});
+  const audio=$("kokoroAudio"),edit=getAudioEdit(),timing=getAudioTrackTiming(total);
+  audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,timelineState.previewElapsed-timing.offset)*timing.rate);
+  audio.playbackRate=Math.max(.25,Math.min(4,timing.rate));audio.volume=Math.min(1,edit.gain);
+  if(timelineState.previewElapsed>=timing.offset)audio.play().catch(()=>{$("timelineStatus").textContent="Vista previa visual activa; el navegador bloqueó el audio.";});
  }
  timelineState.previewStartedAt=performance.now();timelineState.previewPlaying=true;$("pausePreview").textContent="Pausar";runTimelinePreview();
 }
@@ -741,16 +749,20 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  const dx=(w-dw)/2+driftX,dy=(h-dh)/2+driftY;
  ctx.drawImage(img,dx,dy,dw,dh);
  const previousIndex=Number.isInteger(item?.previousVisualIndex)?item.previousVisualIndex:index-1;
- if(previousIndex>=0&&p<.12&&jaiSceneImages[previousIndex]?.image){
-  const previous=jaiSceneImages[previousIndex].image,fade=1-p/.12,prevScale=Math.max(w/previous.width,h/previous.height)*1.055;
-  ctx.save();ctx.globalAlpha=Math.max(0,fade);ctx.drawImage(previous,(w-previous.width*prevScale)/2,(h-previous.height*prevScale)/2,previous.width*prevScale,previous.height*prevScale);ctx.restore();
+ const transition=String(item?.transition||"fade"),transitionDuration=Math.max(.1,Math.min(1,Number(item?.transitionDuration)||.3)),transitionProgress=Math.max(0,Math.min(1,(p*Math.max(.1,Number(item?.seconds)||3))/transitionDuration));
+ if(previousIndex>=0&&transition!=="cut"&&transitionProgress<1&&jaiSceneImages[previousIndex]?.image){
+  const previous=jaiSceneImages[previousIndex].image,prevScale=Math.max(w/previous.width,h/previous.height)*1.055;ctx.save();
+  if(transition==="wipe"){ctx.beginPath();ctx.rect(0,0,w*(1-transitionProgress),h);ctx.clip();ctx.drawImage(previous,(w-previous.width*prevScale)/2,(h-previous.height*prevScale)/2,previous.width*prevScale,previous.height*prevScale);}
+  else{ctx.globalAlpha=1-transitionProgress;ctx.drawImage(previous,(w-previous.width*prevScale)/2,(h-previous.height*prevScale)/2,previous.width*prevScale,previous.height*prevScale);}
+  ctx.restore();
  }
  const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,"rgba(2,8,18,.10)");shade.addColorStop(.68,"rgba(2,8,18,.04)");shade.addColorStop(1,"rgba(2,8,18,.72)");ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
  drawMotionGraphics(item,index,p,audioElapsed);
  const title=String(item.on_screen_text||"").slice(0,62);
  if(title){ctx.fillStyle="#fff";ctx.font="800 36px Arial";ctx.textAlign="center";ctx.shadowColor="#000";ctx.shadowBlur=12;ctx.fillText(title,w/2,h-150);ctx.shadowBlur=0;}
  if(Array.isArray(captionCues)&&captionCues.length){
-  const cue=captionCues.slice().sort((a,b)=>a.start-b.start).find(entry=>audioElapsed>=entry.start&&audioElapsed<entry.end);
+  const subtitleTime=audioElapsed-subtitleTrackOffset;
+  const cue=captionCues.slice().sort((a,b)=>a.start-b.start).find(entry=>subtitleTime>=entry.start&&subtitleTime<entry.end);
   if(cue&&String(cue.text||"").trim()){
    const words=String(cue.text).trim().split(/\s+/),lines=[];let line="";
    ctx.font="700 34px Arial";
@@ -803,7 +815,7 @@ async function renderVideo(){
    const destination=kokoroAudioContext.createMediaStreamDestination();
    audioSource=kokoroAudioContext.createBufferSource();audioSource.buffer=audioBuffer;
    const edit=getAudioEdit(),gainNode=kokoroAudioContext.createGain();
-   audioSource.playbackRate.value=edit.duration/Math.max(.1,timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0));
+   const timing=getAudioTrackTiming(timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0));audioSource.playbackRate.value=timing.rate;
    gainNode.gain.value=edit.gain;audioSource.connect(gainNode);gainNode.connect(destination);
    destination.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
   }
@@ -829,7 +841,7 @@ async function renderVideo(){
   let startedAt=null;
   const draw=now=>{
    if(!renderRecording||finished)return;
-   if(startedAt===null){startedAt=now;if(audioSource){const edit=getAudioEdit();audioSource.start(0,edit.trimStart,edit.duration);}}
+   if(startedAt===null){startedAt=now;if(audioSource){const edit=getAudioEdit();audioSource.start(timing.offset,edit.trimStart,edit.duration);}}
    const elapsed=Math.max(0,(now-startedAt)/1000);
    const visualElapsed=Math.min(timelineDuration,elapsed*visualTimeScale);
    let cursor=0,blockIndex=timelineState.items.length-1,blockProgress=1;
@@ -843,7 +855,8 @@ async function renderVideo(){
    const trimStart=Math.max(0,Math.min(1,Number(activeItem.trimStart)||0));
    const trimEnd=Math.max(trimStart+.01,Math.min(1,Number.isFinite(Number(activeItem.trimEnd))?Number(activeItem.trimEnd):1));
    const sceneProgress=trimStart+blockProgress*(trimEnd-trimStart);
-   drawVideoScene(activeItem,sceneIndex,sceneProgress,audioBuffer?(getAudioEdit().trimStart+elapsed*getAudioEdit().duration/Math.max(.1,timelineDuration)):elapsed);
+   const audioTiming=getAudioTrackTiming(timelineDuration),audioEditState=getAudioEdit();
+   drawVideoScene(activeItem,sceneIndex,sceneProgress,audioBuffer?(audioEditState.trimStart+Math.max(0,elapsed-audioTiming.offset)*audioTiming.rate):elapsed);
    $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";
    if(elapsed>=totalDuration){try{recorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
    animationId=requestAnimationFrame(draw);
@@ -962,6 +975,8 @@ async function makePlan(){
 
 let kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioDuration=0,kokoroSampleRate=24000,kokoroSource=null,kokoroAudioContext=null;
 let audioEdit={trimStart:0,trimEnd:0,gain:1};
+let audioTrackOffset=0,subtitleTrackOffset=0;
+function getAudioTrackTiming(total){const duration=Math.max(.1,Number(total)||.1),offset=Math.max(0,Math.min(duration-.1,Number(audioTrackOffset)||0));const edit=getAudioEdit();return {offset,activeDuration:Math.max(.1,duration-offset),rate:edit.duration/Math.max(.1,duration-offset)};}
 function getAudioEdit(){
  const start=Math.max(0,Math.min(Math.max(0,kokoroAudioDuration-.1),Number(audioEdit.trimStart)||0));
  const rawEnd=Number(audioEdit.trimEnd),end=Math.max(start+.1,Math.min(kokoroAudioDuration,rawEnd>0?rawEnd:kokoroAudioDuration));
@@ -973,6 +988,7 @@ function syncAudioEditControls(){
  $("audioTrimStart").max=Math.max(0,kokoroAudioDuration-.1).toFixed(1);$("audioTrimEnd").max=kokoroAudioDuration.toFixed(1);
  $("audioTrimStart").value=edit.trimStart.toFixed(1);$("audioTrimEnd").value=edit.trimEnd.toFixed(1);
  $("audioGain").value=String(Math.round(edit.gain*100));$("audioGainValue").textContent=Math.round(edit.gain*100)+"%";
+ $("audioTrackOffset").value=String(Math.max(0,Number(audioTrackOffset)||0).toFixed(1));
  $("kokoroAudio").volume=Math.min(1,edit.gain);
  $("audioEditStatus").textContent="Fragmento: "+edit.trimStart.toFixed(1)+"–"+edit.trimEnd.toFixed(1)+" s ("+edit.duration.toFixed(1)+" s). El volumen superior a 100% se aplica al exportar.";
 }
@@ -1054,7 +1070,7 @@ function parseSubtitleFile(raw){
 }
 $("downloadSrt").addEventListener("click",()=>{
  const stamp=value=>{const ms=Math.max(0,Math.round(value*1000)),hours=Math.floor(ms/3600000),minutes=Math.floor(ms%3600000/60000),seconds=Math.floor(ms%60000/1000),millis=ms%1000;return String(hours).padStart(2,"0")+":"+String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0")+","+String(millis).padStart(3,"0");};
- const body=captionCues.slice().sort((a,b)=>a.start-b.start).map((cue,index)=>(index+1)+"\n"+stamp(cue.start)+" --> "+stamp(cue.end)+"\n"+cue.text).join("\n\n");
+ const body=captionCues.slice().sort((a,b)=>a.start-b.start).map((cue,index)=>(index+1)+"\n"+stamp(Math.max(0,cue.start+subtitleTrackOffset))+" --> "+stamp(Math.max(0,cue.end+subtitleTrackOffset))+"\n"+cue.text).join("\n\n");
  const url=URL.createObjectURL(new Blob([body],{type:"text/plain;charset=utf-8"})),link=document.createElement("a");link.href=url;link.download="jai-subtitulos-editados.srt";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 $("generateCaptions").addEventListener("click",()=>{
@@ -1096,6 +1112,8 @@ $("generateNarration").addEventListener("click",async()=>{
 $("audioTrimStart").addEventListener("change",()=>{audioEdit.trimStart=Number($("audioTrimStart").value)||0;if(audioEdit.trimEnd>0&&audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();});
 $("audioTrimEnd").addEventListener("change",()=>{audioEdit.trimEnd=Number($("audioTrimEnd").value)||kokoroAudioDuration;if(audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();});
 $("audioGain").addEventListener("input",()=>{audioEdit.gain=Number($("audioGain").value)/100;syncAudioEditControls();renderMediaTracks();});
+$("audioTrackOffset").addEventListener("change",()=>{const total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);audioTrackOffset=Math.max(0,Math.min(Math.max(0,total-.1),Number($("audioTrackOffset").value)||0));syncAudioEditControls();renderMediaTracks();$("timelineStatus").textContent="Posición de narración ajustada en la pista de audio.";});
+$("subtitleTrackOffset").addEventListener("change",()=>{subtitleTrackOffset=Math.max(-5,Math.min(5,Number($("subtitleTrackOffset").value)||0));$("subtitleTrackOffset").value=subtitleTrackOffset.toFixed(1);renderMediaTracks();$("captionStatus").textContent="Desfase de subtítulos: "+subtitleTrackOffset.toFixed(1)+" s. También se aplicará al SRT exportado.";});
 $("resetAudioEdit").addEventListener("click",()=>{audioEdit={trimStart:0,trimEnd:kokoroAudioDuration,gain:1};syncAudioEditControls();renderMediaTracks();$("kokoroStatus").textContent="Edición de audio restablecida: narración completa al 100%.";});
 $("stopKokoro").addEventListener("click",()=>{$("kokoroAudio").pause();if(kokoroSource){try{kokoroSource.stop();}catch(e){}kokoroSource=null;}});
 function cleanNarrationText(raw){
