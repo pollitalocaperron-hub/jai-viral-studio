@@ -124,6 +124,14 @@ try {
     assert.equal(res.statusCode, 400);
   }
 
+  // Research retrieval must not exclude historical or non-journal knowledge by date/type.
+  {
+    const source = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
+    assert.match(source, /works\?search=.*sort=relevance_score:desc&per-page=8/);
+    assert.doesNotMatch(source, /filter=type:article|from_publication_date:2000-01-01/);
+    assert.match(source, /type: work\.type \|\|/);
+  }
+
   // A complete 36-second plan must pass chronology, scene and retention-map validation.
   {
     const plan = makeValidPlan();
