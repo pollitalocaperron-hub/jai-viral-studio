@@ -168,11 +168,34 @@ export default async function handler(req, res) {
       providerFailures: [groqFailure, geminiFailure].filter(Boolean)
     });
   }
-  let parsed;
-  try { parsed = JSON.parse(output.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim()); }
-  catch { return res.status(502).json({ error: "El director de escenas no devolvió JSON válido.", diagnosticCode: "SCENE_DIRECTOR_INVALID_JSON" }); }
+  const parseDirectorOutput = value => {
+    try { return JSON.parse(String(value || "").replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim()); }
+    catch { return null; }
+  };
+  let parsed = parseDirectorOutput(output), validationError = parsed ? validateShots(parsed?.shots, story) : "El director no devolvió JSON válido.";
+  if ((!parsed || validationError) && provider.startsWith("Groq") && process.env.GEMINI_API_KEY) {
+    try {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
+        method: "POST",
+        headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 7000 } }),
+        signal: AbortSignal.timeout(18000)
+      });
+      const raw = await response.text();
+      let data;
+      try { data = JSON.parse(raw); } catch { throw new Error("Gemini devolvió una respuesta no JSON (HTTP " + response.status + ")."); }
+      if (!response.ok) throw new Error(data?.error?.message || "Gemini HTTP " + response.status);
+      output = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("") || "";
+      parsed = parseDirectorOutput(output);
+      validationError = parsed ? validateShots(parsed?.shots, story) : "Gemini no devolvió JSON válido.";
+      provider = "Gemini 3.8 Flash (respaldo por validación)";
+    } catch (error) {
+      console.warn("[JAI][Scene Director] Groq produjo un plan inválido y Gemini no pudo repararlo:", error?.message || "");
+      return res.status(502).json({ error: "El plan vectorial no superó la validación y el respaldo gratuito no pudo repararlo. No se exportará una animación incompleta.", diagnosticCode: "SCENE_DIRECTOR_INVALID_SHOTS" });
+    }
+  }
+  if (!parsed) return res.status(502).json({ error: "El director de escenas no devolvió JSON válido.", diagnosticCode: "SCENE_DIRECTOR_INVALID_JSON" });
   const shots = parsed?.shots;
-  const validationError = validateShots(shots, story);
   if (validationError) return res.status(502).json({ error: validationError, diagnosticCode: "SCENE_DIRECTOR_INVALID_SHOTS" });
   const normalized = shots.map((shot, index) => ({
     ...shot, shot_id: "shot-" + String(index + 1).padStart(2, "0"),

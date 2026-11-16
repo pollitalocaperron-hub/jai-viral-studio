@@ -230,7 +230,7 @@ try {
     globalThis.fetch = async (url, options = {}) => {
       assert.ok(String(url).includes("api.groq.com"));
       const payload = JSON.parse(options.body || "{}");
-      assert.match(payload.messages?.[1]?.content || "", /fotograma maestro de referencia/);
+      assert.match(payload.messages?.[1]?.content || "", /path_d/);
       return response({ choices: [{ message: { content: JSON.stringify({ shots }) } }] });
     };
     const res = mockResponse();
