@@ -720,8 +720,9 @@ function buildTimeline(){
  timelineState.items=Array.from({length:count},(_,index)=>{
   const start=index*3,end=Math.min(start+3,totalSeconds),mid=(start+end)/2;
   const beatRange=beatRanges.find(r=>mid>=r.start&&mid<r.end);
-  const sceneRange=sceneRanges.find(r=>mid>=r.start&&mid<r.end)||sceneRanges[sceneRanges.length-1];
-  const scene=currentScenes[sceneRange.index]||currentScenes[0];
+  const sceneRange=sceneRanges.find(r=>mid>=r.start&&mid<r.end)||sceneRanges.reduce((best,r)=>!best||Math.min(Math.abs(mid-r.start),Math.abs(mid-r.end))<Math.min(Math.abs(mid-best.start),Math.abs(mid-best.end))?r:best,null);
+  const scene=sceneRange?currentScenes[sceneRange.index]:null;
+  if(!scene)throw new Error("No se pudo asignar el bloque "+(index+1)+" a una escena válida del storyboard.");
   const beat=beatRange&&beatRange.beat;
   const rawAction=(beat&&(beat.visual_action||beat.new_stimulus))||scene.visual_action||scene.animation||scene.visual_proof||"";
   let visualMode=chooseVisualMode(beat||{},scene,index,usedModes);
@@ -747,7 +748,7 @@ function seekTimelineAt(seconds){
  timelineState.previewElapsed=target;timelineState.previewEnd=null;timelineState.previewStartedAt=performance.now();timelineState.previewPlaying=true;renderCanvas.style.display="block";
  if(kokoroAudioBlob){
   const audio=$("kokoroAudio"),edit=getAudioEdit(),timing=getAudioTrackTiming(total);
-  audio.pause();audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,target-timing.offset)*timing.rate);audio.playbackRate=Math.max(.25,Math.min(4,timing.rate));audio.volume=Math.min(1,edit.gain);
+  audio.pause();audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,target-timing.offset)*timing.rate);audio.playbackRate=timing.rate;audio.volume=Math.min(1,edit.gain);
   if(target>=timing.offset)audio.play().catch(()=>{$("timelineStatus").textContent="Reproducción visual iniciada; el navegador bloqueó el audio.";});
  }
  $("pausePreview").textContent="Pausar";$("pausePreview").disabled=false;$("stopPreview").disabled=false;runTimelinePreview();
@@ -765,7 +766,7 @@ function previewTimeline(startIndex=0,singleBlock=false){
  timelineState.previewElapsed=timelineState.items.slice(0,start).reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
  timelineState.previewEnd=singleBlock?timelineState.previewElapsed+Math.max(.1,Number(timelineState.items[start].seconds)||0):null;
  timelineState.previewStartedAt=performance.now();timelineState.previewPlaying=true;renderCanvas.style.display="block";
- if(kokoroAudioBlob){const duration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0),edit=getAudioEdit(),timing=getAudioTrackTiming(duration),audio=$("kokoroAudio");audio.pause();audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,timelineState.previewElapsed-timing.offset)*timing.rate);audio.playbackRate=Math.max(.25,Math.min(4,timing.rate));audio.volume=Math.min(1,edit.gain);if(timelineState.previewElapsed>=timing.offset)audio.play().catch(()=>{$("timelineStatus").textContent="Vista previa visual activa; el navegador bloqueó el audio.";});}
+ if(kokoroAudioBlob){const duration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0),edit=getAudioEdit(),timing=getAudioTrackTiming(duration),audio=$("kokoroAudio");audio.pause();audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,timelineState.previewElapsed-timing.offset)*timing.rate);audio.playbackRate=timing.rate;audio.volume=Math.min(1,edit.gain);if(timelineState.previewElapsed>=timing.offset)audio.play().catch(()=>{$("timelineStatus").textContent="Vista previa visual activa; el navegador bloqueó el audio.";});}
  $("pausePreview").textContent="Pausar";$("pausePreview").disabled=false;$("stopPreview").disabled=false;runTimelinePreview();
 }
 function runTimelinePreview(){
@@ -773,7 +774,7 @@ function runTimelinePreview(){
  const draw=now=>{
   if(!timelineState.previewPlaying)return;
   const elapsed=timelineState.previewElapsed+(now-timelineState.previewStartedAt)/1000,total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0),endAt=timelineState.previewEnd??total;
-  if(kokoroAudioBlob){const edit=getAudioEdit(),timing=getAudioTrackTiming(total),audio=$("kokoroAudio");if(elapsed>=timing.offset&&audio.paused&&elapsed<endAt){audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,elapsed-timing.offset)*timing.rate);audio.playbackRate=Math.max(.25,Math.min(4,timing.rate));audio.volume=Math.min(1,edit.gain);audio.play().catch(()=>{});}}
+  if(kokoroAudioBlob){const edit=getAudioEdit(),timing=getAudioTrackTiming(total),audio=$("kokoroAudio");if(elapsed>=timing.offset&&audio.paused&&elapsed<endAt){audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,elapsed-timing.offset)*timing.rate);audio.playbackRate=timing.rate;audio.volume=Math.min(1,edit.gain);audio.play().catch(()=>{});}}
   setTaskProgress("timelineStatus",Math.min(100,Math.round(elapsed/Math.max(.1,total)*100)),"Vista previa · "+Math.min(100,Math.round(elapsed/Math.max(.1,total)*100))+"%");
   if(elapsed>=endAt){let cursorEnd=0,last=0;for(;last<timelineState.items.length;last++){const d=Math.max(.1,Number(timelineState.items[last].seconds)||0);if(endAt<=cursorEnd+d)break;cursorEnd+=d;}last=Math.min(last,timelineState.items.length-1);const item=timelineState.items[last],p=Math.max(0,Math.min(1,(endAt-cursorEnd)/Math.max(.1,Number(item.seconds)||0)));item.previousVisualIndex=last>0?Number(timelineState.items[last-1].visualIndex):null;const a=Math.max(0,Math.min(1,Number(item.trimStart)||0)),b=Math.max(a+.01,Math.min(1,Number.isFinite(Number(item.trimEnd))?Number(item.trimEnd):1));drawVideoScene(item,item.sceneIndex||0,a+p*(b-a),endAt);timelineState.previewElapsed=endAt;timelineState.previewEnd=null;document.querySelectorAll(".media-playhead").forEach(node=>{node.style.left="100%";});stopTimelinePreview(kokoroAudioBlob?"Vista previa terminada. Vídeo, narración y subtítulos sincronizados.":"Vista previa terminada. Genera la narración para escuchar el audio integrado.");return;}
   let cursor=0,index=0;for(;index<timelineState.items.length;index++){const d=Math.max(.1,Number(timelineState.items[index].seconds)||0);if(elapsed<cursor+d)break;cursor+=d;}
@@ -801,7 +802,7 @@ function resumeTimelinePreview(){
  if(kokoroAudioBlob){
   const audio=$("kokoroAudio"),edit=getAudioEdit(),timing=getAudioTrackTiming(total);
   audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,timelineState.previewElapsed-timing.offset)*timing.rate);
-  audio.playbackRate=Math.max(.25,Math.min(4,timing.rate));audio.volume=Math.min(1,edit.gain);
+  audio.playbackRate=timing.rate;audio.volume=Math.min(1,edit.gain);
   if(timelineState.previewElapsed>=timing.offset)audio.play().catch(()=>{$("timelineStatus").textContent="Vista previa visual activa; el navegador bloqueó el audio.";});
  }
  timelineState.previewStartedAt=performance.now();timelineState.previewPlaying=true;$("pausePreview").textContent="Pausar";runTimelinePreview();
@@ -825,7 +826,7 @@ function drawMotionGraphics(item,index,progress,audioElapsed=0){
  const eased=localProgress*localProgress*(3-2*localProgress);
  const phase=(audioElapsed*1.15+index*.7)%(Math.PI*2);
  const cyan="rgba(105,217,239,.82)",amber="rgba(255,190,96,.82)";
- const cx=w*.5,cy=h*.49,rx=w*.24,ry=h*.13;
+ const cx=w*.78,cy=h*.29,rx=w*.13,ry=h*.075;
  ctx.save();ctx.lineCap="round";ctx.lineJoin="round";ctx.setLineDash([]);
  const line=(x1,y1,x2,y2,color=cyan,width=5)=>{
   ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
@@ -843,7 +844,7 @@ function drawMotionGraphics(item,index,progress,audioElapsed=0){
   for(let i=1;i<points.length;i++)ctx.quadraticCurveTo(points[i][0],points[i][1],points[i][0],points[i][1]);
   ctx.stroke();
  };
- ctx.globalAlpha=.9;
+ ctx.globalAlpha=.58;
  if(/orbit|orbita/.test(intent)){
   ctx.strokeStyle="rgba(105,217,239,.55)";ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,-.22,0,Math.PI*2);ctx.stroke();
   const a=-.22+eased*Math.PI*2;dot(cx+Math.cos(a)*rx,cy+Math.sin(a)*ry,10,amber);
@@ -1200,7 +1201,11 @@ async function makePlan(){
 let kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioDuration=0,kokoroSampleRate=24000,kokoroSource=null,kokoroAudioContext=null;
 let audioEdit={trimStart:0,trimEnd:0,gain:1};
 let audioTrackOffset=0,subtitleTrackOffset=0;
-function getAudioTrackTiming(total){const duration=Math.max(.1,Number(total)||.1),offset=Math.max(0,Math.min(duration-.1,Number(audioTrackOffset)||0));const edit=getAudioEdit();return {offset,activeDuration:Math.max(.1,duration-offset),rate:edit.duration/Math.max(.1,duration-offset)};}
+function getAudioTrackTiming(total){
+ const duration=Math.max(.1,Number(total)||.1),offset=Math.max(0,Math.min(duration-.1,Number(audioTrackOffset)||0)),edit=getAudioEdit();
+ const requestedRate=edit.duration/Math.max(.1,duration-offset),rate=Math.max(.75,Math.min(1.35,requestedRate));
+ return {offset,activeDuration:edit.duration/rate,rate,requestedRate,rateAdjusted:Math.abs(rate-requestedRate)>.001};
+}
 function getAudioEdit(){
  const start=Math.max(0,Math.min(Math.max(0,kokoroAudioDuration-.1),Number(audioEdit.trimStart)||0));
  const rawEnd=Number(audioEdit.trimEnd),end=Math.max(start+.1,Math.min(kokoroAudioDuration,rawEnd>0?rawEnd:kokoroAudioDuration));
