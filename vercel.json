@@ -9,6 +9,9 @@
     },
     "api/inspect-visual.js": {
       "maxDuration": 45
+    },
+    "api/direct-scenes.js": {
+      "maxDuration": 60
     }
   }
 }
