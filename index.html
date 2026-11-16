@@ -139,7 +139,7 @@ function setPipelineStage(key,percent,label,status){
 function updateRenderGate(){
  const ready=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
  $("renderVideo").disabled=!ready||renderRecording;
- if(timelineState.items.length)setPipelineStage("timeline",100,"Estructura de montaje creada · "+timelineState.items.length+" bloques; faltan fotogramas, voz y revisión","done");
+ if(timelineState.items.length){const imagesReady=jaiSceneImages.length===currentScenes.length&&currentScenes.length>0&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);const montageReady=imagesReady&&voiceReady&&visualAuditPassed();setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje completo · imagen, narración y revisión integradas": "Estructura creada · pendiente de fotogramas, narración y revisión",montageReady?"done":"idle");}
  if(!ready&&!renderRecording){
   const reason=!currentScenes.length?"genera primero un plan":!jaiSceneImages.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)?"genera los fotogramas que faltan":!visualAuditPassed()?"la revisión automática está pendiente o falló: revisa los fotogramas y pulsa «Aprobar todas manualmente»":!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":"faltan recursos";
   $("renderStatus").textContent="Exportación bloqueada: "+reason+".";
@@ -160,7 +160,7 @@ function syncRecoveredPipeline(){
  setPipelineStage("visual",imagesReady?100:hasPlan?Math.round(jaiSceneImages.filter(x=>x?.image).length/Math.max(1,currentScenes.length)*100):0,imagesReady?"Fotogramas recuperados · "+jaiSceneImages.length+" escenas":hasPlan?"Fotogramas incompletos":"Esperando storyboard",imagesReady?"done":"idle");
  setPipelineStage("audit",auditReady?100:imagesReady?75:0,auditReady?"Revisión visual aprobada":imagesReady?"Fotogramas listos · falta aprobar la revisión":"Pendiente de imágenes",auditReady?"done":"idle");
  setPipelineStage("voice",hasVoice?100:currentPlanData?.script?55:0,hasVoice?"Narración recuperada · "+kokoroAudioDuration.toFixed(1)+" s":currentPlanData?.script?"Guion listo · falta generar narración":"Pendiente de guion",hasVoice?"done":"idle");
- setPipelineStage("timeline",timelineState.items.length?100:0,timelineState.items.length?"Línea de tiempo recuperada · "+timelineState.items.length+" bloques":"Pendiente de escenas",timelineState.items.length?"done":"idle");
+ const montageReady=!!(timelineState.items.length&&imagesReady&&hasVoice&&auditReady);setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje recuperado · medios y revisión completos":timelineState.items.length?"Estructura recuperada · faltan medios o revisión":"Pendiente de escenas",montageReady?"done":"idle");
  const canExport=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&auditReady&&imagesReady);
  setPipelineStage("render",canExport?25:0,canExport?"Listo para exportar":imagesReady&&!auditReady?"Pendiente de aprobación visual":"Pendiente de aprobación", "idle");
  $("pipelineHint").textContent="Estado reconstruido a partir de los recursos recuperados en este dispositivo.";
