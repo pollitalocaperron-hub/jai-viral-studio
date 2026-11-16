@@ -1136,7 +1136,7 @@ async function makePlan(){
   const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,learning_memory:buildLearningMemoryContext()}),signal:AbortSignal.timeout(65000)});
   const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;throw failure;}
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
-  kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;audioEdit={trimStart:0,trimEnd:0,gain:1};captionCues=[];syncAudioEditControls();
+  kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;audioEdit={trimStart:0,trimEnd:0,gain:1};audioTrackOffset=0;subtitleTrackOffset=0;captionCues=[];syncAudioEditControls();
   $("kokoroAudio").pause();$("kokoroAudio").removeAttribute("src");$("kokoroAudio").style.display="none";
   $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("generateCaptions").disabled=true;
   $("captionStatus").textContent="Nuevo guion: genera la narración y J.A.I. preparará sus subtítulos automáticamente.";
@@ -1430,10 +1430,13 @@ function loadSavedProject(project){
  const data=project.data;
  $("topic").value=String(project.topic||"");$("research").value=String(project.notes||"");
  currentTopic=String(project.topic||"");currentPlanData=data;currentPlan=String(project.plan||JSON.stringify(data,null,2));
+ if(typeof stopTimelinePreview==="function")stopTimelinePreview("");
  if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
- kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;captionCues=[];
+ kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;audioEdit={trimStart:0,trimEnd:0,gain:1};audioTrackOffset=0;subtitleTrackOffset=0;captionCues=[];visualAuditResults=[];
  $("kokoroAudio").pause();$("kokoroAudio").removeAttribute("src");$("kokoroAudio").style.display="none";
- $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("generateCaptions").disabled=true;
+ $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("generateCaptions").disabled=true;syncAudioEditControls();
+ $("inspectVisuals").disabled=true;$("approveAllVisuals").disabled=true;
+ $("visualAuditStatus").textContent="La revisión de este proyecto está pendiente; sus escenas deben volver a inspeccionarse.";
  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">Proyecto guardado</span><span class="tag">Dirección visual · Medio elegido según el tema</span>';
  $("angle").textContent=readable(data.angle||"Enfoque pendiente.");
  $("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");
