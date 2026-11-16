@@ -388,7 +388,7 @@ function renderVisualScenes(){
   const subject=visualText(scene.visual_subject||scene.teaching_point||scene.objective,"Escena "+(index+1));
   const proof=visualText(scene.visual_proof||scene.teaching_point||scene.visual,"Demostración pendiente");
   if(generated&&generated.src){
-   const img=document.createElement("img");img.src=generated.src;img.alt="Fotograma educativo: "+subject;img.loading="lazy";img.style.cssText="width:100%;aspect-ratio:9/16;object-fit:contain;object-position:center;display:block;background:radial-gradient(ellipse at center,#182536 0%,#070d16 78%)";card.appendChild(img);
+   const img=document.createElement("img");img.src=generated.src;img.alt="Fotograma educativo: "+subject;img.loading="lazy";img.style.cssText="width:100%;aspect-ratio:9/16;object-fit:cover;object-position:center;display:block;background:#07101e";card.appendChild(img);
   }else{
    const placeholder=document.createElement("div");placeholder.style.cssText="aspect-ratio:9/16;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:18px;background:radial-gradient(ellipse at 50% 35%,#173b58,#07101e 72%);color:#eaf7ff;text-align:center";
    const kicker=document.createElement("span");kicker.style.cssText="font-size:10px;letter-spacing:2px;color:#77e6d1";kicker.textContent="FOTOGRAMA PENDIENTE";
@@ -506,7 +506,7 @@ async function generateAIVisuals(){
  visualGenerationRunning=true;setPipelineStage("visual",0,"Preparando fotogramas…","running");$("create").disabled=true;button.disabled=true;$("renderVideo").disabled=true;
  if(jaiSceneImages.length!==scenes.length)jaiSceneImages=scenes.map((scene,index)=>jaiSceneImages[index]||null);
  renderVisualScenes();
- const style="Create a polished, topic-faithful educational visual. The exact subject named below MUST be the dominant and unmistakable subject; depict the real objects, places, people, data or actions named for THIS scene, not a generic science image. Follow the specified VISUAL MEDIUM exactly: use photography when the scene calls for real-world imagery, maps for spatial or historical geography, precise diagrams for systems, editorial illustration for concepts, data visualization for quantitative evidence, or CGI only when spatial structure genuinely matters. Choose materials, palette, lighting and visual language that belong to the subject and medium. Compose for a portrait 9:16 frame with a clear central focal point. Preserve subject identity and a coherent art direction across all scenes. Do not force illustration, CGI, laboratory aesthetics or a gray technical blueprint unless explicitly required by the subject.";
+ const style="J.A.I. SIGNATURE ART DIRECTION — keep this exact visual language in EVERY episode and every scene: premium 2D editorial explainer illustration, clean confident ink outlines, carefully designed readable silhouettes, layered flat colors with restrained soft dimensional shading, tactile illustrated materials, deliberate foreground/midground/background separation, crisp edges, strong focal hierarchy and polished educational motion-graphics composition. Adapt the objects, setting and topic-specific palette to the subject, but NEVER switch to photorealism, stock photography, generic 3D CGI, gray blueprint aesthetics or childish clipart. Maps, charts, anatomy, machines, nature and abstract concepts must all be illustrated in this same coherent 2D editorial style. The exact requested subject must remain unmistakable. Compose for a vertical 9:16 crop with all essential objects inside the central portrait-safe area.";
  const avoid="No abstract fog, no amorphous clouds, no random glowing blobs, no decorative particle field, no generic galaxy, no unrelated objects, no generated text, no misspelled labels, no watermark, no cameras or filming equipment, no collage, no split screen, no childish clipart, no flat low-detail icons. Characters and anatomy are allowed only when they are the actual subject being explained.";
  try{
   let generatedCount=jaiSceneImages.filter(Boolean).length;
@@ -592,7 +592,7 @@ async function regenerateVisualScene(index){
  const scene=currentScenes[index],button=$("makeVisuals");visualGenerationRunning=true;button.disabled=true;$("inspectVisuals").disabled=true;$("renderVideo").disabled=true;
  $("visualAuditStatus").textContent="Regenerando la escena "+(index+1)+" con su dirección visual corregida…";
  try{
-  const style="Premium educational visual production, cinematic depth, clear visual hierarchy and a coherent topic-specific art direction. Choose the rendering language, materials, palette, scale and environment that genuinely belong to this subject; preserve the visual identity established by the original scene.";
+  const style="J.A.I. SIGNATURE STYLE: premium 2D editorial explainer illustration, clean confident ink outlines, readable silhouettes, layered flat colors with restrained soft shading, tactile illustrated materials, crisp edges and polished educational motion-graphics composition. Keep this exact visual language across every episode; adapt only the topic-specific objects, environment and palette. No photorealism, stock photography, generic 3D CGI, gray blueprint or childish clipart.";
   const avoid="No unrelated objects, no decorative abstract fog or random glowing blobs, no generic stock-science imagery, no generated text, no watermark, no collage, no split screen, no childish clipart. Do not exclude people, characters, diagrams, maps, natural phenomena, machines, organisms or molecular structures when they are genuinely required by the subject.";
   const subject=visualText(scene.visual_subject||scene.visual_proof||scene.teaching_point||scene.objective,"the exact subject described in the scene").slice(0,260);
   const state=visualText(scene.visual_state||scene.visual,"").slice(0,320);
@@ -614,7 +614,7 @@ async function regenerateVisualScene(index){
 }
 $("inspectVisuals").addEventListener("click",inspectVisuals);
 $("directScenes").addEventListener("click",designAnimationShots);
-$("makeVisuals").textContent="Generar fotogramas cinematográficos";
+$("makeVisuals").textContent="Generar escenas ilustradas J.A.I.";
 $("makeVisuals").addEventListener("click",generateAIVisuals);
 
 const timelineState={items:[],index:0,timer:null,previewFrame:null,previewStartedAt:null,previewElapsed:0,previewEnd:null,previewPlaying:false,storyDuration:0,mapDuration:0};
@@ -1018,11 +1018,10 @@ function getPortraitFrame(source){
  const cached=portraitFrameCache.get(source);if(cached)return cached;
  const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
  const ctx=canvas.getContext("2d");if(!ctx)return source;
+ // Los proveedores devuelven fotogramas cuadrados: recorta a 9:16 para llenar
+ // el lienzo. El prompt exige mantener el sujeto y sus piezas en la zona central.
  const scale=Math.max(720/source.width,1280/source.height),dw=source.width*scale,dh=source.height*scale;
- ctx.save();ctx.filter="blur(30px) brightness(.42) saturate(.82)";ctx.drawImage(source,(720-dw)/2,(1280-dh)/2,dw,dh);ctx.restore();
- const shade=ctx.createLinearGradient(0,0,0,1280);shade.addColorStop(0,"rgba(2,8,18,.18)");shade.addColorStop(1,"rgba(2,8,18,.48)");ctx.fillStyle=shade;ctx.fillRect(0,0,720,1280);
- const contain=Math.min(720/source.width,1280/source.height),fw=source.width*contain,fh=source.height*contain;
- ctx.save();ctx.shadowColor="rgba(0,0,0,.34)";ctx.shadowBlur=26;ctx.drawImage(source,(720-fw)/2,(1280-fh)/2,fw,fh);ctx.restore();
+ ctx.save();ctx.filter="saturate(1.04) contrast(1.025)";ctx.drawImage(source,(720-dw)/2,(1280-dh)/2,dw,dh);ctx.restore();
  portraitFrameCache.set(source,canvas);return canvas;
 }
 function drawVideoScene(item,index,progress,audioElapsed=0){
