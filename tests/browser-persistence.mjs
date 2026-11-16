@@ -216,6 +216,22 @@ try {
   await page.locator("#subtitleTrackOffset").fill("0.5");
   await page.locator("#subtitleTrackOffset").dispatchEvent("change");
   assert.equal(await page.locator("#subtitleTrackOffset").inputValue(), "0.5", "Subtitle offset must remain editable after recovery");
+  const transitionPixelDifference = await page.evaluate(() => {
+    const previous = timelineState.items[0];
+    const item = timelineState.items[1];
+    item.previousVisualIndex = Number(previous.visualIndex);
+    if (item.transition !== "wipe") return 0;
+    drawVideoScene(item, Number(item.sceneIndex) || 0, 0.05, -1);
+    const early = renderCtx.getImageData(0, 0, 360, 900).data;
+    drawVideoScene(item, Number(item.sceneIndex) || 0, 0.5, -1);
+    const late = renderCtx.getImageData(0, 0, 360, 900).data;
+    let difference = 0;
+    for (let i = 0; i < early.length; i += 4) {
+      difference += Math.abs(early[i] - late[i]) + Math.abs(early[i + 1] - late[i + 1]) + Math.abs(early[i + 2] - late[i + 2]);
+    }
+    return difference;
+  });
+  assert.ok(transitionPixelDifference > 1000000, "The selected wipe transition must visibly composite the previous scene and reveal the next scene");
   const subtitlePixelDifference = await page.evaluate(() => {
     const item = timelineState.items[0];
     const sceneIndex = Number.isInteger(item.sceneIndex) ? item.sceneIndex : 0;
@@ -292,7 +308,7 @@ try {
   assert.ok(exported.duration >= 9 && exported.duration <= 12, "The exported video duration must match the edited ten-second timeline");
   assert.ok(exported.distinctFrameColors >= 8, "A decoded exported frame must contain actual visual content, not a blank or black canvas");
   assert.deepEqual(pageErrors, [], "The application must not throw uncaught browser errors during recovery, editing, synchronization, or export");
-  console.log("PASS: recovery, scene/timeline editing, audio/subtitle synchronization, and real Chromium portrait export with decodable metadata, visible frame content, and integrated narration.");
+  console.log("PASS: recovery, scene/timeline editing, rendered wipe transition, audio/subtitle synchronization, and real Chromium portrait export with decodable metadata, visible frame content, and integrated narration.");
 } finally {
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));
