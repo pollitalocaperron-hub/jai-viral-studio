@@ -70,8 +70,59 @@ try {
     caption: "Hola",
     deleted: true
   });
-  assert.deepEqual(pageErrors, [], "The application must not throw uncaught browser errors on startup");
-  console.log("PASS: blank startup, IndexedDB snapshot round-trip (including Blob audio), and snapshot deletion.");
+  const uiProject = {
+    id: "browser-test:ui",
+    snapshotKey: "project:browser-test:ui",
+    topic: "Proyecto recuperado desde interfaz",
+    date: "Prueba automatizada",
+    savedAt: 1730000000000,
+    notes: "Notas de prueba",
+    plan: "{\\"script\\":\\"Guion persistido\\"}",
+    data: {
+      category: "Educación",
+      angle: "Comprobación de recuperación",
+      research_brief: "Resumen persistido",
+      causal_chain: "Paso uno → paso dos",
+      concept_explanations: "Conceptos guardados",
+      fact_audit: "Auditoría pendiente",
+      hook: "Hook recuperado",
+      script: "Guion persistido",
+      story: [],
+      retention_map: [],
+      editorial_warnings: [],
+      verification: "Verificación guardada",
+      quality_check: "Calidad guardada"
+    }
+  };
+  await page.evaluate(async (project) => {
+    const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lV8AAAAASUVORK5CYII=";
+    await writeJaiRecoveryKey(project.snapshotKey, {
+      savedAt: project.savedAt,
+      topic: project.topic,
+      notes: project.notes,
+      plan: project.plan,
+      data: project.data,
+      retentionMap: [],
+      images: [{ src: png, sceneIndex: 0, shot: 0, time: 0 }],
+      audit: [],
+      timeline: [],
+      audio: new Blob([new Uint8Array([10, 20, 30, 40])], { type: "audio/wav" }),
+      audioDuration: 1,
+      audioSampleRate: 24000,
+      audioEdit: { trimStart: 0, trimEnd: 1, gain: 1 },
+      captions: [{ start: 0, end: 1, text: "Subtítulo restaurado" }]
+    });
+    localStorage.setItem("jaiProjects", JSON.stringify([project]));
+  }, uiProject);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Cargar" }).click();
+  await page.getByText("Proyecto completo recuperado", { exact: false }).waitFor({ timeout: 10000 });
+  assert.equal(await page.locator("#topic").inputValue(), uiProject.topic);
+  assert.equal(await page.locator("#script").innerText(), "Guion persistido");
+  assert.equal(await page.locator("#kokoroAudio").isVisible(), true);
+  assert.equal(await page.locator("#captionEditor").innerText().then(t => t.includes("Subtítulo restaurado")), true);
+  assert.deepEqual(pageErrors, [], "The application must not throw uncaught browser errors during recovery");
+  console.log("PASS: blank startup, IndexedDB Blob round-trip/deletion, and full saved-project recovery through the Cargar UI.");
 } finally {
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));
