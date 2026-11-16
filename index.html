@@ -32,6 +32,18 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 @keyframes jai-progress-move{0%{transform:translateX(-110%)}100%{transform:translateX(310%)}}
 .jai-progress-label{font-size:12px;color:#a9bdd4;margin:2px 0 4px}
 </style>
+<style>
+.jai-pipeline{display:grid;gap:9px;margin:12px 0 18px;padding:14px;border:1px solid #30435f;border-radius:14px;background:#0b1728}
+.jai-pipeline-row{display:grid;grid-template-columns:minmax(92px,125px) minmax(0,1fr);gap:10px;align-items:center}
+.jai-pipeline-name{font-size:12px;color:#d7e5f4;font-weight:650}
+.jai-pipeline-detail{font-size:11px;color:#9db2ca;margin-top:3px}
+.jai-pipeline-track{height:7px;border-radius:99px;background:#1b2b40;overflow:hidden}
+.jai-pipeline-fill{height:100%;width:0;background:linear-gradient(90deg,#34bfa6,#75e7c9);transition:width .25s ease}
+.jai-pipeline-row.running .jai-pipeline-fill{width:35%;animation:jai-progress-move 1.2s ease-in-out infinite}
+.jai-pipeline-row.done .jai-pipeline-fill{width:100%;background:#48c69d}
+.jai-pipeline-row.error .jai-pipeline-fill{background:#e5a35b}
+@media(max-width:560px){.jai-pipeline-row{grid-template-columns:1fr;gap:5px}}
+</style>
 </head>
 <body><div class="wrap">
 <header class="top"><div class="brand"><div class="logo">J</div><div><h1>J.A.I. Viral Studio</h1><div class="sub">Tu idea → una producción vertical</div></div></div><div class="pill">PROTOTIPO · DÍA 1</div></header>
@@ -42,6 +54,16 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <div class="grid"><div><label for="duration">Duración objetivo</label><select id="duration"><option>30–45 segundos</option><option>45–60 segundos</option><option>60–90 segundos</option></select></div><div><label for="platform">Destino principal</label><select id="platform"><option>Reels</option><option>YouTube Shorts</option><option>TikTok</option><option>Multiplataforma</option></select></div></div>
 <button class="primary" id="create">Crear plan de producción con IA</button><div class="hint status" id="status">Motor editorial Groq + Gemini · Narración neuronal · Fotogramas CGI · Exportación MP4/WebM según navegador.</div><div class="hint" id="memoryStatus">Memoria editorial: preparando historial de aprendizaje…</div></section>
 <section class="card output" id="output"><div class="row" style="justify-content:space-between"><h3 class="section-title">Plan de producción</h3><span class="tag">9:16 · 720 × 1280</span></div><div id="category" style="margin-bottom:10px"></div>
+<div class="jai-pipeline" id="pipelineProgress" aria-live="polite">
+ <div class="row" style="justify-content:space-between"><b>Progreso de producción</b><span class="tag" id="pipelineOverall">0 de 6 etapas</span></div>
+ <div class="jai-pipeline-row" data-pipeline="plan"><div><div class="jai-pipeline-name">01 · Investigación</div><div class="jai-pipeline-detail">Esperando tema</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
+ <div class="jai-pipeline-row" data-pipeline="visual"><div><div class="jai-pipeline-name">02 · Fotogramas</div><div class="jai-pipeline-detail">Esperando storyboard</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
+ <div class="jai-pipeline-row" data-pipeline="audit"><div><div class="jai-pipeline-name">03 · Revisión visual</div><div class="jai-pipeline-detail">Pendiente de imágenes</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
+ <div class="jai-pipeline-row" data-pipeline="voice"><div><div class="jai-pipeline-name">04 · Narración</div><div class="jai-pipeline-detail">Pendiente de guion</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
+ <div class="jai-pipeline-row" data-pipeline="timeline"><div><div class="jai-pipeline-name">05 · Montaje</div><div class="jai-pipeline-detail">Pendiente de escenas</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
+ <div class="jai-pipeline-row" data-pipeline="render"><div><div class="jai-pipeline-name">06 · Exportación</div><div class="jai-pipeline-detail">Pendiente de aprobación</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
+ <div class="jai-pipeline-detail" id="pipelineHint">Cada barra refleja el avance real; las tareas externas muestran actividad mientras responden.</div>
+</div>
 <label>Enfoque recomendado</label><div class="result" id="angle"></div><div style="height:13px"></div><label>Investigación y comprensión</label><div class="result" id="researchBrief"></div><div style="height:13px"></div><label>Fuentes académicas recuperadas</label><div class="result" id="researchSources">Las fuentes aparecerán si el buscador académico encuentra resultados pertinentes.</div><div style="height:13px"></div><label>Cadena de causa y efecto</label><div class="result" id="causalChain"></div><div style="height:13px"></div><label>Conceptos explicados</label><div class="result" id="conceptExplanations"></div><div style="height:13px"></div><label>Auditoría de afirmaciones</label><div class="result" id="factAudit"></div><div style="height:13px"></div><label>Hook inicial</label><div class="result" id="hook"></div><div style="height:13px"></div><label>Guion base</label><div class="result" id="script"></div><div style="height:13px"></div>
 <section class="card" id="voiceStudio" style="display:none" aria-hidden="true">
  <div class="row" style="justify-content:space-between"><h3 class="section-title">Estudio de voz</h3><span class="tag">Voz del dispositivo · Sin coste</span></div>
@@ -103,11 +125,21 @@ function setTaskProgress(statusId,percent,label,mode="determinate"){
  wrap.querySelector(".jai-progress-label").textContent=label||"";
  wrap.querySelector(".jai-progress-fill").style.width=value+"%";
 }
+const pipelineState={plan:{percent:0,label:"Esperando tema",status:"idle"},visual:{percent:0,label:"Esperando storyboard",status:"idle"},audit:{percent:0,label:"Pendiente de imágenes",status:"idle"},voice:{percent:0,label:"Pendiente de guion",status:"idle"},timeline:{percent:0,label:"Pendiente de escenas",status:"idle"},render:{percent:0,label:"Pendiente de aprobación",status:"idle"}};
+function setPipelineStage(key,percent,label,status){
+ const item=pipelineState[key];if(!item)return;
+ item.percent=Math.max(0,Math.min(100,Number(percent)||0));item.label=label||item.label;item.status=status||(item.percent>=100?"done":"running");
+ const row=document.querySelector('[data-pipeline="'+key+'"]');
+ if(row){row.classList.remove("running","done","error");if(item.status==="running")row.classList.add("running");if(item.status==="done")row.classList.add("done");if(item.status==="error")row.classList.add("error");row.querySelector(".jai-pipeline-fill").style.width=item.percent+"%";row.querySelector(".jai-pipeline-detail").textContent=item.label;}
+ const done=Object.values(pipelineState).filter(x=>x.status==="done").length;
+ $("pipelineOverall").textContent=done+" de 6 etapas"+(Object.values(pipelineState).some(x=>x.status==="running")?" · en proceso":"");
+}
 function updateRenderGate(){
  const ready=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
  $("renderVideo").disabled=!ready||renderRecording;
+ if(timelineState.items.length)setPipelineStage("timeline",100,"Línea de tiempo preparada · "+timelineState.items.length+" bloques","done");
  if(!ready&&!renderRecording){
-  const reason=!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!visualAuditPassed()?"audita los fotogramas o revísalos y pulsa «Aprobar todas manualmente»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":"faltan fotogramas";
+  const reason=!currentScenes.length?"genera primero un plan":!jaiSceneImages.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)?"genera los fotogramas que faltan":!visualAuditPassed()?"la revisión automática está pendiente o falló: revisa los fotogramas y pulsa «Aprobar todas manualmente»":!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":"faltan recursos";
   $("renderStatus").textContent="Exportación bloqueada: "+reason+".";
  }else if(ready)$("renderStatus").textContent="Todo listo para exportar. Pulsa «Renderizar y exportar video».";
 }
@@ -274,7 +306,7 @@ async function generateAIVisuals(){
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Primero genera el guion y storyboard.";return;}
  if(!timelineState.items.length)buildTimeline();
  const scenes=currentScenes,button=$("makeVisuals");
- visualGenerationRunning=true;$("create").disabled=true;button.disabled=true;$("renderVideo").disabled=true;
+ visualGenerationRunning=true;setPipelineStage("visual",0,"Preparando fotogramas…","running");$("create").disabled=true;button.disabled=true;$("renderVideo").disabled=true;
  if(jaiSceneImages.length!==scenes.length)jaiSceneImages=scenes.map((scene,index)=>jaiSceneImages[index]||null);
  renderVisualScenes();
  const style="Premium educational visual production frame, with a deliberate topic-specific visual language and a clear teaching purpose. Do NOT default to 3D or CGI. Select the simplest and most effective medium for the idea: 2D motion graphics, kinetic typography, clean diagrams, editorial illustration, maps, timelines, data visualization, compositing, photographic/cinematic imagery, procedural simulation, or 3D CGI only when spatial depth, physical structure, or a real three-dimensional process materially improves understanding. Prioritize clarity, visual proof, intentional composition and readable forms over spectacle. Keep one consistent art direction across related scenes.";
@@ -299,13 +331,13 @@ async function generateAIVisuals(){
    $("visualStatus").textContent="Generando escena "+(i+1)+" de "+scenes.length+" · "+generatedCount+" listas · "+subject.slice(0,75);setTaskProgress("visualStatus",Math.round(generatedCount/scenes.length*100),"Fotogramas listos: "+generatedCount+" de "+scenes.length);
    const generated=await requestVisualImage(prompt,i+1);
    jaiSceneImages[i]={...generated,shot:subject,time:scene.time,sceneIndex:i,prompt};
-   generatedCount++;renderVisualScenes();scheduleJaiAutosave();
+   generatedCount++;setPipelineStage("visual",Math.round(generatedCount/scenes.length*100),"Fotogramas generados: "+generatedCount+" de "+scenes.length,"running");renderVisualScenes();scheduleJaiAutosave();
   }
-  $("visualStatus").textContent="Producción visual lista: "+generatedCount+" escenas únicas. Se conservaron las imágenes de esta sesión.";setTaskProgress("visualStatus",100,"Producción visual completada");
+  setPipelineStage("visual",100,generatedCount+" de "+scenes.length+" fotogramas listos","done");$("visualStatus").textContent="Producción visual lista: "+generatedCount+" escenas únicas. Se conservaron las imágenes de esta sesión.";setTaskProgress("visualStatus",100,"Producción visual completada");
   $("inspectVisuals").disabled=!scenes.every((scene,index)=>jaiSceneImages[index]?.image);
   $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&scenes.every((scene,index)=>jaiSceneImages[index]?.image)&&visualAuditPassed());
  }catch(error){
-  $("visualStatus").textContent="Producción parcial: "+jaiSceneImages.filter(Boolean).length+" de "+scenes.length+" escenas listas. "+error.message+" Pulsa «Generar fotogramas» para reanudar; las imágenes terminadas no se repetirán.";
+  setPipelineStage("visual",Math.round(jaiSceneImages.filter(Boolean).length/scenes.length*100),"Producción parcial: "+jaiSceneImages.filter(Boolean).length+" de "+scenes.length+"; puedes reanudar","error");$("visualStatus").textContent="Producción parcial: "+jaiSceneImages.filter(Boolean).length+" de "+scenes.length+" escenas listas. "+error.message+" Pulsa «Generar fotogramas» para reanudar; las imágenes terminadas no se repetirán.";
   renderVisualScenes();
  }finally{
   visualGenerationRunning=false;$("create").disabled=false;button.disabled=false;
@@ -315,7 +347,7 @@ async function generateAIVisuals(){
 async function inspectVisuals(){
  if(planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualAuditStatus").textContent="Espera a que termine la tarea actual.";return;}
  if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){ $("visualAuditStatus").textContent="Primero genera todos los fotogramas.";return;}
- const button=$("inspectVisuals");button.disabled=true;$("makeVisuals").disabled=true;$("renderVideo").disabled=true;
+ const button=$("inspectVisuals");setPipelineStage("audit",0,"Comparando imágenes con la enseñanza…","running");button.disabled=true;$("makeVisuals").disabled=true;$("renderVideo").disabled=true;
  $("visualAuditStatus").textContent="Gemini está comparando cada fotograma con la explicación y la prueba visual de su escena…";setTaskProgress("visualAuditStatus",0,"Inspeccionando "+currentScenes.length+" escenas…","indeterminate");
  try{
   const images=currentScenes.map((scene,index)=>{
@@ -328,12 +360,12 @@ async function inspectVisuals(){
   const data=await readJsonResponse(response,"Inspector visual");
   if(!response.ok)throw new Error(data.error||"No se pudo completar la inspección visual.");
   if(!Array.isArray(data.results)||data.results.length!==currentScenes.length)throw new Error("El inspector no devolvió un resultado por cada escena.");
-  visualAuditResults=data.results;
+  visualAuditResults=data.results;setPipelineStage("audit",100,"Inspección terminada: "+data.results.filter(x=>x.status==="pass").length+" aprobadas","done");
   renderVisualScenes();
   $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)&&visualAuditPassed());
   const failed=visualAuditResults.filter(item=>item.status!=="pass").length;
   $("visualAuditStatus").textContent=failed===0?"Inspección completada: todas las escenas superaron la revisión visual. Revisa los detalles de cada tarjeta.": "Inspección completada: "+failed+" de "+visualAuditResults.length+" escenas necesitan revisión. Consulta las observaciones de cada tarjeta.";
- }catch(error){$("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Puedes revisar las imágenes manualmente; no se modificaron ni se descartaron.";setTaskProgress("visualAuditStatus",0,"Inspección fallida; las imágenes se conservaron");}
+ }catch(error){setPipelineStage("audit",0,"Inspección no disponible; requiere revisión manual","error");$("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Puedes revisar las imágenes manualmente; no se modificaron ni se descartaron.";setTaskProgress("visualAuditStatus",0,"Inspección fallida; las imágenes se conservaron");}
  finally{$("makeVisuals").disabled=false;button.disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));}
 }
 function approveAllVisualScenes(){
@@ -341,6 +373,7 @@ function approveAllVisualScenes(){
   $("visualAuditStatus").textContent="No se puede aprobar: primero deben estar generadas las imágenes de todas las escenas.";return;
  }
  visualAuditResults=currentScenes.map((scene,index)=>({scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar el fotograma.",issues:[],manual:true}));
+ setPipelineStage("audit",100,"Aprobación manual · "+currentScenes.length+" escenas revisadas","done");
  renderVisualScenes();
  $("visualAuditStatus").textContent="Las "+currentScenes.length+" escenas quedaron aprobadas manualmente. La exportación ya puede prepararse.";
  updateRenderGate();
@@ -825,7 +858,7 @@ async function renderVideo(){
  const mimeCandidates=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
  const mime=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
  if(!mime){$("renderStatus").textContent="Este navegador no admite grabación MP4 ni WebM desde el editor.";return;}
- renderRecording=true;$("renderVideo").disabled=true;$("approveAllVisuals").disabled=true;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
+ renderRecording=true;setPipelineStage("render",0,"Renderizando vídeo vertical…","running");$("renderVideo").disabled=true;$("approveAllVisuals").disabled=true;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
  let stream=null,audioBuffer=null,audioSource=null,audioStartOffset=0,recorder=null,animationId=null,finished=false;
  const cleanup=()=>{
   if(animationId!==null)cancelAnimationFrame(animationId);
@@ -891,7 +924,7 @@ async function renderVideo(){
    const sceneProgress=trimStart+blockProgress*(trimEnd-trimStart);
    const audioTiming=getAudioTrackTiming(timelineDuration),audioEditState=getAudioEdit();
    drawVideoScene(activeItem,sceneIndex,sceneProgress,audioBuffer?(audioEditState.trimStart+Math.max(0,elapsed-audioTiming.offset)*audioTiming.rate):elapsed);
-   $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";setTaskProgress("renderStatus",Math.min(100,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%");
+   $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";setTaskProgress("renderStatus",Math.min(100,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%");setPipelineStage("render",Math.min(99,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.round(elapsed/totalDuration*100)+"%","running");
    if(elapsed>=totalDuration){try{recorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
    animationId=requestAnimationFrame(draw);
   };
@@ -942,7 +975,7 @@ async function makePlan(){
  if(planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual antes de iniciar otro plan.";return;}
  planningInProgress=true;
  const topic=$("topic").value.trim(),notes=$("research").value.trim();if(!topic){planningInProgress=false;$("topic").focus();$("status").textContent="Primero escribe el tema del vídeo.";return;}
- $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";
+ $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";setPipelineStage("plan",5,"Analizando tema y preparando el plan…","running");
  try{
   const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,learning_memory:buildLearningMemoryContext()}),signal:AbortSignal.timeout(65000)});
   const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;throw failure;}
@@ -954,7 +987,7 @@ async function makePlan(){
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual · Medio elegido según el tema</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];visualAuditResults=[];$("inspectVisuals").disabled=true;$("visualAuditStatus").textContent="La inspección visual independiente estará disponible cuando todas las escenas tengan imagen.";$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma educativo por escena, con la representación apropiada al tema.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
-  rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan=[
+  setPipelineStage("plan",100,"Plan editorial y storyboard listos","done");rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan=[
    "J.A.I. VIRAL STUDIO",
    "Tema: "+topic,
    "Categoría: "+readable(data.category),
@@ -1004,7 +1037,7 @@ async function makePlan(){
   renderRetentionMap(normalizedRetention);
   currentPlan=currentPlan.replace(readable(data.retention_map),readable(normalizedRetention));
   $("output").classList.add("show");scheduleJaiAutosave();const durationOk=!!(data.duration_validation&&data.duration_validation.within_tolerance);$("status").textContent=durationOk?"¡Plan generado! Revisa las escenas, verificaciones y control de calidad antes de producir.":"Plan generado, pero la validación editorial detectó problemas de duración o cronología. Corrige el guion y los tiempos antes de producir."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
- }catch(error){const timedOut=error&&(error.name==="TimeoutError"||error.name==="AbortError");const networkFailure=error&&((error.name==="TypeError")||/failed to fetch|networkerror|load failed/i.test(error.message||""));$("status").textContent=timedOut?"La generación superó el tiempo de espera. El motor pudo quedar saturado; inténtalo una vez más.":networkFailure?"No se pudo conectar con el motor de generación de J.A.I. La solicitud no devolvió el guion. Recarga la página e inténtalo una vez más; si persiste, revisaremos el servicio de Vercel.":(error.message||"Ocurrió un error al generar el plan.");if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{planningInProgress=false;$("create").disabled=false;}
+ }catch(error){setPipelineStage("plan",0,"No se pudo completar el plan","error");const timedOut=error&&(error.name==="TimeoutError"||error.name==="AbortError");const networkFailure=error&&((error.name==="TypeError")||/failed to fetch|networkerror|load failed/i.test(error.message||""));$("status").textContent=timedOut?"La generación superó el tiempo de espera. El motor pudo quedar saturado; inténtalo una vez más.":networkFailure?"No se pudo conectar con el motor de generación de J.A.I. La solicitud no devolvió el guion. Recarga la página e inténtalo una vez más; si persiste, revisaremos el servicio de Vercel.":(error.message||"Ocurrió un error al generar el plan.");if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{planningInProgress=false;$("create").disabled=false;}
 }
 
 let kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioDuration=0,kokoroSampleRate=24000,kokoroSource=null,kokoroAudioContext=null;
@@ -1122,7 +1155,7 @@ $("generateNarration").addEventListener("click",async()=>{
  const text=cleanNarrationText($("script").textContent);
  if(!text||text==="Guion pendiente."){$("kokoroStatus").textContent="Primero genera el guion editorial.";return;}
  if(planningInProgress||renderRecording){$("kokoroStatus").textContent="Espera a que termine la tarea actual antes de generar otra narración.";return;}
- const button=$("generateNarration");narrationGenerating=true;button.disabled=true;$("downloadNarration").hidden=true;
+ const button=$("generateNarration");narrationGenerating=true;setPipelineStage("voice",0,"Generando voz neuronal…","running");button.disabled=true;$("downloadNarration").hidden=true;
  try{
   $("kokoroStatus").textContent="Conectando con Gemini y generando la narración en español…";setTaskProgress("kokoroStatus",0,"Generando voz neuronal…","indeterminate");
   const response=await fetch("/api/narrate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voice:$("kokoroVoice").value}),signal:AbortSignal.timeout(50000)});
@@ -1139,7 +1172,7 @@ $("generateNarration").addEventListener("click",async()=>{
   kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);
   $("kokoroAudio").src=kokoroAudioUrl;$("kokoroAudio").style.display="block";syncAudioEditControls();
   $("downloadNarration").href=kokoroAudioUrl;$("downloadNarration").hidden=false;scheduleJaiAutosave();
-  $("kokoroStatus").textContent="Narración lista: "+kokoroAudioDuration.toFixed(1)+" segundos. Ya puedes escucharla, descargarla e integrarla en el video final.";setTaskProgress("kokoroStatus",100,"Narración completada · "+kokoroAudioDuration.toFixed(1)+" s");
+  setPipelineStage("voice",100,"Narración lista · "+kokoroAudioDuration.toFixed(1)+" s","done");$("kokoroStatus").textContent="Narración lista: "+kokoroAudioDuration.toFixed(1)+" segundos. Ya puedes escucharla, descargarla e integrarla en el video final.";setTaskProgress("kokoroStatus",100,"Narración completada · "+kokoroAudioDuration.toFixed(1)+" s");
  }catch(error){$("kokoroStatus").textContent="No se pudo generar la voz: "+(error.message||"error desconocido");setTaskProgress("kokoroStatus",0,"Generación de voz fallida");}
  finally{narrationGenerating=false;button.disabled=false;}
 });
