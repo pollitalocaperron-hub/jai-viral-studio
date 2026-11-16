@@ -22,7 +22,7 @@ export default async function handler(req, res) {
   }
 
   const instructions = `Eres el inspector visual independiente de J.A.I. Evalúas imágenes de un vídeo educativo de CUALQUIER dominio: ciencias, historia, geografía, tecnología, arte, cultura, cocina, naturaleza, economía u otros.
-Compara CADA imagen con el sujeto, estado material, acción y prueba visual solicitados.
+Compara CADA imagen con el sujeto, estado material, acción y prueba visual solicitados. La coincidencia del tema es un requisito eliminatorio: si el tema pedido son tablas de cortar, una imagen de cohetes, maquinaria, anatomía, laboratorios o cualquier objeto no relacionado DEBE recibir status "revise", aunque sea bonita o tenga buena calidad técnica. No apruebes por estética cuando falla la identidad del sujeto.
 Criterios: (1) el sujeto principal es reconocible y coincide con el solicitado; (2) el estado y la acción física son visibles; (3) la imagen demuestra la idea de la escena, no solo la decora; (4) no hay objetos ajenos, composición confusa, nubes abstractas ni manchas luminosas sin forma; (5) la imagen tiene un sujeto claro y legible en encuadre vertical.
 Evalúa la representación según el dominio: acepta mapas, líneas temporales, ilustraciones históricas, diagramas, CGI, personajes, procesos naturales o gráficos cuando sean adecuados al contenido. No impongas estética científica ni fotorealismo si la representación elegida es didácticamente válida. No inventes errores que no puedas observar.
 Devuelve SOLO JSON con esta forma: {"results":[{"scene_index":0,"status":"pass"|"revise","score":0,"reason":"explicación breve en español","issues":["problema observable"]}]}.
