@@ -150,7 +150,7 @@ function updateRenderGate(){
  }else if(ready)$("renderStatus").textContent="Todo listo para exportar. Pulsa «Renderizar y exportar video».";
 }
 const JAI_AUTOSAVE_DB="jai-viral-studio-recovery",JAI_AUTOSAVE_STORE="sessions",JAI_AUTOSAVE_KEY="latest";
-let jaiAutosaveTimer=null,jaiAutosaveBusy=false,jaiAutosavePending=false;
+let jaiAutosaveTimer=null,jaiAutosaveBusy=false,jaiAutosavePending=false,projectRecoveryInProgress=false;
 function openJaiRecoveryDB(){return new Promise((resolve,reject)=>{if(!("indexedDB" in window)){reject(new Error("IndexedDB no disponible"));return;}const request=indexedDB.open(JAI_AUTOSAVE_DB,1);request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(JAI_AUTOSAVE_STORE))db.createObjectStore(JAI_AUTOSAVE_STORE);};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error("No se pudo abrir el almacenamiento local"));});}
 function jaiRecoverySnapshot(){if(!currentPlanData||!currentTopic)return null;return {savedAt:Date.now(),topic:currentTopic,notes:$("research").value,plan:currentPlan,data:currentPlanData,retentionMap:currentRetentionMap,images:jaiSceneImages.map(item=>item&&item.src?{src:item.src,shot:item.shot,time:item.time,sceneIndex:item.sceneIndex,prompt:item.prompt}:null),audit:visualAuditResults,timeline:timelineState.items.map(item=>({...item})),audio:kokoroAudioBlob,audioDuration:kokoroAudioDuration,audioSampleRate:kokoroSampleRate,audioEdit:{...audioEdit},audioTrackOffset,subtitleTrackOffset,captions:captionCues.map(cue=>({...cue}))};}
 async function writeJaiRecovery(){if(jaiAutosaveBusy){jaiAutosavePending=true;return;}const snapshot=jaiRecoverySnapshot();if(!snapshot)return;jaiAutosaveBusy=true;let db=null;try{db=await openJaiRecoveryDB();await new Promise((resolve,reject)=>{const tx=db.transaction(JAI_AUTOSAVE_STORE,"readwrite");tx.objectStore(JAI_AUTOSAVE_STORE).put(snapshot,JAI_AUTOSAVE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Guardado cancelado"));});const status=$("autosaveStatus");if(status)status.textContent="Recuperación automática guardada · "+new Date(snapshot.savedAt).toLocaleTimeString("es-MX");}catch(error){const status=$("autosaveStatus");if(status)status.textContent="No se pudo guardar automáticamente: "+(error?.name==="QuotaExceededError"?"almacenamiento del dispositivo lleno":error.message);}finally{if(db)db.close();jaiAutosaveBusy=false;if(jaiAutosavePending){jaiAutosavePending=false;writeJaiRecovery();}}}
@@ -184,16 +184,17 @@ async function writeJaiRecoveryKey(key,snapshot){
  finally{if(db)db.close();}
 }
 async function restoreJaiProjectRecord(project){
- if(planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual antes de cambiar de proyecto.";return;}
+ if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual antes de cambiar de proyecto.";return;}
  if(!project?.data){$("status").textContent="Este registro no contiene un plan completo.";return;}
- if(!project.snapshotKey){loadSavedProject(project);$("status").textContent="Proyecto antiguo restaurado: solo contiene el plan editorial. Los medios deben generarse de nuevo.";return;}
+ if(!project.snapshotKey){projectRecoveryInProgress=true;try{loadSavedProject(project,{recovery:true});$("status").textContent="Proyecto antiguo restaurado: solo contiene el plan editorial. Los medios deben generarse de nuevo.";}finally{projectRecoveryInProgress=false;}return;}
+ projectRecoveryInProgress=true;
  try{
   $("status").textContent="Recuperando proyecto completo y sus medios…";
   const stateAtRequest=currentPlanData;
   const snapshot=await readJaiRecovery(project.snapshotKey);
   if(!snapshot?.data)throw new Error("No se encontró la copia completa de este proyecto.");
   if(currentPlanData!==stateAtRequest||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="La sesión cambió mientras se recuperaba el proyecto; no se reemplazó el trabajo actual.";return;}
-  loadSavedProject(project);
+  loadSavedProject(project,{recovery:true});
   currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;
   if(Array.isArray(snapshot.images)){
    jaiSceneImages=snapshot.images.map(item=>{if(!item?.src)return null;const image=new Image();image.src=item.src;return {...item,image};});
@@ -215,6 +216,7 @@ async function restoreJaiProjectRecord(project){
   $("autosaveStatus").textContent="Proyecto completo recuperado · "+new Date(snapshot.savedAt||project.savedAt||Date.now()).toLocaleString("es-MX");
   $("status").textContent="Proyecto restaurado con "+(currentScenes.length-missingImages)+"/"+currentScenes.length+" fotogramas, "+(kokoroAudioBlob?"narración y ":"")+"línea de tiempo y subtítulos. "+(missingImages?"Faltan "+missingImages+" fotogramas por recuperar; vuelve a generarlos.":"Revisa la secuencia antes de exportar.");
  }catch(error){$("status").textContent="No se pudo recuperar el proyecto completo: "+(error?.message||"error de almacenamiento");}
+ finally{projectRecoveryInProgress=false;}
 }
 async function restoreJaiRecovery(){
  let db=null;
@@ -1486,12 +1488,13 @@ $("newProject").addEventListener("click",async()=>{
 $("copy").addEventListener("click",async()=>{if(!currentPlan)return;try{await navigator.clipboard.writeText(currentPlan);$("status").textContent="Plan copiado.";}catch(e){$("status").textContent="No se pudo copiar automáticamente. Selecciona el texto para copiarlo.";}});
 function getProjects(){try{const value=JSON.parse(localStorage.getItem("jaiProjects")||"[]");return Array.isArray(value)?value:[]}catch(e){return[]}}
 function escapeHtml(value){return String(value).replace(/[&<>"\']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[char]));}
-function loadSavedProject(project){
- if(planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){
+function loadSavedProject(project,options={}){
+ if((projectRecoveryInProgress&&!options.recovery)||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){
   $("status").textContent="No se puede cambiar de proyecto mientras J.A.I. está generando o exportando. Espera a que termine la tarea actual.";
   return;
  }
  if(!project||!project.data){$("status").textContent="Este registro antiguo no contiene un plan completo para restaurar.";return;}
+ if(jaiAutosaveTimer){clearTimeout(jaiAutosaveTimer);jaiAutosaveTimer=null;}
  const data=project.data;
  $("topic").value=String(project.topic||"");$("research").value=String(project.notes||"");
  currentTopic=String(project.topic||"");currentPlanData=data;currentPlan=String(project.plan||JSON.stringify(data,null,2));
