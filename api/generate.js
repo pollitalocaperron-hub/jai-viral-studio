@@ -109,7 +109,7 @@ async function generatePlanHandler(req, res) {
             temperature: 0.55,
             max_completion_tokens: 6000
           }),
-          signal: AbortSignal.timeout(13000)
+          signal: AbortSignal.timeout(22000)
         });
         const groqBody = await groqResponse.text();
         let groqData;
@@ -148,7 +148,7 @@ async function generatePlanHandler(req, res) {
       const geminiModel = "gemini-3.8-flash";
       let geminiResponse;
       try {
-        geminiResponse = await fetch(
+        const geminiRequest = () => fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`,
           {
             method: "POST",
@@ -164,9 +164,17 @@ async function generatePlanHandler(req, res) {
                 maxOutputTokens: 5500
               }
             }),
-            signal: AbortSignal.timeout(13000)
+            signal: AbortSignal.timeout(22000)
           }
         );
+        geminiResponse = await geminiRequest();
+        // HTTP 503 is usually temporary overload. Retry once, without creating
+        // an unbounded retry loop or exceeding the function's 60-second budget.
+        if (geminiResponse.status === 503) {
+          console.warn("[JAI][Gemini] HTTP 503 por alta demanda; se reintentará una vez.");
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          geminiResponse = await geminiRequest();
+        }
       } catch (error) {
         console.error("[JAI][Gemini] Falló también el respaldo:", error?.name || "Error", error?.message || "");
         return res.status(502).json({
