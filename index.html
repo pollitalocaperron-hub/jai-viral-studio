@@ -489,6 +489,7 @@ async function generateAIVisuals(){
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Primero genera el guion y storyboard.";return;}
  // El director de tomas forma parte de la producción, no es un paso opcional
  // que el usuario deba recordar ejecutar por separado.
+ let shotPlanCreatedForThisRun=false;
  if(!Array.isArray(currentShotPlan)||currentShotPlan.length===0){
   $("visualStatus").textContent="Falta la dirección de tomas. J.A.I. la está preparando antes de producir los fotogramas…";
   await designAnimationShots();
@@ -496,8 +497,11 @@ async function generateAIVisuals(){
    $("visualStatus").textContent="Producción detenida: el director gratuito no pudo validar las tomas. No se crearán fotogramas genéricos ni se marcará la animación como lista.";
    return;
   }
+  shotPlanCreatedForThisRun=true;
  }
- if(!timelineState.items.length)buildTimeline();
+ // Reconstruye los bloques para asociar cada instante a su toma dirigida,
+ // sin dejar una línea de tiempo anterior desconectada del nuevo plan.
+ if(shotPlanCreatedForThisRun||!timelineState.items.length)buildTimeline();
  const scenes=currentScenes,button=$("makeVisuals");
  visualGenerationRunning=true;setPipelineStage("visual",0,"Preparando fotogramas…","running");$("create").disabled=true;button.disabled=true;$("renderVideo").disabled=true;
  if(jaiSceneImages.length!==scenes.length)jaiSceneImages=scenes.map((scene,index)=>jaiSceneImages[index]||null);
