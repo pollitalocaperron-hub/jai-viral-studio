@@ -21,7 +21,8 @@ function mockResponse() {
     body: null,
     setHeader(name, value) { this.headers[name] = value; },
     status(code) { this.statusCode = code; return this; },
-    json(body) { this.body = body; return this; }
+    json(body) { this.body = body; return this; },
+    end() { this.ended = true; return this; }
   };
 }
 
@@ -84,6 +85,23 @@ function makeValidPlan() {
 try {
   process.env.GROQ_API_KEY = "test-groq-key";
   process.env.GEMINI_API_KEY = "test-gemini-key";
+
+  // GitHub Pages must be able to call the Vercel API through a strict origin allowlist.
+  {
+    const allowedOrigin = "https://pollitalocaperron-hub.github.io";
+    for (const handler of [generateHandler, narrateHandler, inspectVisualHandler]) {
+      const res = mockResponse();
+      await handler({ method: "OPTIONS", headers: { origin: allowedOrigin }, body: {} }, res);
+      assert.equal(res.statusCode, 204, "Allowed Pages preflight must complete without invoking the provider");
+      assert.equal(res.headers["Access-Control-Allow-Origin"], allowedOrigin);
+      assert.equal(res.headers["Access-Control-Allow-Methods"], "POST, OPTIONS");
+      assert.equal(res.headers["Access-Control-Allow-Headers"], "Content-Type");
+      assert.equal(res.ended, true);
+    }
+    const blocked = mockResponse();
+    await narrateHandler({ method: "OPTIONS", headers: { origin: "https://untrusted.example" }, body: {} }, blocked);
+    assert.equal(blocked.statusCode, 403, "Untrusted origins must not receive cross-origin API access");
+  }
 
   // The editorial endpoint must reject invalid methods and empty topics safely.
   {
