@@ -1219,7 +1219,8 @@ function syncAudioEditControls(){
  $("audioGain").value=String(Math.round(edit.gain*100));$("audioGainValue").textContent=Math.round(edit.gain*100)+"%";
  $("audioTrackOffset").value=String(Math.max(0,Number(audioTrackOffset)||0).toFixed(1));
  $("kokoroAudio").volume=Math.min(1,edit.gain);
- $("audioEditStatus").textContent="Fragmento: "+edit.trimStart.toFixed(1)+"–"+edit.trimEnd.toFixed(1)+" s ("+edit.duration.toFixed(1)+" s). El volumen superior a 100% se aplica al exportar.";
+ const timing=timelineState.items.length?getAudioTrackTiming(timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0)):null;
+ $("audioEditStatus").textContent="Fragmento: "+edit.trimStart.toFixed(1)+"–"+edit.trimEnd.toFixed(1)+" s ("+edit.duration.toFixed(1)+" s)."+(timing?" Velocidad sincronizada: "+timing.rate.toFixed(2)+"×"+(timing.rateAdjusted?" · limitada para evitar cambios extremos de tono":"")+".":"") +" El volumen superior a 100% se aplica al exportar.";
 }
 let captionCues=[];
 function makePcmWavBlob(base64,sampleRate){
