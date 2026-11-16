@@ -575,8 +575,8 @@ function seekTimelineAt(seconds){
  stopTimelinePreview("");
  timelineState.previewElapsed=target;timelineState.previewEnd=null;timelineState.previewStartedAt=performance.now();timelineState.previewPlaying=true;renderCanvas.style.display="block";
  if(kokoroAudioBlob){
-  const audio=$("kokoroAudio"),rate=kokoroAudioDuration/Math.max(.1,total);
-  audio.pause();audio.currentTime=Math.min(kokoroAudioDuration,target*rate);audio.playbackRate=Math.max(.25,Math.min(4,rate));
+  const audio=$("kokoroAudio"),edit=getAudioEdit(),rate=edit.duration/Math.max(.1,total);
+  audio.pause();audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+target*rate);audio.playbackRate=Math.max(.25,Math.min(4,rate));audio.volume=Math.min(1,edit.gain);
   audio.play().catch(()=>{$("timelineStatus").textContent="Reproducción visual iniciada; el navegador bloqueó el audio.";});
  }
  $("pausePreview").textContent="Pausar";$("pausePreview").disabled=false;$("stopPreview").disabled=false;runTimelinePreview();
@@ -823,8 +823,8 @@ async function renderVideo(){
    $("renderStatus").textContent="Vídeo renderizado correctamente ("+(blob.size/1048576).toFixed(1)+" MB), formato "+extension.toUpperCase()+(audioBuffer?" con narración integrada ("+audioBuffer.duration.toFixed(1)+" s).":" sin narración.")+(isMp4?"":" Este navegador exportó WebM porque no admite MP4 directo.");
   };
   const timelineDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
-  const totalDuration=Math.max(timelineDuration,audioBuffer?audioBuffer.duration:0);
-  const visualTimeScale=timelineDuration/Math.max(.1,totalDuration);
+  const totalDuration=timelineDuration;
+  const visualTimeScale=1;
   let startedAt=null;
   const draw=now=>{
    if(!renderRecording||finished)return;
@@ -899,7 +899,7 @@ async function makePlan(){
   const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,learning_memory:buildLearningMemoryContext()}),signal:AbortSignal.timeout(65000)});
   const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;throw failure;}
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
-  kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;captionCues=[];
+  kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;audioEdit={trimStart:0,trimEnd:0,gain:1};captionCues=[];syncAudioEditControls();
   $("kokoroAudio").pause();$("kokoroAudio").removeAttribute("src");$("kokoroAudio").style.display="none";
   $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("generateCaptions").disabled=true;
   $("captionStatus").textContent="Nuevo guion: genera la narración y J.A.I. preparará sus subtítulos automáticamente.";
@@ -1094,7 +1094,7 @@ $("generateNarration").addEventListener("click",async()=>{
 });
 $("audioTrimStart").addEventListener("change",()=>{audioEdit.trimStart=Number($("audioTrimStart").value)||0;if(audioEdit.trimEnd>0&&audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();});
 $("audioTrimEnd").addEventListener("change",()=>{audioEdit.trimEnd=Number($("audioTrimEnd").value)||kokoroAudioDuration;if(audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();});
-$("audioGain").addEventListener("input",()=>{audioEdit.gain=Number($("audioGain").value)/100;syncAudioEditControls();});
+$("audioGain").addEventListener("input",()=>{audioEdit.gain=Number($("audioGain").value)/100;syncAudioEditControls();renderMediaTracks();});
 $("stopKokoro").addEventListener("click",()=>{$("kokoroAudio").pause();if(kokoroSource){try{kokoroSource.stop();}catch(e){}kokoroSource=null;}});
 function cleanNarrationText(raw){
  return String(raw||"")
