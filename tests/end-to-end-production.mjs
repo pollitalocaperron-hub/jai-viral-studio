@@ -46,7 +46,7 @@ const plan = {
   clarification_required: false, clarification_question: null,
   category: "Educación", angle: "Explicación por etapas",
   hook: "Observa cómo cambia el proceso",
-  script: "Observa este proceso. " + Array.from({ length: 82 }, () => "Cada etapa explica una transformación observable y su consecuencia.").join(" "),
+  script: Array.from({ length: 84 }, () => "palabra").join(" "),
   research_brief: ["Resumen de investigación simulado para la prueba de integración."],
   research_sources: [], causal_chain: ["Inicio", "Transformación", "Resultado"],
   concept_explanations: [], fact_audit: [], story, retention_map,
