@@ -1562,6 +1562,7 @@ function renderProjects(){
  });
 }
 $("save").addEventListener("click",async()=>{
+ if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la producción o la recuperación antes de guardar el proyecto.";return;}
  const topic=currentTopic||$("topic").value.trim();
  if(!topic||!currentPlan||!currentPlanData){$("status").textContent="Primero genera un plan completo antes de guardarlo.";return;}
  const button=$("save");button.disabled=true;button.textContent="Guardando medios…";
