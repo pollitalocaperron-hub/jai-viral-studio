@@ -189,8 +189,10 @@ async function restoreJaiProjectRecord(project){
  if(!project.snapshotKey){loadSavedProject(project);$("status").textContent="Proyecto antiguo restaurado: solo contiene el plan editorial. Los medios deben generarse de nuevo.";return;}
  try{
   $("status").textContent="Recuperando proyecto completo y sus medios…";
+  const stateAtRequest=currentPlanData;
   const snapshot=await readJaiRecovery(project.snapshotKey);
   if(!snapshot?.data)throw new Error("No se encontró la copia completa de este proyecto.");
+  if(currentPlanData!==stateAtRequest||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="La sesión cambió mientras se recuperaba el proyecto; no se reemplazó el trabajo actual.";return;}
   loadSavedProject(project);
   currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;
   if(Array.isArray(snapshot.images)){
@@ -226,6 +228,7 @@ async function restoreJaiRecovery(){
    tx.onabort=()=>reject(tx.error||new Error("Lectura de recuperación cancelada"));
   });
   if(!snapshot?.data||!snapshot.topic){const status=$("autosaveStatus");if(status)status.textContent="No hay una sesión anterior que recuperar.";return;}
+  if(currentPlanData||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){const status=$("autosaveStatus");if(status)status.textContent="Hay un proyecto activo; se conservó sin reemplazarlo por la sesión anterior.";return;}
   loadSavedProject({topic:snapshot.topic,notes:snapshot.notes,plan:snapshot.plan,data:snapshot.data});
   currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;
   if(Array.isArray(snapshot.images)){
