@@ -428,7 +428,7 @@ async function generateAIVisuals(){
    const prompt=[style,"MANDATORY EXACT SUBJECT: "+subject+".","SHOW THIS SPECIFIC TEACHING MOMENT: "+proof+".","VISIBLE OBJECTS AND STATE: "+state+".","ACTION TO DEPICT: "+action+".","SETTING: "+environment+".","COMPOSITION: "+composition+".","VISUAL MEDIUM: "+medium+".","ART DIRECTION: use a visually rich but subject-accurate palette, clear hierarchy, legible forms and professional educational production quality; do not override the specified medium.","CONTINUITY: "+continuity+".",authored?"REFERENCE DESCRIPTION: "+authored:"","Portrait 9:16 composition. One coherent scene, one clear focal action, subject fills the frame. Do not substitute a different topic or introduce objects not listed. "+avoid].filter(Boolean).join(" ");
    $("visualStatus").textContent="Generando fotograma "+(i+1)+" de "+scenes.length+" · "+generatedCount+" terminados · esperando al servicio de imágenes";setTaskProgress("visualStatus",Math.round(generatedCount/scenes.length*100),"Generando "+(i+1)+"/"+scenes.length+" · "+generatedCount+" completados");setPipelineStage("visual",Math.round(generatedCount/scenes.length*100),"Generando fotograma "+(i+1)+" de "+scenes.length+" · servicio externo en curso","running");
    const generated=await requestVisualImage(prompt,i+1);
-   jaiSceneImages[i]={...generated,shot:subject,time:scene.time,sceneIndex:i,prompt};
+   jaiSceneImages[i]={...generated,shot:subject,time:scene.time,sceneIndex:i,prompt};scheduleJaiAutosave();
    generatedCount++;setPipelineStage("visual",Math.round(generatedCount/scenes.length*100),"Fotogramas generados: "+generatedCount+" de "+scenes.length,"running");renderVisualScenes();
   }
   setPipelineStage("visual",100,generatedCount+" de "+scenes.length+" fotogramas listos","done");$("visualStatus").textContent="Producción visual lista: "+generatedCount+" escenas únicas. Se conservaron las imágenes de esta sesión.";setTaskProgress("visualStatus",100,"Producción visual completada");
@@ -459,7 +459,7 @@ async function inspectVisuals(){
   if(!response.ok)throw new Error(data.error||"No se pudo completar la inspección visual.");
   if(!Array.isArray(data.results)||data.results.length!==currentScenes.length)throw new Error("El inspector no devolvió un resultado por cada escena.");
   if(!data.results.every((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)))throw new Error("El inspector devolvió resultados desordenados o asociados a otra escena; la aprobación se descartó.");
-  visualAuditResults=data.results;setPipelineStage("audit",100,"Inspección terminada: "+data.results.filter(x=>x.status==="pass").length+" aprobadas","done");
+  visualAuditResults=data.results;scheduleJaiAutosave();setPipelineStage("audit",100,"Inspección terminada: "+data.results.filter(x=>x.status==="pass").length+" aprobadas","done");
   renderVisualScenes();
   updateRenderGate();
   const failed=visualAuditResults.filter(item=>item.status!=="pass").length;
@@ -471,7 +471,7 @@ function approveAllVisualScenes(){
  if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){
   $("visualAuditStatus").textContent="No se puede aprobar: primero deben estar generadas las imágenes de todas las escenas.";return;
  }
- visualAuditResults=currentScenes.map((scene,index)=>({scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar el fotograma.",issues:[],manual:true}));
+ visualAuditResults=currentScenes.map((scene,index)=>({scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar el fotograma.",issues:[],manual:true}));scheduleJaiAutosave();
  setPipelineStage("audit",100,"Aprobación manual · "+currentScenes.length+" escenas revisadas","done");
  renderVisualScenes();
  $("visualAuditStatus").textContent="Las "+currentScenes.length+" escenas quedaron aprobadas manualmente. La exportación ya puede prepararse.";
@@ -481,7 +481,7 @@ $("approveAllVisuals").addEventListener("click",approveAllVisualScenes);
 function approveVisualScene(index){
  if(!Number.isInteger(index)||!currentScenes[index]||!jaiSceneImages[index]?.image)return;
  if(visualAuditResults.length!==currentScenes.length)visualAuditResults=Array.from({length:currentScenes.length},(_,i)=>visualAuditResults[i]||null);
- visualAuditResults[index]={scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar la imagen.",issues:[],manual:true};
+ visualAuditResults[index]={scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar la imagen.",issues:[],manual:true};scheduleJaiAutosave();
  renderVisualScenes();
  $("visualAuditStatus").textContent="Escena "+(index+1)+" aprobada manualmente. La exportación se habilitará cuando todas las escenas estén aprobadas por IA o manualmente.";
  updateRenderGate();
@@ -506,7 +506,7 @@ async function regenerateVisualScene(index){
   const prompt=[style,"VISUAL MEDIUM: "+medium+".","ANIMATION TECHNIQUE: "+technique+".",authored?"INITIAL FRAME: "+authored:"","EXACT SUBJECT: "+subject+".","VISIBLE STATE: "+state+".","PHYSICAL ACTION: "+action+".","ORDERED MOTION: "+sequence+".","CONTINUITY: "+continuity+".","ENVIRONMENT: "+environment+".","COMPOSITION: "+composition+".","Create one animation-ready frame that proves the scene's teaching point. Match the actual subject and do not impose a fixed aesthetic or visual template. "+avoid].filter(Boolean).join(" ");
   $("visualAuditStatus").textContent="Regenerando escena "+(index+1)+" con la representación y el movimiento propios del tema…";
   const generated=await requestVisualImage(prompt,index+1);
-  jaiSceneImages[index]={...generated,shot:subject,time:scene.time,sceneIndex:index,prompt};visualAuditResults[index]=null;renderVisualScenes();
+  jaiSceneImages[index]={...generated,shot:subject,time:scene.time,sceneIndex:index,prompt};visualAuditResults[index]=null;scheduleJaiAutosave();renderVisualScenes();
   $("visualAuditStatus").textContent="Escena "+(index+1)+" regenerada. Vuelve a auditar el conjunto antes de exportar.";
  }catch(error){$("visualAuditStatus").textContent="No se pudo regenerar la escena "+(index+1)+": "+error.message;}
  finally{visualGenerationRunning=false;button.disabled=false;$("inspectVisuals").disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((item,i)=>jaiSceneImages[i]?.image));}
@@ -929,7 +929,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  const driftY=Math.sin(eased*Math.PI+index*.55)*Math.min(22,h*.018);
  const dx=(w-dw)/2+driftX,dy=(h-dh)/2+driftY;
  ctx.drawImage(img,dx,dy,dw,dh);
- const previousIndex=Number.isInteger(item?.previousVisualIndex)?item.previousVisualIndex:index-1;
+ const previousIndex=item&&Object.prototype.hasOwnProperty.call(item,"previousVisualIndex")?(Number.isInteger(item.previousVisualIndex)?item.previousVisualIndex:-1):index-1;
  const transition=String(item?.transition||"fade"),transitionDuration=Math.max(.1,Math.min(1,Number(item?.transitionDuration)||.3)),transitionProgress=Math.max(0,Math.min(1,(p*Math.max(.1,Number(item?.seconds)||3))/transitionDuration));
  if(previousIndex>=0&&transition!=="cut"&&transitionProgress<1&&jaiSceneImages[previousIndex]?.image){
   const previous=getPortraitFrame(jaiSceneImages[previousIndex].image),prevScale=1.015;ctx.save();
@@ -1512,5 +1512,11 @@ $("save").addEventListener("click",()=>{
  catch(e){$("status").textContent="No se pudo guardar el proyecto completo. El almacenamiento del navegador puede estar lleno.";}
 });
 renderProjects();
+restoreJaiRecovery();
+["timelineTracks","captionEditor","audioEditPanel"].forEach(id=>{
+ const root=$(id);if(!root)return;
+ ["input","change","click"].forEach(type=>root.addEventListener(type,()=>scheduleJaiAutosave()));
+});
+["audioTrackOffset","subtitleTrackOffset"].forEach(id=>$(id).addEventListener("change",()=>scheduleJaiAutosave()));
 
 </script></body></html>
