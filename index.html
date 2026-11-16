@@ -401,13 +401,22 @@ function renderTimeline(){
   moveUp.addEventListener("click",()=>{const [moved]=timelineState.items.splice(index,1);timelineState.items.splice(index-1,0,moved);updateTimelineDurations();renderTimeline();$("timelineStatus").textContent="Bloque movido antes. Se conserva su imagen y su escena original; los tiempos se recalcularon.";});
   const moveDown=document.createElement("button");moveDown.type="button";moveDown.className="secondary";moveDown.textContent="↓";moveDown.title="Mover bloque después";moveDown.setAttribute("aria-label","Mover bloque "+(index+1)+" después");moveDown.disabled=index===timelineState.items.length-1;moveDown.style.padding="8px 12px";
   moveDown.addEventListener("click",()=>{const [moved]=timelineState.items.splice(index,1);timelineState.items.splice(index+1,0,moved);updateTimelineDurations();renderTimeline();$("timelineStatus").textContent="Bloque movido después. Se conserva su imagen y su escena original; los tiempos se recalcularon.";});
+  const trimLabel=document.createElement("span");trimLabel.textContent="Recorte de movimiento";trimLabel.style.cssText="font-size:12px;color:#a9bfd4;margin-left:4px";
+  const trimInLabel=document.createElement("label");trimInLabel.style.cssText="display:flex;align-items:center;gap:5px;font-size:12px;color:#a9bfd4";trimInLabel.textContent="Entrada %";
+  const trimIn=document.createElement("input");trimIn.type="number";trimIn.min="0";trimIn.max="95";trimIn.step="5";trimIn.value=String(Math.round((Number(item.trimStart)||0)*100));trimIn.style.width="68px";trimIn.setAttribute("aria-label","Entrada de movimiento del bloque "+(index+1));
+  const trimOutLabel=document.createElement("label");trimOutLabel.style.cssText="display:flex;align-items:center;gap:5px;font-size:12px;color:#a9bfd4";trimOutLabel.textContent="Salida %";
+  const trimOut=document.createElement("input");trimOut.type="number";trimOut.min="5";trimOut.max="100";trimOut.step="5";trimOut.value=String(Math.round((Number(item.trimEnd)||1)*100));trimOut.style.width="68px";trimOut.setAttribute("aria-label","Salida de movimiento del bloque "+(index+1));
+  const applyTrim=(changed)=>{let a=Math.max(0,Math.min(95,Number(trimIn.value)||0)),b=Math.max(5,Math.min(100,Number(trimOut.value)||100));if(b-a<5){if(changed==="in")a=Math.max(0,b-5);else b=Math.min(100,a+5);}item.trimStart=a/100;item.trimEnd=b/100;trimIn.value=String(a);trimOut.value=String(b);};
+  trimIn.addEventListener("change",()=>{applyTrim("in");$("timelineStatus").textContent="Entrada del movimiento ajustada. El bloque reproducirá una parte distinta de la animación de su escena.";});
+  trimOut.addEventListener("change",()=>{applyTrim("out");$("timelineStatus").textContent="Salida del movimiento ajustada. El bloque reproducirá una parte distinta de la animación de su escena.";});
   control.append(durationLabel,moveUp,moveDown);info.append(heading,desc,control);
+  const trimControls=document.createElement("div");trimControls.className="row";trimControls.style.cssText="align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap";trimControls.append(trimLabel,trimInLabel,trimIn,trimOutLabel,trimOut);info.appendChild(trimControls);
   const duration=document.createElement("span");duration.className="tag";duration.textContent=item.seconds+" s";
   row.append(info,duration);row.dataset.sceneIndex=String(index);root.appendChild(row);
  });
  const total=timelineState.items.reduce((sum,item)=>sum+item.seconds,0);
  const original=timelineState.mapDuration||0;
- $("timelineSummary").textContent=timelineState.items.length+" bloques editables · "+total+" segundos · "+(original?"mapa original "+original+" s · ":"")+"los cambios de duración se sincronizan al exportar.";
+ $("timelineSummary").textContent=timelineState.items.length+" bloques editables · "+total+" segundos · recorte de entrada/salida del movimiento por bloque · "+(original?"mapa original "+original+" s · ":"")+"orden y duración se sincronizan al exportar.";
  $("previewTimeline").disabled=!timelineState.items.length;
  $("renderVideo").disabled=!timelineState.items.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)||!currentDurationValidation?.within_tolerance||!visualAuditPassed();
 }
@@ -504,7 +513,10 @@ function buildTimeline(){
   const visualAction=!rawAction||usedActions.has(actionKey)?fallbackVisualAction(visualMode,scene,index):rawAction;
   usedActions.add(normalizeVisualText(visualAction));
   const title=(beat&&beat.on_screen_text)||scene.on_screen_text||fallbackVisualTitle(visualMode,scene,index);
-  return {...scene,visualIndex:sceneRange.index,time:Math.floor(start/60)+":"+String(start%60).padStart(2,"0")+" - "+Math.floor(end/60)+":"+String(end%60).padStart(2,"0"),seconds:end-start,sceneIndex:sceneRange.index,visualMode,segmentLabel:"BLOQUE "+(index+1)+" / "+count,on_screen_text:title,objective:scene.objective,visual:String(scene.visual||""),visualAction,retentionStimulus:beat?(beat.new_stimulus||visualAction):visualAction,narrativeAdvance:beat?(beat.narrative_advance||""): "La composición revela un detalle distinto del fenómeno.",curiosity:beat?(beat.curiosity||""):""};
+  const sceneDuration=Math.max(.001,sceneRange.end-sceneRange.start);
+  const trimStart=Math.max(0,Math.min(1,(start-sceneRange.start)/sceneDuration));
+  const trimEnd=Math.max(trimStart+.01,Math.min(1,(end-sceneRange.start)/sceneDuration));
+  return {...scene,visualIndex:sceneRange.index,time:Math.floor(start/60)+":"+String(start%60).padStart(2,"0")+" - "+Math.floor(end/60)+":"+String(end%60).padStart(2,"0"),seconds:end-start,sceneIndex:sceneRange.index,trimStart,trimEnd,visualMode,segmentLabel:"BLOQUE "+(index+1)+" / "+count,on_screen_text:title,objective:scene.objective,visual:String(scene.visual||""),visualAction,retentionStimulus:beat?(beat.new_stimulus||visualAction):visualAction,narrativeAdvance:beat?(beat.narrative_advance||""): "La composición revela un detalle distinto del fenómeno.",curiosity:beat?(beat.curiosity||""):""};
  });
  renderTimeline();
  const gap=Math.max(0,totalSeconds-mapEnd),overrun=Math.max(0,mapEnd-totalSeconds);
@@ -726,9 +738,9 @@ async function renderVideo(){
    }
    const activeItem=timelineState.items[blockIndex],sceneIndex=Number.isInteger(activeItem.sceneIndex)?activeItem.sceneIndex:0;
    activeItem.previousVisualIndex=blockIndex>0?Number(timelineState.items[blockIndex-1].visualIndex):null;
-   let sceneStart=0,sceneDuration=0;
-   timelineState.items.forEach((item,index)=>{if(item.sceneIndex===sceneIndex){if(index<blockIndex)sceneStart+=Math.max(.1,Number(item.seconds)||0);sceneDuration+=Math.max(.1,Number(item.seconds)||0);}});
-   const sceneProgress=Math.max(0,Math.min(1,(sceneStart+blockProgress*Math.max(.1,Number(activeItem.seconds)||0))/Math.max(.1,sceneDuration)));
+   const trimStart=Math.max(0,Math.min(1,Number(activeItem.trimStart)||0));
+   const trimEnd=Math.max(trimStart+.01,Math.min(1,Number.isFinite(Number(activeItem.trimEnd))?Number(activeItem.trimEnd):1));
+   const sceneProgress=trimStart+blockProgress*(trimEnd-trimStart);
    drawVideoScene(activeItem,sceneIndex,sceneProgress,elapsed);
    $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";
    if(elapsed>=totalDuration){try{recorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
