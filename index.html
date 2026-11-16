@@ -973,8 +973,23 @@ function renderCaptionEditor(){
   const endLabel=document.createElement("label");endLabel.textContent="Fin (s)";endLabel.appendChild(end);
   times.append(startLabel,endLabel);card.appendChild(times);
   const text=document.createElement("textarea");text.rows=2;text.value=cue.text;text.setAttribute("aria-label","Texto del subtítulo");text.addEventListener("input",()=>{cue.text=text.value;renderMediaTracks();});card.appendChild(text);
-  const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="Eliminar subtítulo";remove.addEventListener("click",()=>{captionCues.splice(index,1);renderCaptionEditor();renderMediaTracks();});
-  card.appendChild(remove);root.appendChild(card);
+  const actions=document.createElement("div");actions.className="row";actions.style.cssText="gap:8px;flex-wrap:wrap";
+  const split=document.createElement("button");split.type="button";split.className="secondary";split.textContent="Dividir subtítulo";split.disabled=String(cue.text||"").trim().split(/\\s+/).length<2||cue.end-cue.start<.3;
+  split.addEventListener("click",()=>{
+   const words=String(cue.text||"").trim().split(/\\s+/);if(words.length<2)return;
+   const cut=Math.ceil(words.length/2),ratio=cut/words.length,mid=cue.start+(cue.end-cue.start)*ratio;
+   const second={start:Number(mid.toFixed(2)),end:cue.end,text:words.slice(cut).join(" ")};
+   cue.end=second.start;cue.text=words.slice(0,cut).join(" ");captionCues.splice(index+1,0,second);
+   renderCaptionEditor();renderMediaTracks();$("downloadSrt").disabled=false;
+  });
+  const merge=document.createElement("button");merge.type="button";merge.className="secondary";merge.textContent="Unir con siguiente";merge.disabled=index===captionCues.length-1;
+  merge.addEventListener("click",()=>{
+   const next=captionCues[index+1];if(!next)return;
+   cue.end=Math.max(cue.end,next.end);cue.text=[String(cue.text||"").trim(),String(next.text||"").trim()].filter(Boolean).join(" ");
+   captionCues.splice(index+1,1);renderCaptionEditor();renderMediaTracks();$("downloadSrt").disabled=!captionCues.length;
+  });
+  const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="Eliminar subtítulo";remove.addEventListener("click",()=>{captionCues.splice(index,1);renderCaptionEditor();renderMediaTracks();$("downloadSrt").disabled=!captionCues.length;});
+  actions.append(split,merge,remove);card.appendChild(actions);root.appendChild(card);
  });
 }
 function buildEstimatedCaptionCues(raw,duration){
