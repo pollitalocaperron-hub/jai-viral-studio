@@ -73,7 +73,9 @@ export default async function handler(req, res) {
     "Tema: " + topic.trim()
   ].join("\n\n");
 
-  let output = "", provider = "";
+  let output = "", provider = "", groqFailure = null, geminiFailure = null;
+  // Cascada de proveedores: si Groq agota su cuota gratuita o no responde,
+  // se intenta Gemini. No se habilitan planes, compras ni proveedores de pago.
   if (process.env.GROQ_API_KEY) {
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -82,26 +84,61 @@ export default async function handler(req, res) {
         body: JSON.stringify({ model: "openai/gpt-oss-120b", messages: [{ role: "system", content: "Devuelve exclusivamente JSON válido." }, { role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.35, max_completion_tokens: 7000 }),
         signal: AbortSignal.timeout(18000)
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error?.message || "Groq HTTP " + response.status);
-      output = data.choices?.[0]?.message?.content || ""; provider = "Groq GPT-OSS 120B";
-    } catch (error) { console.warn("[JAI][Scene Director] Groq falló; se intenta Gemini:", error?.message || ""); }
+      const raw = await response.text();
+      let data;
+      try { data = JSON.parse(raw); } catch { throw new Error("Groq devolvió una respuesta ilegible (HTTP " + response.status + ")."); }
+      if (!response.ok) {
+        const error = new Error(data?.error?.message || "Groq HTTP " + response.status);
+        error.status = response.status;
+        throw error;
+      }
+      output = data.choices?.[0]?.message?.content || "";
+      if (!output) throw new Error("Groq respondió sin contenido.");
+      provider = "Groq GPT-OSS 120B";
+    } catch (error) {
+      groqFailure = { status: Number(error?.status || 0), message: String(error?.message || "Error de Groq").slice(0, 260) };
+      console.warn("[JAI][Scene Director] Groq no disponible; se activa el respaldo gratuito configurado:", groqFailure.message);
+    }
   }
   if (!output && process.env.GEMINI_API_KEY) {
     try {
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
+      const requestGemini = () => fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
         method: "POST",
         headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.35, maxOutputTokens: 7000 } }),
         signal: AbortSignal.timeout(18000)
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error?.message || "Gemini HTTP " + response.status);
-      output = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("") || ""; provider = "Gemini 3.8 Flash";
+      let response = await requestGemini();
+      // Un 503 suele ser saturación temporal; se permite un único reintento.
+      if (response.status === 503) {
+        await new Promise(resolve => setTimeout(resolve, 900));
+        response = await requestGemini();
+      }
+      const raw = await response.text();
+      let data;
+      try { data = JSON.parse(raw); } catch { throw new Error("Gemini devolvió una respuesta ilegible (HTTP " + response.status + ")."); }
+      if (!response.ok) {
+        const error = new Error(data?.error?.message || "Gemini HTTP " + response.status);
+        error.status = response.status;
+        throw error;
+      }
+      output = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("") || "";
+      if (!output) throw new Error("Gemini respondió sin contenido.");
+      provider = "Gemini 3.8 Flash";
     } catch (error) {
-      console.error("[JAI][Scene Director] Ambos proveedores no completaron la tarea:", error?.message || "");
-      return res.status(502).json({ error: "El director de escenas no pudo generar el plan. Inténtalo de nuevo.", diagnosticCode: "SCENE_DIRECTOR_FAILED" });
+      geminiFailure = { status: Number(error?.status || 0), message: String(error?.message || "Error de Gemini").slice(0, 260) };
+      console.error("[JAI][Scene Director] El respaldo gratuito tampoco está disponible:", geminiFailure.message);
     }
+  }
+  if (!output) {
+    const quotaLimited = [groqFailure, geminiFailure].some(item => item?.status === 429);
+    return res.status(quotaLimited ? 429 : 502).json({
+      error: quotaLimited
+        ? "Se agotó temporalmente la cuota gratuita de los motores editoriales disponibles. No se realizará ningún cobro; conserva tu proyecto y vuelve a intentarlo cuando se renueven las cuotas."
+        : "Los motores editoriales gratuitos configurados no pudieron completar el plan. No se activó ningún servicio de pago.",
+      diagnosticCode: quotaLimited ? "FREE_QUOTA_EXHAUSTED" : "SCENE_DIRECTOR_FAILED",
+      providerFailures: [groqFailure, geminiFailure].filter(Boolean)
+    });
   }
   let parsed;
   try { parsed = JSON.parse(output.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim()); }
