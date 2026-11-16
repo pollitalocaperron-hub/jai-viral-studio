@@ -25,7 +25,7 @@ async function generatePlanHandler(req, res) {
   // Investigación académica abierta mediante OpenAlex; no requiere clave ni tarjeta.
   async function fetchResearchSources(query) {
     try {
-      const url = "https://api.openalex.org/works?search=" + encodeURIComponent(query) + "&filter=type:article,from_publication_date:2000-01-01&sort=relevance_score:desc&per-page=6&select=id,doi,title,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count";
+      const url = "https://api.openalex.org/works?search=" + encodeURIComponent(query) + "&sort=relevance_score:desc&per-page=8&select=id,doi,title,type,publication_year,authorships,primary_location,abstract_inverted_index,cited_by_count";
       const response = await fetch(url, { signal: AbortSignal.timeout(2500), headers: { "Accept": "application/json" } });
       if (!response.ok) throw new Error("OpenAlex HTTP " + response.status);
       const body = await response.json();
@@ -37,7 +37,7 @@ async function generatePlanHandler(req, res) {
           abstract = words.filter(Boolean).join(" ").slice(0, 500);
         }
         const authors = (work.authorships || []).slice(0, 3).map(a => a.author && a.author.display_name).filter(Boolean).join(", ");
-        return { id: "S" + (index + 1), title: work.title || "Título no disponible", year: work.publication_year || null, authors, doi: work.doi || "", url: (work.primary_location && work.primary_location.landing_page_url) || work.doi || "", cited_by_count: work.cited_by_count || 0, abstract };
+        return { id: "S" + (index + 1), title: work.title || "Título no disponible", type: work.type || "tipo no indicado", year: work.publication_year || null, authors, source_name: work.primary_location?.source?.display_name || "", doi: work.doi || "", url: (work.primary_location && work.primary_location.landing_page_url) || work.doi || "", cited_by_count: work.cited_by_count || 0, abstract };
       }).filter(item => item.title && (item.url || item.abstract));
     } catch (error) { console.warn("[JAI][Research] OpenAlex no disponible:", error && error.message); return []; }
   }
