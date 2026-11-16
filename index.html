@@ -618,7 +618,7 @@ function updateTimelineDurations(){
 function renderMediaTracks(){
  const root=$("mediaTracks");if(!root)return;root.replaceChildren();
  const total=Math.max(0,timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0));
- const audioEditState=getAudioEdit(),audioDuration=kokoroAudioBlob?audioEditState.duration:0,span=Math.max(total,audioDuration,1);
+ const audioEditState=getAudioEdit(),audioDuration=kokoroAudioBlob?audioEditState.duration:0,span=Math.max(total,1);
  const addTrack=(name,clips,note)=>{
   const track=document.createElement("div");track.className="media-track";
   const label=document.createElement("div");label.className="media-track-name";label.textContent=name;
@@ -644,7 +644,7 @@ function renderMediaTracks(){
  addTrack("VÍDEO",videoClips,total?total+" s · "+timelineState.items.length+" bloques visuales":"Prepara la línea de tiempo");
  const audioTiming=getAudioTrackTiming(total),audioClips=audioDuration?[{start:audioTiming.offset,end:Math.min(total,audioTiming.offset+audioTiming.activeDuration),label:"NARRACIÓN · "+Math.round(audioEditState.gain*100)+"%",title:"Narración recortada · inicio "+audioTiming.offset.toFixed(1)+" s",kind:"audio"}]:[];
  addTrack("AUDIO",audioClips,audioDuration?"Gemini WAV · "+audioDuration.toFixed(1)+" s · "+(total&&Math.abs(audioDuration-total)>.15?"se ajusta a la duración visual":"duración alineada"):"Genera la narración para añadir la pista de audio");
- const subtitleClips=captionCues.map((cue,index)=>({start:Math.max(0,Number(cue.start)||0)+subtitleTrackOffset,end:Math.max(Number(cue.start)||0,Number(cue.end)||0)+subtitleTrackOffset,label:"S"+(index+1),title:String(cue.text||"Subtítulo")+" · "+Number(cue.start||0).toFixed(1)+"–"+Number(cue.end||0).toFixed(1)+" s",kind:"subtitle"})).filter(clip=>clip.end>clip.start&&clip.end>0);
+ const subtitleClips=captionCues.map((cue,index)=>({start:Math.max(0,(Number(cue.start)||0)+subtitleTrackOffset),end:Math.min(total,Math.max(0,(Number(cue.end)||0)+subtitleTrackOffset)),label:"S"+(index+1),title:String(cue.text||"Subtítulo")+" · "+Number(cue.start||0).toFixed(1)+"–"+Number(cue.end||0).toFixed(1)+" s",kind:"subtitle"})).filter(clip=>clip.end>clip.start&&clip.start<total);
  addTrack("SUBTÍTULOS",subtitleClips,subtitleClips.length?subtitleClips.length+" cues editables · tiempos estimados y ajustables":"Los subtítulos aparecerán al generar la narración");
 }
 function renderTimeline(){
