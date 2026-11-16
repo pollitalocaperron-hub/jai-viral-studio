@@ -370,6 +370,20 @@ function sceneSeconds(scene){
  if(match){const start=Number(match[1])*60+Number(match[2]);const end=Number(match[3])*60+Number(match[4]);if(end>start)return end-start;}
  return 6;
 }
+function formatTimelineTime(seconds){
+ const value=Math.max(0,Math.round(seconds));
+ return Math.floor(value/60)+":"+String(value%60).padStart(2,"0");
+}
+function updateTimelineDurations(){
+ let cursor=0;
+ timelineState.items.forEach(item=>{
+  const duration=Math.max(1,Math.min(6,Number(item.seconds)||3));
+  item.seconds=duration;
+  const start=cursor;cursor+=duration;
+  item.time=formatTimelineTime(start)+" - "+formatTimelineTime(cursor);
+ });
+ timelineState.storyDuration=cursor;
+}
 function renderTimeline(){
  const root=$("timelineTracks");root.replaceChildren();
  timelineState.items.forEach((item,index)=>{
@@ -377,14 +391,18 @@ function renderTimeline(){
   const info=document.createElement("div");
   const heading=document.createElement("h4");heading.textContent=String(index+1).padStart(2,"0")+" · "+(item.time||"Tiempo por definir");
   const desc=document.createElement("p");desc.textContent=String(item.on_screen_text||item.objective||item.visualAction||"Escena visual");
-  info.append(heading,desc);
+  const control=document.createElement("label");control.style.cssText="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:#a9bfd4";
+  control.textContent="Duración del bloque";
+  const select=document.createElement("select");select.setAttribute("aria-label","Duración del bloque "+(index+1));select.style.cssText="width:auto;min-width:84px;padding:7px";
+  for(let seconds=1;seconds<=6;seconds++){const option=document.createElement("option");option.value=String(seconds);option.textContent=seconds+" s";option.selected=Number(item.seconds)===seconds;select.appendChild(option);}
+  select.addEventListener("change",()=>{item.seconds=Number(select.value);updateTimelineDurations();renderTimeline();$("timelineStatus").textContent="Duración ajustada. Los tiempos posteriores se recalcularon y la narración se adaptará a la duración total al exportar.";});
+  control.appendChild(select);info.append(heading,desc,control);
   const duration=document.createElement("span");duration.className="tag";duration.textContent=item.seconds+" s";
   row.append(info,duration);row.dataset.sceneIndex=String(index);root.appendChild(row);
  });
  const total=timelineState.items.reduce((sum,item)=>sum+item.seconds,0);
- const story=timelineState.storyDuration||total,map=timelineState.mapDuration||0;
- const coverage=map===story?"storyboard y mapa coinciden":map<story?"mapa "+map+" s; "+(story-map)+" s completados":"mapa recortado al final del storyboard";
- $("timelineSummary").textContent=timelineState.items.length+" bloques · "+total+" segundos · storyboard "+story+" s · "+coverage+".";
+ const original=timelineState.mapDuration||0;
+ $("timelineSummary").textContent=timelineState.items.length+" bloques editables · "+total+" segundos · "+(original?"mapa original "+original+" s · ":"")+"los cambios de duración se sincronizan al exportar.";
  $("previewTimeline").disabled=!timelineState.items.length;
  $("renderVideo").disabled=!timelineState.items.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)||!currentDurationValidation?.within_tolerance||!visualAuditPassed();
 }
