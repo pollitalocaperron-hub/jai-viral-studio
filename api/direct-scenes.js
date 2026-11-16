@@ -1,4 +1,5 @@
 import { applyApiCors } from "../cors.js";
+import { enforceRequestBodyLimit } from "./request-guard.js";
 
 function parseRange(value) {
   const match = String(value || "").replace(/[–—]/g, "-").match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
@@ -75,6 +76,7 @@ export default async function handler(req, res) {
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Origen no autorizado." });
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Método no permitido." }); }
+  if (!enforceRequestBodyLimit(req, res, 320000)) return;
   const { topic, script, story, retention_map = [] } = req.body || {};
   if (typeof topic !== "string" || !topic.trim() || topic.length > 500 || typeof script !== "string" || !script.trim() || script.length > 8000) {
     return res.status(400).json({ error: "Se requiere un tema y una narración válidos." });

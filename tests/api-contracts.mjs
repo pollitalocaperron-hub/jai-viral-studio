@@ -4,6 +4,7 @@ import generateHandler from "../api/generate.js";
 import narrateHandler from "../api/narrate.js";
 import inspectVisualHandler from "../api/inspect-visual.js";
 import directScenesHandler from "../api/direct-scenes.js";
+import { enforceRequestBodyLimit } from "../api/request-guard.js";
 
 // Guard the worst-case provider + retry + repair path against Vercel's 60s function limit.
 const generationSource = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
@@ -93,6 +94,19 @@ function makeValidPlan() {
 }
 
 try {
+  // Request-size guard rejects oversized declared and parsed bodies before provider work.
+  {
+    const declared = mockResponse();
+    assert.equal(enforceRequestBodyLimit({ headers: { "content-length": "25000" }, body: {} }, declared, 24000), false);
+    assert.equal(declared.statusCode, 413);
+    assert.equal(declared.body.diagnosticCode, "REQUEST_TOO_LARGE");
+    const parsed = mockResponse();
+    assert.equal(enforceRequestBodyLimit({ headers: {}, body: { notes: "x".repeat(24001) } }, parsed, 24000), false);
+    assert.equal(parsed.statusCode, 413);
+    const accepted = mockResponse();
+    assert.equal(enforceRequestBodyLimit({ headers: {}, body: { topic: "Tema breve" } }, accepted, 24000), true);
+  }
+
   process.env.GROQ_API_KEY = "test-groq-key";
   process.env.GEMINI_API_KEY = "test-gemini-key";
 

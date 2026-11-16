@@ -1,4 +1,5 @@
 import { applyApiCors } from "../cors.js";
+import { enforceRequestBodyLimit } from "./request-guard.js";
 export default async function handler(req, res) {
   if (!applyApiCors(req, res)) {
     return res.status(403).json({ error: "Origen no autorizado." });
@@ -11,6 +12,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Método no permitido." });
   }
 
+  if (!enforceRequestBodyLimit(req, res, 3800000)) return;
   const key = process.env.GEMINI_API_KEY;
   if (!key) return res.status(503).json({ error: "El inspector necesita GEMINI_API_KEY; no se configuró ningún proveedor adicional." });
 

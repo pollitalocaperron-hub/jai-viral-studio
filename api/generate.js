@@ -1,4 +1,5 @@
 import { applyApiCors } from "../cors.js";
+import { enforceRequestBodyLimit } from "./request-guard.js";
 async function generatePlanHandler(req, res) {
   if (!applyApiCors(req, res)) {
     return res.status(403).json({ error: "Origen no autorizado." });
@@ -11,6 +12,7 @@ async function generatePlanHandler(req, res) {
     return res.status(405).json({ error: "Método no permitido." });
   }
 
+  if (!enforceRequestBodyLimit(req, res, 24000)) return;
   const { topic, notes = "", duration = "45–60 segundos", platform = "Reels", learning_memory = "" } = req.body || {};
   if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
     console.error("[JAI] No hay claves de proveedor configuradas.");

@@ -1,4 +1,5 @@
 import { applyApiCors } from "../cors.js";
+import { enforceRequestBodyLimit } from "./request-guard.js";
 
 function parseRivaPcm(bytes) {
   let data = bytes, sampleRate = 22000, channels = 1, bitsPerSample = 16, audioFormat = 1;
@@ -60,6 +61,7 @@ export default async function handler(req, res) {
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Origen no autorizado." });
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Método no permitido." }); }
+  if (!enforceRequestBodyLimit(req, res, 16000)) return;
   const { text, voice = "Kore" } = req.body || {};
   if (typeof text !== "string" || !text.trim() || text.length > 12000) return res.status(400).json({ error: "El guion debe tener entre 1 y 12,000 caracteres." });
   if (!new Set(["Kore", "Puck", "Charon"]).has(voice)) return res.status(400).json({ error: "La voz seleccionada no está disponible." });
