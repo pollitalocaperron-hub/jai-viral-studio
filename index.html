@@ -328,7 +328,7 @@ async function generateAIVisuals(){
    const motionSequence=Array.isArray(scene.motion_sequence)?scene.motion_sequence.map((step,n)=>"PHASE "+(n+1)+": "+visualText(typeof step==="string"?step:(step?.action||step?.description||JSON.stringify(step)),"").slice(0,220)).join(" | "):visualText(scene.motion_sequence,"").slice(0,650);
    const continuity=visualText(scene.continuity_anchor,"maintain consistent subject identity and scene logic").slice(0,300);
    const prompt=[style,"VISUAL MEDIUM: "+medium+".","ANIMATION TECHNIQUE: "+animationType+".",authored?"INITIAL FRAME DESCRIPTION: "+authored:"","EXACT SUBJECT: "+subject+".","VISIBLE STATE: "+state+".","SCENE ACTION: "+action+".","MOTION SEQUENCE: "+motionSequence+".","CONTINUITY: "+continuity+".","VISIBLE TEACHING PROOF: "+proof+".","ENVIRONMENT: "+environment+".","COMPOSITION: "+composition+".","Create one polished, animation-ready frame for a topic-specific educational explainer. Match the representation to the actual subject: do not add anatomy, characters, machinery, molecules, arrows or diagrams unless this topic requires them. Keep the main subject readable in a 9:16 portrait composition and leave caption-safe space. "+avoid].filter(Boolean).join(" ");
-   $("visualStatus").textContent="Generando escena "+(i+1)+" de "+scenes.length+" · "+generatedCount+" listas · "+subject.slice(0,75);setTaskProgress("visualStatus",Math.round(generatedCount/scenes.length*100),"Fotogramas listos: "+generatedCount+" de "+scenes.length);
+   $("visualStatus").textContent="Generando fotograma "+(i+1)+" de "+scenes.length+" · "+generatedCount+" terminados · esperando al servicio de imágenes";setTaskProgress("visualStatus",Math.round(generatedCount/scenes.length*100),"Generando "+(i+1)+"/"+scenes.length+" · "+generatedCount+" completados");setPipelineStage("visual",Math.round(generatedCount/scenes.length*100),"Generando fotograma "+(i+1)+" de "+scenes.length+" · servicio externo en curso","running");
    const generated=await requestVisualImage(prompt,i+1);
    jaiSceneImages[i]={...generated,shot:subject,time:scene.time,sceneIndex:i,prompt};
    generatedCount++;setPipelineStage("visual",Math.round(generatedCount/scenes.length*100),"Fotogramas generados: "+generatedCount+" de "+scenes.length,"running");renderVisualScenes();scheduleJaiAutosave();
@@ -859,7 +859,7 @@ async function renderVideo(){
  if(!window.MediaRecorder||typeof renderCanvas.captureStream!=="function"){$("renderStatus").textContent="Este navegador no permite grabar el lienzo. Prueba con Chrome actualizado.";return;}
  const mimeCandidates=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
  const mime=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
- if(!mime){$("renderStatus").textContent="Este navegador no admite grabación MP4 ni WebM desde el editor.";return;}
+ if(!mime){setPipelineStage("render",0,"Formato de vídeo no compatible con este navegador","error");$("renderStatus").textContent="Este navegador no admite grabación MP4 ni WebM desde el editor. Prueba Chrome actualizado.";return;}
  renderRecording=true;setPipelineStage("render",0,"Renderizando vídeo vertical…","running");$("renderVideo").disabled=true;$("approveAllVisuals").disabled=true;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
  let stream=null,audioBuffer=null,audioSource=null,audioStartOffset=0,recorder=null,animationId=null,finished=false;
  const cleanup=()=>{
@@ -873,6 +873,8 @@ async function renderVideo(){
  const fail=message=>{if(finished)return;finished=true;setPipelineStage("render",0,"Error: "+String(message).slice(0,110),"error");$("renderStatus").textContent=message;cleanup();};
  try{
   stream=renderCanvas.captureStream(30);
+  if(!stream||!stream.getVideoTracks().length)throw new Error("El navegador no pudo capturar la pista de vídeo del lienzo.");
+  if(renderCanvas.width!==720||renderCanvas.height!==1280)throw new Error("El lienzo de exportación no tiene la resolución vertical 720 × 1280.");
   if(kokoroAudioBlob){
    const AudioCtx=window.AudioContext||window.webkitAudioContext;
    if(!AudioCtx)throw new Error("Este navegador no permite preparar el audio de narración.");
@@ -897,10 +899,10 @@ async function renderVideo(){
    finished=true;
    const blob=new Blob(chunks,{type:mime});
    cleanup();
-   if(!blob.size){$("renderStatus").textContent="El navegador terminó la grabación sin generar datos. Prueba Chrome actualizado y mantén esta pestaña visible durante el render.";return;}
+   if(!blob.size){setPipelineStage("render",0,"El navegador no entregó datos de vídeo","error");$("renderStatus").textContent="El navegador terminó la grabación sin generar datos. No se creó un archivo descargable. Prueba Chrome actualizado, mantén esta pestaña visible y vuelve a renderizar.";return;}
    const previous=$("downloadVideo").dataset.objectUrl;if(previous)URL.revokeObjectURL(previous);
    const url=URL.createObjectURL(blob);$("downloadVideo").dataset.objectUrl=url;
-   const isMp4=mime.includes("mp4"),extension=isMp4?"mp4":"webm";
+   const actualMime=recorder?.mimeType||mime;const isMp4=actualMime.includes("mp4");const extension=isMp4?"mp4":"webm";
    $("downloadVideo").href=url;$("downloadVideo").download="jai-viral-studio."+extension;$("downloadVideo").textContent="Descargar video "+extension.toUpperCase();$("downloadVideo").hidden=false;
    $("renderStatus").textContent="Vídeo renderizado correctamente ("+(blob.size/1048576).toFixed(1)+" MB), formato "+extension.toUpperCase()+(audioBuffer?" con narración integrada ("+audioBuffer.duration.toFixed(1)+" s).":" sin narración.")+(isMp4?"":" Este navegador exportó WebM porque no admite MP4 directo.");setTaskProgress("renderStatus",100,"Exportación completada · "+extension.toUpperCase());setPipelineStage("render",100,"Vídeo listo · "+extension.toUpperCase()+" · "+(blob.size/1048576).toFixed(1)+" MB","done");
   };
@@ -909,6 +911,7 @@ async function renderVideo(){
   const visualTimeScale=1;
   let startedAt=null;
   const draw=now=>{
+   try{
    if(!renderRecording||finished)return;
    if(startedAt===null){startedAt=now;if(audioSource){const edit=getAudioEdit();audioSource.start(audioStartOffset,edit.trimStart,edit.duration);}}
    const elapsed=Math.max(0,(now-startedAt)/1000);
@@ -929,6 +932,7 @@ async function renderVideo(){
    $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";setTaskProgress("renderStatus",Math.min(100,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%");setPipelineStage("render",Math.min(99,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.round(elapsed/totalDuration*100)+"%","running");
    if(elapsed>=totalDuration){try{recorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
    animationId=requestAnimationFrame(draw);
+   }catch(error){fail("Falló la composición de un fotograma durante la exportación: "+(error?.message||"error desconocido")+". El render se detuvo para evitar un archivo dañado.");}
   };
   recorder.start(250);
   animationId=requestAnimationFrame(draw);
