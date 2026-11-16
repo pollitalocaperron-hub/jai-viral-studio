@@ -296,6 +296,37 @@ try {
     assert.match(res.body.error, /No se realizará ningún cobro/);
   }
 
+  // Animation actions must target an existing layer and use a valid time interval.
+  {
+    const story = makeValidPlan().story;
+    const shots = [];
+    story.forEach((scene, sceneIndex) => {
+      const start = sceneIndex * 9;
+      for (let part = 0; part < 2; part++) {
+        const shotStart = start + part * 4.5;
+        shots.push({
+          scene_index: sceneIndex, start_seconds: shotStart, end_seconds: shotStart + 4.5,
+          narration_segment: "La explicación describe esta acción concreta.",
+          subtitle: "Acción " + (part + 1), subject: "Componente mecánico identificable",
+          visual_state: "Estado inicial y cambio visible", visual_action: "El componente se desplaza de forma observable",
+          visual_prompt_en: "Clean educational 2D editorial illustration of the exact mechanical component in a coherent portrait composition, clear shapes, consistent palette, separated readable parts and a specific teaching action.",
+          continuity_anchor: "Same component geometry, color, scale and orientation across adjacent shots.",
+          layers: [{ id: "component", description: "Componente principal", role: "subject" }, { id: "housing", description: "Estructura contenedora", role: "environment" }],
+          animation_steps: [{ target_id: "missing-layer", action: "move", from_state: "lower", to_state: "upper", start_progress: 0, end_progress: 1 }, { target_id: "housing", action: "hold", from_state: "fixed", to_state: "fixed", start_progress: 0, end_progress: 1 }]
+        });
+      }
+    });
+    globalThis.fetch = async url => {
+      if (String(url).includes("api.groq.com")) return response({ choices: [{ message: { content: JSON.stringify({ shots }) } }] });
+      throw new Error("Unexpected provider in layer target validation test: " + url);
+    };
+    const res = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
+    assert.equal(res.statusCode, 502);
+    assert.equal(res.body.diagnosticCode, "SCENE_DIRECTOR_INVALID_SHOTS");
+    assert.match(res.body.error, /no apunta a una capa válida/);
+  }
+
   // Narration input and provider payload must be validated before returning PCM data.
   {
     const res = mockResponse();
