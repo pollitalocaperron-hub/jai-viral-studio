@@ -450,7 +450,7 @@ async function requestVisualImage(prompt,sceneNumber){
 async function generateAIVisuals(){
  if(currentPlanData?.clarification_required){$("visualStatus").textContent="Producción visual detenida: "+(currentPlanData.clarification_question||"primero aclara el enfoque del tema.");return;}
  const productionCheck=validateStoryboardForProduction();if(!productionCheck.ok){$("visualStatus").textContent="Producción visual bloqueada: "+productionCheck.reason;return;}
- if(planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualStatus").textContent="Espera a que termine la tarea actual antes de generar imágenes.";return;}
+ if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualStatus").textContent="Espera a que termine la tarea actual antes de generar imágenes o recuperar un proyecto.";return;}
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Primero genera el guion y storyboard.";return;}
  if(!timelineState.items.length)buildTimeline();
  const scenes=currentScenes,button=$("makeVisuals");
@@ -493,7 +493,7 @@ async function generateAIVisuals(){
  }
 }
 async function inspectVisuals(){
- if(planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualAuditStatus").textContent="Espera a que termine la tarea actual.";return;}
+ if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualAuditStatus").textContent="Espera a que termine la tarea actual o la recuperación del proyecto.";return;}
  if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){ $("visualAuditStatus").textContent="Primero genera todos los fotogramas.";return;}
  const button=$("inspectVisuals");setPipelineStage("audit",0,"Comparando imágenes con la enseñanza…","running");button.disabled=true;$("makeVisuals").disabled=true;$("renderVideo").disabled=true;
  $("visualAuditStatus").textContent="Gemini está comparando cada fotograma con la explicación y la prueba visual de su escena…";setTaskProgress("visualAuditStatus",0,"Inspeccionando "+currentScenes.length+" escenas…","indeterminate");
@@ -1022,7 +1022,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
 }
 async function renderVideo(){
  if(currentPlanData?.clarification_required){$("renderStatus").textContent="Exportación bloqueada: "+(currentPlanData.clarification_question||"primero aclara el enfoque del tema.");return;}
- if(planningInProgress||visualGenerationRunning||narrationGenerating){$("renderStatus").textContent="Espera a que terminen las tareas de producción antes de renderizar.";return;}
+ if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating){$("renderStatus").textContent="Espera a que termine la producción o la recuperación del proyecto antes de exportar.";return;}
  if(renderRecording)return;
  if(!timelineState.items.length){$("renderStatus").textContent="Prepara la línea de tiempo antes de exportar.";return;}
  if(!currentDurationValidation?.within_tolerance){$("renderStatus").textContent="Render bloqueado: corrige primero la duración y la cronología del plan editorial.";return;}
@@ -1186,7 +1186,7 @@ function continueWithClarification(answer){
 }
 $("clarificationSubmit").addEventListener("click",()=>{const answer=$("clarificationOther").value.trim();if(!answer){$("clarificationOther").focus();return;}continueWithClarification(answer);});
 async function makePlan(){
- if(planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual antes de iniciar otro plan.";return;}
+ if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual o la recuperación antes de iniciar otro plan.";return;}
  planningInProgress=true;
  const topic=$("topic").value.trim(),notes=$("research").value.trim();if(!topic){planningInProgress=false;$("topic").focus();$("status").textContent="Primero escribe el tema del vídeo.";return;}
  $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";setPipelineStage("plan",5,"Analizando tema y preparando el plan…","running");
@@ -1468,6 +1468,7 @@ setInterval(advanceTopicSuggestion,6500);
 $("topic").addEventListener("input",()=>{if($("topic").value.trim())$("status").textContent="Tema propio listo. J.A.I. trabajará sobre lo que escribiste.";});
 $("create").addEventListener("click",makePlan);
 $("newProject").addEventListener("click",async()=>{
+ if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual o la recuperación antes de iniciar otro proyecto.";return;}
  if(!window.confirm("¿Iniciar un proyecto nuevo? Se borrará la recuperación automática de la sesión actual. Los proyectos guardados manualmente no se eliminarán."))return;
  const button=$("newProject");button.disabled=true;button.textContent="Preparando…";
  try{
