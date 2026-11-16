@@ -475,7 +475,7 @@ async function designAnimationShots(){
    const actions=document.createElement("p");actions.textContent="Acciones: "+shot.animation_steps.map(step=>step.action+" ("+step.target_id+")").join(" → ");card.appendChild(actions);
    root.appendChild(card);
   });
-  $("directScenesStatus").textContent="Director completado: "+data.shot_count+" tomas animables derivadas de "+data.conceptual_scene_count+" escenas conceptuales. Proveedor: "+data.provider+". Cada toma ya tiene tramo de narración, elementos y acciones estructuradas; el siguiente paso es generar y segmentar sus recursos visuales.";
+  $("directScenesStatus").textContent="Dirección de tomas validada: "+data.shot_count+" tomas derivadas de "+data.conceptual_scene_count+" escenas conceptuales. Proveedor: "+data.provider+". Cada toma ya está vinculada a la narración, sus capas descritas y sus acciones; el motor de capas independientes sigue siendo una fase distinta.";
   setTaskProgress("directScenesStatus",100,"Plan de tomas validado · "+data.shot_count+" tomas");
   scheduleJaiAutosave();
  }catch(error){
