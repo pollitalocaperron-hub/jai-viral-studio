@@ -398,6 +398,7 @@ function validateStoryboardForProduction(){
   const required=["visual_subject","visual_state","visual_action","visual_composition","visual_environment","visual_prompt_en","visual_medium","animation_type","continuity_anchor","visual_proof","teaching_point"];
   const missing=required.filter(key=>typeof scene[key]!=="string"||!scene[key].trim()||/pendiente|por definir|scene 2|escena 2/i.test(scene[key]));
   if(missing.length)return {ok:false,reason:"La escena "+(i+1)+" está incompleta. Faltan datos visuales válidos: "+missing.join(", ")+"."};
+  if(!Array.isArray(scene.motion_sequence)||scene.motion_sequence.length<2||scene.motion_sequence.length>4)return {ok:false,reason:"La escena "+(i+1)+" necesita 2–4 pasos de animación concretos."};
   if(scene.visual_prompt_en.trim().split(/\s+/).length<35)return {ok:false,reason:"El prompt visual de la escena "+(i+1)+" no tiene detalle suficiente."};
  }
  const beats=Array.isArray(currentRetentionMap)?currentRetentionMap:[];
