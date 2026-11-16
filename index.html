@@ -1544,8 +1544,8 @@ function renderProjects(){
   });
   const deleteButton=document.createElement("button");deleteButton.type="button";deleteButton.className="secondary";deleteButton.textContent="Eliminar";
   deleteButton.addEventListener("click",()=>{
-   const latest=getProjects();latest.splice(index,1);
-   try{localStorage.setItem("jaiProjects",JSON.stringify(latest));renderProjects();$("status").textContent="Proyecto eliminado de este dispositivo.";}
+   const latest=getProjects();const removed=latest.splice(index,1)[0];
+   try{localStorage.setItem("jaiProjects",JSON.stringify(latest));if(removed?.snapshotKey)deleteJaiRecoveryKey(removed.snapshotKey).catch(error=>console.warn("[JAI] No se pudo borrar la copia multimedia:",error));renderProjects();$("status").textContent="Proyecto eliminado de este dispositivo.";}
    catch(e){$("status").textContent="No se pudo actualizar el almacenamiento.";}
   });
   actions.append(loadButton,copyButton,deleteButton);card.append(title,date,actions);root.appendChild(card);
