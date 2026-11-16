@@ -793,7 +793,7 @@ async function renderVideo(){
  const mime=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
  if(!mime){$("renderStatus").textContent="Este navegador no admite grabación MP4 ni WebM desde el editor.";return;}
  renderRecording=true;$("renderVideo").disabled=true;$("approveAllVisuals").disabled=true;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
- let stream=null,audioBuffer=null,audioSource=null,recorder=null,animationId=null,finished=false;
+ let stream=null,audioBuffer=null,audioSource=null,audioStartOffset=0,recorder=null,animationId=null,finished=false;
  const cleanup=()=>{
   if(animationId!==null)cancelAnimationFrame(animationId);
   if(audioSource){try{audioSource.stop();}catch{}}
@@ -816,7 +816,7 @@ async function renderVideo(){
    const destination=kokoroAudioContext.createMediaStreamDestination();
    audioSource=kokoroAudioContext.createBufferSource();audioSource.buffer=audioBuffer;
    const edit=getAudioEdit(),gainNode=kokoroAudioContext.createGain();
-   const timing=getAudioTrackTiming(timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0));audioSource.playbackRate.value=timing.rate;
+   const timing=getAudioTrackTiming(timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0));audioStartOffset=timing.offset;audioSource.playbackRate.value=timing.rate;
    gainNode.gain.value=edit.gain;audioSource.connect(gainNode);gainNode.connect(destination);
    destination.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
   }
@@ -842,7 +842,7 @@ async function renderVideo(){
   let startedAt=null;
   const draw=now=>{
    if(!renderRecording||finished)return;
-   if(startedAt===null){startedAt=now;if(audioSource){const edit=getAudioEdit();audioSource.start(timing.offset,edit.trimStart,edit.duration);}}
+   if(startedAt===null){startedAt=now;if(audioSource){const edit=getAudioEdit();audioSource.start(audioStartOffset,edit.trimStart,edit.duration);}}
    const elapsed=Math.max(0,(now-startedAt)/1000);
    const visualElapsed=Math.min(timelineDuration,elapsed*visualTimeScale);
    let cursor=0,blockIndex=timelineState.items.length-1,blockProgress=1;
