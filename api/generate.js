@@ -478,9 +478,12 @@ Return no other keys and no markdown.`;
     });
     // Las afirmaciones sin cita específica no son automáticamente falsas.
     // Se muestran como pendientes de documentación, pero no se bloquea el plan por coincidencias léxicas.
-    plan.editorial_warnings = (Array.isArray(plan.fact_audit) ? plan.fact_audit : [])
+    const unverifiedClaimWarnings = (Array.isArray(plan.fact_audit) ? plan.fact_audit : [])
       .filter(item => item.status === "no verificada")
       .map(item => ({ claim: item.claim, reason: "No se vinculó una fuente académica recuperada; requiere revisión antes de publicar como dato especializado." }));
+    const priorEditorialWarnings = Array.isArray(plan.editorial_warnings) ? plan.editorial_warnings : [];
+    plan.editorial_warnings = [...new Map([...priorEditorialWarnings, ...unverifiedClaimWarnings]
+      .map(item => [String(item.claim || "") + "|" + String(item.reason || ""), item])).values()];
     const spokenText = String(plan.script || "").replace(/\[[^\]]+\]/g, " ");
     const wordCount = (spokenText.match(/[a-záéíóúüñ0-9]+/gi) || []).length;
     const estimatedSeconds = Math.round(wordCount / 140 * 60);
