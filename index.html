@@ -698,6 +698,8 @@ function renderMediaTracks(){
  addTrack("SUBTÍTULOS",subtitleClips,subtitleClips.length?subtitleClips.length+" cues editables · tiempos estimados y ajustables":"Los subtítulos aparecerán al generar la narración");
 }
 function renderTimeline(){
+ // Mantén las transiciones ligadas al orden real de la pista, incluso después de reordenar tomas.
+ timelineState.items.forEach((item,index)=>{if(item.directedShot)item.previousDirectedShot=index>0?timelineState.items[index-1].directedShot||null:null;});
  const root=$("timelineTracks");root.replaceChildren();
  timelineState.items.forEach((item,index)=>{
   const row=document.createElement("div");row.className="scene";row.style.display="grid";row.style.gridTemplateColumns="minmax(0,1fr) auto";row.style.alignItems="center";row.style.gap="10px";

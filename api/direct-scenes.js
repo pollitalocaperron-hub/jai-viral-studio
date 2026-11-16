@@ -191,7 +191,7 @@ export default async function handler(req, res) {
       provider = "Gemini 3.8 Flash (respaldo por validación)";
     } catch (error) {
       console.warn("[JAI][Scene Director] Groq produjo un plan inválido y Gemini no pudo repararlo:", error?.message || "");
-      return res.status(502).json({ error: "El plan vectorial no superó la validación y el respaldo gratuito no pudo repararlo. No se exportará una animación incompleta.", diagnosticCode: "SCENE_DIRECTOR_INVALID_SHOTS" });
+      return res.status(502).json({ error: "El plan vectorial no superó la validación: " + validationError + ". El respaldo gratuito no pudo repararlo; no se exportará una animación incompleta.", diagnosticCode: "SCENE_DIRECTOR_INVALID_SHOTS" });
     }
   }
   if (!parsed) return res.status(502).json({ error: "El director de escenas no devolvió JSON válido.", diagnosticCode: "SCENE_DIRECTOR_INVALID_JSON" });
