@@ -67,14 +67,16 @@ Aprueba solo si la imagen comunica correctamente la escena. Si falta evidencia o
     const results = images.map((_, index) => {
       const result = parsed.results.find(item => Number(item.scene_index) === index) || {};
       const score = Math.max(0, Math.min(100, Math.round(Number(result.score) || 0)));
-      // Una etiqueta "pass" del modelo no basta: exigimos evidencia y una puntuación mínima.
-      const status = result.status === "pass" && score >= 70 ? "pass" : "revise";
+      const reason = String(result.reason || "").trim();
+      const issues = Array.isArray(result.issues) ? result.issues.slice(0, 5).map(issue => String(issue).slice(0, 180)) : [];
+      // Una etiqueta "pass" no basta: exigimos confianza alta, justificación y cero problemas reportados.
+      const status = result.status === "pass" && score >= 80 && reason.length >= 18 && issues.length === 0 ? "pass" : "revise";
       return {
         scene_index: index,
         status,
         score,
-        reason: String(result.reason || "No se pudo justificar la evaluación.").slice(0, 500),
-        issues: Array.isArray(result.issues) ? result.issues.slice(0, 5).map(issue => String(issue).slice(0, 180)) : []
+        reason: (reason || "No se pudo justificar la evaluación.").slice(0, 500),
+        issues
       };
     });
     return res.status(200).json({ results, model: "gemini-3.8-flash" });
