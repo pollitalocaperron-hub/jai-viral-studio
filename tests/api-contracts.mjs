@@ -243,6 +243,59 @@ try {
     assert.equal(res.body.shots[0].layers.length, 2);
   }
 
+  // A free-tier quota error from Groq must route the scene plan to the configured free Gemini fallback.
+  {
+    const story = makeValidPlan().story;
+    const shots = [];
+    story.forEach((scene, sceneIndex) => {
+      const start = sceneIndex * 9;
+      for (let part = 0; part < 2; part++) {
+        const shotStart = start + part * 4.5;
+        shots.push({
+          scene_index: sceneIndex, start_seconds: shotStart, end_seconds: shotStart + 4.5,
+          narration_segment: "La explicación describe esta acción concreta.",
+          subtitle: "Acción " + (part + 1), subject: "Componente mecánico identificable",
+          visual_state: "Estado inicial y cambio visible", visual_action: "El componente se desplaza de forma observable",
+          visual_prompt_en: "Clean educational 2D editorial illustration of the exact mechanical component in a coherent portrait composition, clear shapes, consistent palette, separated readable parts and a specific teaching action.",
+          continuity_anchor: "Same component geometry, color, scale and orientation across adjacent shots.",
+          layers: [{ id: "component", description: "Componente principal", role: "subject" }, { id: "housing", description: "Estructura contenedora", role: "environment" }],
+          animation_steps: [{ target_id: "component", action: "move", from_state: "lower", to_state: "upper", start_progress: 0, end_progress: 1 }, { target_id: "housing", action: "hold", from_state: "fixed", to_state: "fixed", start_progress: 0, end_progress: 1 }]
+        });
+      }
+    });
+    const calls = [];
+    globalThis.fetch = async (url) => {
+      calls.push(String(url));
+      if (String(url).includes("api.groq.com")) return response({ error: { message: "Free tier rate limit reached" } }, 429);
+      if (String(url).includes("generativelanguage.googleapis.com")) {
+        return response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ shots }) }] } }] });
+      }
+      throw new Error("Unexpected provider in free-tier failover test: " + url);
+    };
+    const res = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
+    assert.equal(res.statusCode, 200, "Gemini free fallback must complete the task after Groq quota exhaustion");
+    assert.equal(res.body.provider, "Gemini 3.8 Flash");
+    assert.equal(res.body.shot_count, 8);
+    assert.equal(calls.length, 2, "Only the primary and configured free fallback may be called");
+    assert.ok(calls[0].includes("api.groq.com"));
+    assert.ok(calls[1].includes("generativelanguage.googleapis.com"));
+  }
+
+  // If all configured free-tier providers are quota-limited, fail closed without paid-provider escalation.
+  {
+    globalThis.fetch = async url => {
+      if (String(url).includes("api.groq.com")) return response({ error: { message: "Rate limit reached" } }, 429);
+      if (String(url).includes("generativelanguage.googleapis.com")) return response({ error: { message: "Quota exceeded" } }, 429);
+      throw new Error("Unexpected paid or unknown provider call: " + url);
+    };
+    const res = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story: makeValidPlan().story, retention_map: [] } }, res);
+    assert.equal(res.statusCode, 429);
+    assert.equal(res.body.diagnosticCode, "FREE_QUOTA_EXHAUSTED");
+    assert.match(res.body.error, /No se realizará ningún cobro/);
+  }
+
   // Narration input and provider payload must be validated before returning PCM data.
   {
     const res = mockResponse();
