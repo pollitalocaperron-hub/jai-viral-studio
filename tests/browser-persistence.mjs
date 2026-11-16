@@ -210,6 +210,20 @@ try {
   await page.locator("#subtitleTrackOffset").fill("0.5");
   await page.locator("#subtitleTrackOffset").dispatchEvent("change");
   assert.equal(await page.locator("#subtitleTrackOffset").inputValue(), "0.5", "Subtitle offset must remain editable after recovery");
+  const subtitlePixelDifference = await page.evaluate(() => {
+    const item = timelineState.items[0];
+    const sceneIndex = Number.isInteger(item.sceneIndex) ? item.sceneIndex : 0;
+    drawVideoScene(item, sceneIndex, 0.5, 1.0);
+    const active = renderCtx.getImageData(220, 950, 280, 150).data;
+    drawVideoScene(item, sceneIndex, 0.5, 1.6);
+    const inactive = renderCtx.getImageData(220, 950, 280, 150).data;
+    let difference = 0;
+    for (let i = 0; i < active.length; i += 4) {
+      difference += Math.abs(active[i] - inactive[i]) + Math.abs(active[i + 1] - inactive[i + 1]) + Math.abs(active[i + 2] - inactive[i + 2]);
+    }
+    return difference;
+  });
+  assert.ok(subtitlePixelDifference > 100000, "Subtitle offset must place the caption visibly at the correct audio-relative moment in the rendered frame");
   assert.equal(await page.locator("#mediaTracks .media-clip.audio").count(), 1, "The edited narration must remain on its own track");
   assert.equal(await page.locator("#mediaTracks .media-clip.subtitle").count(), 1, "The edited subtitle cue must remain on its own track");
   const renderButton = page.locator("#renderVideo");
