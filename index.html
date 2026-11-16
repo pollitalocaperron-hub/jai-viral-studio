@@ -150,10 +150,10 @@ function updateRenderGate(){
  }else if(ready)$("renderStatus").textContent="Todo listo para exportar. Pulsa «Renderizar y exportar video».";
 }
 const JAI_AUTOSAVE_DB="jai-viral-studio-recovery",JAI_AUTOSAVE_STORE="sessions",JAI_AUTOSAVE_KEY="latest";
-let jaiAutosaveTimer=null,jaiAutosaveBusy=false,jaiAutosavePending=false,projectRecoveryInProgress=false;
+let jaiAutosaveTimer=null,jaiAutosaveBusy=false,jaiAutosavePending=false,projectRecoveryInProgress=false,jaiAutosaveRevision=0;
 function openJaiRecoveryDB(){return new Promise((resolve,reject)=>{if(!("indexedDB" in window)){reject(new Error("IndexedDB no disponible"));return;}const request=indexedDB.open(JAI_AUTOSAVE_DB,1);request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(JAI_AUTOSAVE_STORE))db.createObjectStore(JAI_AUTOSAVE_STORE);};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error("No se pudo abrir el almacenamiento local"));});}
 function jaiRecoverySnapshot(){if(!currentPlanData||!currentTopic)return null;return {savedAt:Date.now(),topic:currentTopic,notes:$("research").value,plan:currentPlan,data:currentPlanData,retentionMap:currentRetentionMap,images:jaiSceneImages.map(item=>item&&item.src?{src:item.src,shot:item.shot,time:item.time,sceneIndex:item.sceneIndex,prompt:item.prompt}:null),audit:visualAuditResults,timeline:timelineState.items.map(item=>({...item})),audio:kokoroAudioBlob,audioDuration:kokoroAudioDuration,audioSampleRate:kokoroSampleRate,audioEdit:{...audioEdit},audioTrackOffset,subtitleTrackOffset,captions:captionCues.map(cue=>({...cue}))};}
-async function writeJaiRecovery(){if(jaiAutosaveBusy){jaiAutosavePending=true;return;}const snapshot=jaiRecoverySnapshot();if(!snapshot)return;jaiAutosaveBusy=true;let db=null;try{db=await openJaiRecoveryDB();await new Promise((resolve,reject)=>{const tx=db.transaction(JAI_AUTOSAVE_STORE,"readwrite");tx.objectStore(JAI_AUTOSAVE_STORE).put(snapshot,JAI_AUTOSAVE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Guardado cancelado"));});const status=$("autosaveStatus");if(status)status.textContent="Recuperación automática guardada · "+new Date(snapshot.savedAt).toLocaleTimeString("es-MX");}catch(error){const status=$("autosaveStatus");if(status)status.textContent="No se pudo guardar automáticamente: "+(error?.name==="QuotaExceededError"?"almacenamiento del dispositivo lleno":error.message);}finally{if(db)db.close();jaiAutosaveBusy=false;if(jaiAutosavePending){jaiAutosavePending=false;writeJaiRecovery();}}}
+async function writeJaiRecovery(){if(jaiAutosaveBusy){jaiAutosavePending=true;return;}const snapshot=jaiRecoverySnapshot();if(!snapshot)return;const revision=jaiAutosaveRevision;jaiAutosaveBusy=true;let db=null;try{db=await openJaiRecoveryDB();if(revision!==jaiAutosaveRevision)return;await new Promise((resolve,reject)=>{const tx=db.transaction(JAI_AUTOSAVE_STORE,"readwrite");tx.objectStore(JAI_AUTOSAVE_STORE).put(snapshot,JAI_AUTOSAVE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Guardado cancelado"));});const status=$("autosaveStatus");if(status)status.textContent="Recuperación automática guardada · "+new Date(snapshot.savedAt).toLocaleTimeString("es-MX");}catch(error){const status=$("autosaveStatus");if(status)status.textContent="No se pudo guardar automáticamente: "+(error?.name==="QuotaExceededError"?"almacenamiento del dispositivo lleno":error.message);}finally{if(db)db.close();jaiAutosaveBusy=false;if(jaiAutosavePending){jaiAutosavePending=false;writeJaiRecovery();}}}
 function scheduleJaiAutosave(){if(!currentPlanData||!currentTopic)return;if(jaiAutosaveTimer)clearTimeout(jaiAutosaveTimer);const status=$("autosaveStatus");if(status)status.textContent="Guardando cambios de recuperación…";jaiAutosaveTimer=setTimeout(writeJaiRecovery,900);}
 function syncRecoveredPipeline(){
  const hasPlan=!!(currentPlanData&&currentScenes.length);
@@ -215,6 +215,7 @@ async function restoreJaiProjectRecord(project){
   const missingImages=currentScenes.filter((scene,index)=>!jaiSceneImages[index]?.image).length;
   $("autosaveStatus").textContent="Proyecto completo recuperado · "+new Date(snapshot.savedAt||project.savedAt||Date.now()).toLocaleString("es-MX");
   $("status").textContent="Proyecto restaurado con "+(currentScenes.length-missingImages)+"/"+currentScenes.length+" fotogramas, "+(kokoroAudioBlob?"narración y ":"")+"línea de tiempo y subtítulos. "+(missingImages?"Faltan "+missingImages+" fotogramas por recuperar; vuelve a generarlos.":"Revisa la secuencia antes de exportar.");
+   scheduleJaiAutosave();
  }catch(error){$("status").textContent="No se pudo recuperar el proyecto completo: "+(error?.message||"error de almacenamiento");}
  finally{projectRecoveryInProgress=false;}
 }
@@ -291,6 +292,7 @@ async function restoreJaiRecovery(){
   const status=$("autosaveStatus");
   if(status)status.textContent="Sesión recuperada automáticamente · "+new Date(snapshot.savedAt).toLocaleString("es-MX");
   $("status").textContent="J.A.I. recuperó tu último proyecto y los recursos guardados en este dispositivo. "+(missingImages?"Faltan "+missingImages+" fotogramas; vuelve a generarlos antes de exportar.":"Revisa el montaje antes de exportar.");
+   scheduleJaiAutosave();
  }catch(error){
   const status=$("autosaveStatus");
   if(status)status.textContent="La recuperación automática no está disponible en este navegador.";
@@ -1498,6 +1500,7 @@ function loadSavedProject(project,options={}){
   return;
  }
  if(!project||!project.data){$("status").textContent="Este registro antiguo no contiene un plan completo para restaurar.";return;}
+ jaiAutosaveRevision++;
  if(jaiAutosaveTimer){clearTimeout(jaiAutosaveTimer);jaiAutosaveTimer=null;}
  const data=project.data;
  $("topic").value=String(project.topic||"");$("research").value=String(project.notes||"");
@@ -1532,7 +1535,7 @@ function loadSavedProject(project,options={}){
  const normalizedRetention=timelineState.items.map(item=>({time:item.time,new_stimulus:item.retentionStimulus,narrative_advance:item.narrativeAdvance||item.visualAction,curiosity:item.curiosity,visual_action:item.visualAction,on_screen_text:item.on_screen_text}));
  renderRetentionMap(normalizedRetention);
  if(currentPlan){currentPlan=currentPlan.replace(readable(data.retention_map),readable(normalizedRetention));}
- $("output").classList.add("show");$("status").textContent="Proyecto restaurado. Puedes revisar el plan, regenerar la voz y crear de nuevo los fotogramas."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
+ $("output").classList.add("show");$("status").textContent="Proyecto restaurado. Puedes revisar el plan, regenerar la voz y crear de nuevo los fotogramas."; $("output").scrollIntoView({behavior:"smooth",block:"start"});scheduleJaiAutosave();
 }
 function renderProjects(){
  const root=$("projects");root.replaceChildren();const projects=getProjects();
