@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import generateHandler from "../api/generate.js";
 import narrateHandler from "../api/narrate.js";
 import inspectVisualHandler from "../api/inspect-visual.js";
+
+// Guard the worst-case provider + retry + repair path against Vercel's 60s function limit.
+const generationSource = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
+const generationTimeouts = [...generationSource.matchAll(/AbortSignal\\.timeout\\((\\d+)\\)/g)].map(match => Number(match[1]));
+assert.deepEqual(generationTimeouts, [2500, 12000, 12000, 6000, 6000], "Generation provider and repair timeouts must remain explicitly bounded.");
+const worstCaseGenerationMs = 2500 + 12000 + (12000 * 2) + 1000 + (6000 * 2);
+assert.ok(worstCaseGenerationMs < 60000, "Worst-case generation path must leave headroom inside Vercel's 60s limit.");
 
 const originalFetch = globalThis.fetch;
 const originalGroqKey = process.env.GROQ_API_KEY;
