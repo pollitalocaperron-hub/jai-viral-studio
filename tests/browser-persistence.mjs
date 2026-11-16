@@ -161,7 +161,7 @@ try {
   const durationControl = page.locator('#timelineTracks select[aria-label="Duración del bloque 1"]');
   await durationControl.selectOption("1");
   assert.equal(await durationControl.inputValue(), "1", "Timeline duration must remain editable after recovery");
-  assert.match(await page.locator("#timelineTracks .scene h4").first().innerText(), /00:00 - 00:01/, "Changing duration must recalculate subsequent timeline timecodes");
+  assert.match(await page.locator("#timelineTracks .scene h4").first().innerText(), /0:00 - 0:01/, "Changing duration must recalculate subsequent timeline timecodes");
   const initialAudioClip = page.locator("#mediaTracks .media-clip.audio");
   assert.equal(await initialAudioClip.count(), 1);
   assert.ok(parseFloat(await initialAudioClip.evaluate(node => node.style.width)) > 99, "The audio clip must occupy the full visual timeline after time-stretching, not use its unadjusted source duration");
