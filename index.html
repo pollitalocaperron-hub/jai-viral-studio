@@ -626,8 +626,8 @@ function resumeTimelinePreview(){
  const total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
  if(timelineState.previewElapsed>=(timelineState.previewEnd??total)){previewTimeline(0);return;}
  if(kokoroAudioBlob){
-  const audio=$("kokoroAudio"),rate=kokoroAudioDuration/Math.max(.1,total);
-  const edit=getAudioEdit();audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+timelineState.previewElapsed*rate);
+  const audio=$("kokoroAudio"),edit=getAudioEdit(),rate=edit.duration/Math.max(.1,total);
+  audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+timelineState.previewElapsed*rate);
   audio.playbackRate=Math.max(.25,Math.min(4,edit.duration/Math.max(.1,total)));audio.volume=Math.min(1,edit.gain);
   audio.play().catch(()=>{$("timelineStatus").textContent="Vista previa visual activa; el navegador bloqueó el audio.";});
  }
