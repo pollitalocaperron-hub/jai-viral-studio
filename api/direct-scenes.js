@@ -190,8 +190,21 @@ export default async function handler(req, res) {
       validationError = parsed ? validateShots(parsed?.shots, story) : "Gemini no devolvió JSON válido.";
       provider = "Gemini 3.8 Flash (respaldo por validación)";
     } catch (error) {
-      console.warn("[JAI][Scene Director] Groq produjo un plan inválido y Gemini no pudo repararlo:", error?.message || "");
-      return res.status(502).json({ error: "El plan vectorial no superó la validación: " + validationError + ". El respaldo gratuito no pudo repararlo; no se exportará una animación incompleta.", diagnosticCode: "SCENE_DIRECTOR_INVALID_SHOTS" });
+      const fallbackStatus = Number(error?.status || 0);
+      const fallbackMessage = String(error?.message || "Error del respaldo Gemini").slice(0, 240);
+      console.warn("[JAI][Scene Director] Groq produjo un plan inválido y Gemini no pudo repararlo:", fallbackMessage);
+      if (fallbackStatus === 429) {
+        return res.status(429).json({
+          error: "El plan de Groq necesitaba reparación y el motor gratuito Gemini alcanzó su cuota temporal. No se realizará ningún cobro; conserva tu proyecto y vuelve a intentarlo cuando se renueve la cuota.",
+          diagnosticCode: "FREE_QUOTA_EXHAUSTED",
+          providerFailures: [groqFailure, { status: fallbackStatus, message: fallbackMessage }].filter(Boolean)
+        });
+      }
+      return res.status(502).json({
+        error: "El plan vectorial no superó la validación: " + validationError + ". El respaldo gratuito no pudo repararlo; no se exportará una animación incompleta.",
+        diagnosticCode: "SCENE_DIRECTOR_FALLBACK_FAILED",
+        providerFailures: [groqFailure, { status: fallbackStatus, message: fallbackMessage }].filter(Boolean)
+      });
     }
   }
   if (!parsed) return res.status(502).json({ error: "El director de escenas no devolvió JSON válido.", diagnosticCode: "SCENE_DIRECTOR_INVALID_JSON" });

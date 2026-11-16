@@ -328,6 +328,24 @@ try {
     assert.match(res.body.error, /no apunta a una capa válida/);
   }
 
+  // If Groq's shot plan is invalid and Gemini repair is quota-limited, report the real free-quota failure.
+  {
+    const story = makeValidPlan().story;
+    const calls = [];
+    globalThis.fetch = async (url) => {
+      calls.push(String(url));
+      if (String(url).includes("api.groq.com")) return response({ choices: [{ message: { content: JSON.stringify({ shots: [{ scene_index: 0 }] }) } }] });
+      if (String(url).includes("generativelanguage.googleapis.com")) return response({ error: { message: "Free quota exhausted during repair" } }, 429);
+      throw new Error("Unexpected provider in scene repair quota test: " + url);
+    };
+    const res = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
+    assert.equal(res.statusCode, 429);
+    assert.equal(res.body.diagnosticCode, "FREE_QUOTA_EXHAUSTED");
+    assert.match(res.body.error, /No se realizará ningún cobro/);
+    assert.equal(calls.length, 2, "Only Groq and the configured free Gemini repair fallback may be called");
+  }
+
   // Narration input and provider payload must be validated before returning PCM data.
   {
     const res = mockResponse();
