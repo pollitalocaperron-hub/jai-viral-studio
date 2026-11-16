@@ -229,6 +229,11 @@ try {
   const renderButton = page.locator("#renderVideo");
   assert.equal(await renderButton.isEnabled(), true, "A complete, audited project with valid images and decodable narration must unlock export");
   await renderButton.click();
+  assert.equal(await durationControl.isDisabled(), true, "Timeline edits must be locked while a render is in progress");
+  assert.equal(await page.locator("#audioGain").isDisabled(), true, "Narration edits must be locked while a render is in progress");
+  assert.equal(await page.locator('#captionEditor textarea[aria-label="Texto del subtítulo"]').isDisabled(), true, "Subtitle edits must be locked while a render is in progress");
+  assert.equal(await page.locator("#makeVisuals").isDisabled(), true, "Visual regeneration must be locked while a render is in progress");
+  assert.equal(await page.locator("#cancelRender").isEnabled(), true, "The user must retain the ability to cancel a render");
   await page.waitForFunction(() => {
     const status = document.querySelector("#renderStatus")?.textContent || "";
     return status.includes("Vídeo renderizado correctamente") || status.startsWith("Falló") || status.includes("Error:") || status.includes("Render bloqueado");
@@ -236,6 +241,9 @@ try {
   const renderStatus = await page.locator("#renderStatus").innerText();
   assert.match(renderStatus, /Vídeo renderizado correctamente/, "Chromium must produce a completed video export, not merely enable the render button");
   assert.match(renderStatus, /con narración integrada/, "The completed export must report that narration was muxed into the video");
+  assert.equal(await durationControl.isDisabled(), false, "Timeline editing must be restored after rendering");
+  assert.equal(await page.locator("#audioGain").isDisabled(), false, "Narration editing must be restored after rendering");
+  assert.equal(await page.locator('#captionEditor textarea[aria-label="Texto del subtítulo"]').isDisabled(), false, "Subtitle editing must be restored after rendering");
   const download = page.locator("#downloadVideo");
   assert.equal(await download.isVisible(), true, "A completed render must expose its downloadable file");
   const exported = await page.evaluate(async () => {
