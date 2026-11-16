@@ -307,8 +307,16 @@ try {
   assert.equal(exported.height, 1280, "The exported video must be portrait 9:16");
   assert.ok(exported.duration >= 9 && exported.duration <= 12, "The exported video duration must match the edited ten-second timeline");
   assert.ok(exported.distinctFrameColors >= 8, "A decoded exported frame must contain actual visual content, not a blank or black canvas");
-  assert.deepEqual(pageErrors, [], "The application must not throw uncaught browser errors during recovery, editing, synchronization, or export");
-  console.log("PASS: recovery, scene/timeline editing, rendered wipe transition, audio/subtitle synchronization, and real Chromium portrait export with decodable metadata, visible frame content, and integrated narration.");
+  await page.evaluate(() => buildTimeline());
+  assert.equal(await page.locator("#timelineTracks .scene").count(), 12, "A 36-second storyboard with twelve three-second beats must build twelve timeline blocks, not a truncated three-second clip");
+  const rebuiltTimeline = await page.evaluate(() => ({
+    total: timelineState.items.reduce((sum, item) => sum + Number(item.seconds || 0), 0),
+    sceneAssignments: timelineState.items.map(item => item.visualIndex)
+  }));
+  assert.equal(rebuiltTimeline.total, 36, "The rebuilt timeline must preserve the full storyboard duration");
+  assert.deepEqual(rebuiltTimeline.sceneAssignments, [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3], "Every conceptual scene must contribute all of its corresponding rhythm beats");
+  assert.deepEqual(pageErrors, [], "The application must not throw uncaught browser errors during recovery, editing, synchronization, export, or timeline rebuilding");
+  console.log("PASS: API-independent Chromium recovery, full storyboard-to-timeline construction, scene editing, wipe transition, audio/subtitle synchronization, and real portrait video export.");
 } finally {
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));
