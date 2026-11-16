@@ -27,7 +27,23 @@ function validateShots(shots, story) {
     for (const key of required) if (!clean(shot[key], key === "visual_prompt_en" ? 1800 : 700)) return "La toma " + (index + 1) + " no incluye " + key + ".";
     if (clean(shot.visual_prompt_en, 1800).split(/\s+/).length < 25) return "El prompt de la toma " + (index + 1) + " necesita describir un fotograma concreto con mayor precisión.";
     if (!Array.isArray(shot.layers) || shot.layers.length < 2 || shot.layers.length > 10) return "La toma " + (index + 1) + " necesita entre 2 y 10 elementos visuales identificables.";
+    const layerIds = new Set();
+    for (const [layerIndex, layer] of shot.layers.entries()) {
+      const id = clean(layer?.id, 60);
+      if (!/^[a-zA-Z0-9_-]{1,60}$/.test(id) || layerIds.has(id) || !clean(layer?.description, 260) || !clean(layer?.role, 120)) {
+        return "La capa " + (layerIndex + 1) + " de la toma " + (index + 1) + " tiene un identificador duplicado o datos incompletos.";
+      }
+      layerIds.add(id);
+    }
     if (!Array.isArray(shot.animation_steps) || shot.animation_steps.length < 2 || shot.animation_steps.length > 6) return "La toma " + (index + 1) + " necesita entre 2 y 6 acciones de animación.";
+    for (const [stepIndex, step] of shot.animation_steps.entries()) {
+      const target = clean(step?.target_id, 60);
+      const action = clean(step?.action, 180);
+      const from = Number(step?.start_progress), to = Number(step?.end_progress);
+      if (!layerIds.has(target) || !action || !Number.isFinite(from) || !Number.isFinite(to) || from < 0 || to > 1 || to <= from) {
+        return "La acción " + (stepIndex + 1) + " de la toma " + (index + 1) + " no apunta a una capa válida o tiene una progresión temporal incorrecta.";
+      }
+    }
     const list = byScene.get(sceneIndex) || [];
     list.push({ start, end }); byScene.set(sceneIndex, list);
   }
