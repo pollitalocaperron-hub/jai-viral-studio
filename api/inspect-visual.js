@@ -66,11 +66,13 @@ Aprueba solo si la imagen comunica correctamente la escena. Si falta evidencia o
     if (!Array.isArray(parsed.results)) return res.status(502).json({ error: "El informe visual está incompleto." });
     const results = images.map((_, index) => {
       const result = parsed.results.find(item => Number(item.scene_index) === index) || {};
-      const status = result.status === "pass" ? "pass" : "revise";
+      const score = Math.max(0, Math.min(100, Math.round(Number(result.score) || 0)));
+      // Una etiqueta "pass" del modelo no basta: exigimos evidencia y una puntuación mínima.
+      const status = result.status === "pass" && score >= 70 ? "pass" : "revise";
       return {
         scene_index: index,
         status,
-        score: Math.max(0, Math.min(100, Math.round(Number(result.score) || 0))),
+        score,
         reason: String(result.reason || "No se pudo justificar la evaluación.").slice(0, 500),
         issues: Array.isArray(result.issues) ? result.issues.slice(0, 5).map(issue => String(issue).slice(0, 180)) : []
       };
