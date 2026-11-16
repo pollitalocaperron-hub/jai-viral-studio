@@ -219,6 +219,8 @@ async function restoreJaiProjectRecord(project){
  finally{projectRecoveryInProgress=false;}
 }
 async function restoreJaiRecovery(){
+ if(projectRecoveryInProgress)return;
+ projectRecoveryInProgress=true;
  let db=null;
  try{
   db=await openJaiRecoveryDB();
@@ -231,7 +233,7 @@ async function restoreJaiRecovery(){
   });
   if(!snapshot?.data||!snapshot.topic){const status=$("autosaveStatus");if(status)status.textContent="No hay una sesión anterior que recuperar.";return;}
   if(currentPlanData||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){const status=$("autosaveStatus");if(status)status.textContent="Hay un proyecto activo; se conservó sin reemplazarlo por la sesión anterior.";return;}
-  loadSavedProject({topic:snapshot.topic,notes:snapshot.notes,plan:snapshot.plan,data:snapshot.data});
+  loadSavedProject({topic:snapshot.topic,notes:snapshot.notes,plan:snapshot.plan,data:snapshot.data},{recovery:true});
   currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;
   if(Array.isArray(snapshot.images)){
    jaiSceneImages=snapshot.images.map(item=>{
@@ -295,6 +297,7 @@ async function restoreJaiRecovery(){
   console.error("[JAI] Falló la recuperación automática:",error);
  }finally{
   if(db)db.close();
+  projectRecoveryInProgress=false;
  }
 }
 
