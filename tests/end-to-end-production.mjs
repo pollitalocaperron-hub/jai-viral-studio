@@ -136,35 +136,9 @@ try {
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("http://127.0.0.1:4174/", { waitUntil: "domcontentloaded" });
   await page.locator("#topic").fill("Cómo se transforma el chocolate al calentarse");
-  await page.evaluate(() => {
-    const realNow = Date.now.bind(Date);
-    window.__jaiRealNow = realNow;
-    window.__jaiImageClockOffset = 0;
-    Date.now = () => realNow() + window.__jaiImageClockOffset;
-  });
-  const pngBase64 = await page.evaluate(() => {
-    const canvas = document.createElement("canvas"); canvas.width = 640; canvas.height = 640;
-    const ctx = canvas.getContext("2d");
-    const gradient = ctx.createLinearGradient(0, 0, 640, 640);
-    gradient.addColorStop(0, "#12304a"); gradient.addColorStop(.5, "#d18a36"); gradient.addColorStop(1, "#2879a0");
-    ctx.fillStyle = gradient; ctx.fillRect(0, 0, 640, 640);
-    for (let i = 0; i < 8; i++) { ctx.fillStyle = "hsl(" + (i * 43) + ",75%,55%)"; ctx.beginPath(); ctx.arc(80 + i * 65, 320, 24 + i * 3, 0, Math.PI * 2); ctx.fill(); }
-    return canvas.toDataURL("image/png").split(",")[1];
-  });
   await page.route("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations", async route => {
-    const request = route.request();
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "http://127.0.0.1:4174",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type"
-    };
-    if (request.method() === "OPTIONS") {
-      await route.fulfill({ status: 204, headers: corsHeaders });
-      return;
-    }
     counters.images++;
-    await page.evaluate(() => { window.__jaiImageClockOffset += 36000; });
-    await route.fulfill({ status: 200, contentType: "application/json", headers: corsHeaders, body: JSON.stringify({ data: [{ b64_json: pngBase64 }] }) });
+    await route.abort("blockedbyclient");
   });
 
   await page.locator("#create").click();
@@ -178,9 +152,8 @@ try {
   assert.equal(counters.directScenes, 1, "Visual production must automatically request and validate the directed shot plan");
   assert.equal(await page.locator("#timelineTracks .scene").count(), 8, "The editable timeline must use the eight directed shots, not repeat four conceptual stills.");
   assert.ok((await page.locator("#timelineTracks").innerText()).includes("SHOT-01"), "Directed shot IDs must be carried into the editable timeline");
-  assert.equal(counters.images, 4, "The visual director must request one unique image for every conceptual scene");
-  assert.equal(await page.locator("#visualScenes img").count(), 4, "All generated image frames must be decoded and displayed");
-  await page.evaluate(() => { if (window.__jaiRealNow) Date.now = window.__jaiRealNow; });
+  assert.equal(counters.images, 0, "The vector illustration pipeline must not call external image-generation APIs or consume image credits");
+  assert.equal(await page.locator("#visualScenes img").count(), 4, "All AI-generated vector illustrations must be rasterized and displayed");
 
   await page.locator("#generateNarration").click();
   await page.waitForFunction(() => (document.querySelector("#kokoroStatus")?.textContent || "").includes("Narración lista"), null, { timeout: 20000 });
