@@ -120,7 +120,7 @@ try {
   assert.equal(await page.locator("#topic").inputValue(), uiProject.topic);
   assert.equal(await page.locator("#script").innerText(), "Guion persistido");
   assert.equal(await page.locator("#kokoroAudio").isVisible(), true);
-  assert.equal(await page.locator("#captionEditor").innerText().then(t => t.includes("Subtítulo restaurado")), true);
+  assert.equal(await page.locator('#captionEditor textarea[aria-label="Texto del subtítulo"]').inputValue(), "Subtítulo restaurado", "Recovered subtitle text must be restored into its editable control");
   assert.deepEqual(pageErrors, [], "The application must not throw uncaught browser errors during recovery");
   console.log("PASS: blank startup, IndexedDB Blob round-trip/deletion, and full saved-project recovery through the Cargar UI.");
 } finally {
