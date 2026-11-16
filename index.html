@@ -117,7 +117,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <footer>J.A.I. Viral Studio · Memoria editorial acumulativa · Exportación MP4 nativa cuando el navegador la admite; WebM de respaldo.</footer></div>
 
 <script>
-const $=id=>document.getElementById(id);let currentPlan="",currentPlanData=null,currentRetentionMap=[],currentTopic="";
+const JAI_API_BASE=location.hostname==="pollitalocaperron-hub.github.io"?"https://jai-viral-studio.vercel.app":"";function jaiApiUrl(path){return JAI_API_BASE+path;}const $=id=>document.getElementById(id);let currentPlan="",currentPlanData=null,currentRetentionMap=[],currentTopic="";
 function setTaskProgress(statusId,percent,label,mode="determinate"){
  const status=$(statusId);if(!status)return;
  let wrap=document.getElementById(statusId+"Progress");
@@ -509,7 +509,7 @@ async function inspectVisuals(){
    canvas.getContext("2d").drawImage(image,0,0,canvas.width,canvas.height);
    return {scene_index:index,subject:visualText(scene.visual_subject||scene.visual||scene.objective,"").slice(0,220),state:visualText(scene.visual_state,"").slice(0,220),action:visualText(scene.visual_action||scene.animation,"").slice(0,220),proof:visualText(scene.visual_proof||scene.teaching_point,"").slice(0,220),image_base64:canvas.toDataURL("image/jpeg",0.76).split(",")[1]};
   });
-  const response=await fetch("/api/inspect-visual",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images}),signal:AbortSignal.timeout(45000)});
+  const response=await fetch(jaiApiUrl("/api/inspect-visual"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images}),signal:AbortSignal.timeout(45000)});
   const data=await readJsonResponse(response,"Inspector visual");
   if(!response.ok)throw new Error(data.error||"No se pudo completar la inspección visual.");
   if(!Array.isArray(data.results)||data.results.length!==currentScenes.length)throw new Error("El inspector no devolvió un resultado por cada escena.");
@@ -1207,7 +1207,7 @@ async function makePlan(){
  const topic=$("topic").value.trim(),notes=$("research").value.trim();if(!topic){planningInProgress=false;$("topic").focus();$("status").textContent="Primero escribe el tema del vídeo.";return;}
  $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";setPipelineStage("plan",5,"Analizando tema y preparando el plan…","running");
  try{
-  const response=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,learning_memory:buildLearningMemoryContext()}),signal:AbortSignal.timeout(65000)});
+  const response=await fetch(jaiApiUrl("/api/generate"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,learning_memory:buildLearningMemoryContext()}),signal:AbortSignal.timeout(65000)});
   const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;throw failure;}
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
   kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;audioEdit={trimStart:0,trimEnd:0,gain:1};audioTrackOffset=0;subtitleTrackOffset=0;captionCues=[];syncAudioEditControls();
@@ -1395,7 +1395,7 @@ $("generateNarration").addEventListener("click",async()=>{
  const button=$("generateNarration");narrationGenerating=true;setPipelineStage("voice",0,"Generando voz neuronal…","running");button.disabled=true;$("downloadNarration").hidden=true;
  try{
   $("kokoroStatus").textContent="Conectando con Gemini y generando la narración en español…";setTaskProgress("kokoroStatus",0,"Generando voz neuronal…","indeterminate");
-  const response=await fetch("/api/narrate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voice:$("kokoroVoice").value}),signal:AbortSignal.timeout(50000)});
+  const response=await fetch(jaiApiUrl("/api/narrate"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voice:$("kokoroVoice").value}),signal:AbortSignal.timeout(50000)});
   const data=await readJsonResponse(response,"Generador de voz Gemini");
   if(!response.ok)throw new Error(data.error||"No se pudo generar la narración.");
   if(!data.audioBase64)throw new Error("El servicio no devolvió audio.");
