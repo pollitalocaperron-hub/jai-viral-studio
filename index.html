@@ -315,12 +315,20 @@ async function regenerateVisualScene(index){
  const scene=currentScenes[index],button=$("makeVisuals");visualGenerationRunning=true;button.disabled=true;$("inspectVisuals").disabled=true;$("renderVideo").disabled=true;
  $("visualAuditStatus").textContent="Regenerando la escena "+(index+1)+" con su dirección visual corregida…";
  try{
-  const style="Premium scientific CGI documentary still, physically plausible materials, photorealistic 3D rendering, sophisticated cinematic lighting, deep graphite and midnight-blue environment, restrained cyan and amber accents only where scientifically meaningful, crisp subject detail, realistic depth and scale.";
-  const avoid="No abstract fog, no amorphous clouds, no random glowing blobs, no decorative particle field, no generic galaxy, no unrelated objects, no text, no labels, no watermark, no people, no characters, no cameras or filming equipment, no collage, no split screen, no cartoon, no flat vector illustration.";
-  const subject=visualText(scene.visual_subject||scene.visual_proof||scene.teaching_point||scene.objective,"the exact physical subject described in the scene").slice(0,260);
+  const style="Premium educational visual production, cinematic depth, clear visual hierarchy and a coherent topic-specific art direction. Choose the rendering language, materials, palette, scale and environment that genuinely belong to this subject; preserve the visual identity established by the original scene.";
+  const avoid="No unrelated objects, no decorative abstract fog or random glowing blobs, no generic stock-science imagery, no generated text, no watermark, no collage, no split screen, no childish clipart. Do not exclude people, characters, diagrams, maps, natural phenomena, machines, organisms or molecular structures when they are genuinely required by the subject.";
+  const subject=visualText(scene.visual_subject||scene.visual_proof||scene.teaching_point||scene.objective,"the exact subject described in the scene").slice(0,260);
+  const state=visualText(scene.visual_state||scene.visual,"").slice(0,320);
+  const action=visualText(scene.visual_action||scene.animation||scene.visual_proof,"").slice(0,320);
+  const medium=visualText(scene.visual_medium,"topic-appropriate visual representation").slice(0,220);
+  const technique=visualText(scene.animation_type,"topic-appropriate animation technique").slice(0,220);
+  const sequence=Array.isArray(scene.motion_sequence)?scene.motion_sequence.map((step,n)=>"PHASE "+(n+1)+": "+visualText(step,"")).join(" | "):visualText(scene.motion_sequence,"");
+  const environment=visualText(scene.visual_environment||scene.visual,"relevant physical environment").slice(0,260);
+  const composition=visualText(scene.visual_composition,"clear portrait-safe composition").slice(0,240);
+  const continuity=visualText(scene.continuity_anchor,"preserve subject identity and scene logic").slice(0,260);
   const authored=visualText(scene.visual_prompt_en,"").trim().slice(0,1300);
-  const prompt=[style,authored?"SHOT DESCRIPTION: "+authored:"","EXACT SUBJECT: "+subject,"VISIBLE SCIENTIFIC PROOF: "+visualText(scene.visual_proof||scene.teaching_point,"the physical change described by the scene"),"One recognizable subject, one dominant physical action, centered portrait-safe composition. "+avoid].filter(Boolean).join(" ");
-  $("visualAuditStatus").textContent="Regenerando escena "+(index+1)+" con reintentos automáticos si el servicio gratuito falla…";
+  const prompt=[style,"VISUAL MEDIUM: "+medium+".","ANIMATION TECHNIQUE: "+technique+".",authored?"INITIAL FRAME: "+authored:"","EXACT SUBJECT: "+subject+".","VISIBLE STATE: "+state+".","PHYSICAL ACTION: "+action+".","ORDERED MOTION: "+sequence+".","CONTINUITY: "+continuity+".","ENVIRONMENT: "+environment+".","COMPOSITION: "+composition+".","Create one animation-ready frame that proves the scene's teaching point. Match the actual subject and do not impose a fixed aesthetic or visual template. "+avoid].filter(Boolean).join(" ");
+  $("visualAuditStatus").textContent="Regenerando escena "+(index+1)+" con la representación y el movimiento propios del tema…";
   const generated=await requestVisualImage(prompt,index+1);
   jaiSceneImages[index]={...generated,shot:subject,time:scene.time,sceneIndex:index,prompt};visualAuditResults[index]=null;renderVisualScenes();
   $("visualAuditStatus").textContent="Escena "+(index+1)+" regenerada. Vuelve a auditar el conjunto antes de exportar.";
