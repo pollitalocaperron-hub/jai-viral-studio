@@ -176,7 +176,7 @@ try {
   await page.locator("#makeVisuals").click();
   await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Producción visual lista"), null, { timeout: 30000 });
   assert.equal(counters.directScenes, 1, "Visual production must automatically request and validate the directed shot plan");
-  assert.ok((await page.locator("#timelineTracks").innerText()).includes("shot-01"), "Directed shot IDs must be carried into the editable timeline");
+  assert.ok((await page.locator("#timelineTracks").innerText()).includes("SHOT-01"), "Directed shot IDs must be carried into the editable timeline");
   assert.equal(counters.images, 4, "The visual director must request one unique image for every conceptual scene");
   assert.equal(await page.locator("#visualScenes img").count(), 4, "All generated image frames must be decoded and displayed");
   await page.evaluate(() => { if (window.__jaiRealNow) Date.now = window.__jaiRealNow; });
