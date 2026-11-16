@@ -417,11 +417,12 @@ function renderVisualScenes(){
   meta.appendChild(verdict);
   const shotIssues=audits.filter(item=>Array.isArray(item.issues)&&item.issues.length).flatMap(item=>item.issues);
   if(shotIssues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+shotIssues.map(x=>visualText(x,"")).join(" · ");meta.appendChild(issues);}
+  let allShotPreviewsReady=true;
   if(currentShotPlan.length){
    const shotGallery=document.createElement("div");shotGallery.style.cssText="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0";
    auditIndices.forEach((shotIndex,localIndex)=>{
-    const shot=currentShotPlan[shotIndex];if(!shot)return;
-    const preview=vectorShotPreview(shot,.5);if(!preview)return;
+    const shot=currentShotPlan[shotIndex];if(!shot){allShotPreviewsReady=false;return;}
+    const preview=vectorShotPreview(shot,.5);if(!preview){allShotPreviewsReady=false;return;}
     const tile=document.createElement("figure");tile.style.cssText="margin:0;min-width:0";
     const shotImage=document.createElement("img");shotImage.src=preview;shotImage.alt="Toma "+(localIndex+1)+" de "+auditIndices.length+": "+visualText(shot.subject,"ilustración de la toma");shotImage.loading="lazy";shotImage.style.cssText="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:10px;background:#07101e";
     const shotLabel=document.createElement("figcaption");shotLabel.className="hint";shotLabel.textContent="TOMA "+String(localIndex+1).padStart(2,"0")+" · "+Number(shot.start_seconds).toFixed(1)+"–"+Number(shot.end_seconds).toFixed(1)+" s";
@@ -430,7 +431,7 @@ function renderVisualScenes(){
    meta.appendChild(shotGallery);
   }
   const retry=document.createElement("button");retry.type="button";retry.className="secondary";retry.textContent="Rediseñar todas las tomas";retry.addEventListener("click",async()=>{const ok=await designAnimationShots();if(ok)await generateAIVisuals();});meta.appendChild(retry);
-  if(!allShotsPassed){const approve=document.createElement("button");approve.type="button";approve.className="secondary";approve.textContent="Aprobar manualmente";approve.addEventListener("click",()=>approveVisualScene(index));meta.appendChild(approve);}
+  if(!allShotsPassed){const approve=document.createElement("button");approve.type="button";approve.className="secondary";approve.textContent="Aprobar manualmente";approve.disabled=!allShotPreviewsReady;approve.title=allShotPreviewsReady?"":"No se puede aprobar: falta un fotograma vectorial válido de alguna toma.";approve.addEventListener("click",()=>approveVisualScene(index));meta.appendChild(approve);}
   const promptDetails=document.createElement("details");promptDetails.style.cssText="margin-top:8px;font-size:12px;color:#b8c9dc";
   const promptSummary=document.createElement("summary");promptSummary.textContent="Ver dirección visual usada";
   const promptText=document.createElement("p");promptText.style.cssText="white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere";promptText.textContent=visualText(firstDirectedShot?.visual_prompt_en||generated?.prompt||scene.visual_prompt_en,"El plan no entregó un prompt visual específico para esta escena.")+"\n\nCapas vectoriales: "+(firstDirectedShot?.layers||[]).map(layer=>layer.description).join(" · ");
@@ -588,6 +589,9 @@ function approveAllVisualScenes(){
  if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){
   $("visualAuditStatus").textContent="No se puede aprobar: primero deben estar generadas las ilustraciones vectoriales.";return;
  }
+ if(currentShotPlan.length&&(!currentScenes.every((scene,index)=>currentShotPlan.some(shot=>Number(shot.scene_index)===index))||!currentShotPlan.every(shot=>!!vectorShotPreview(shot,.5)))){
+  $("visualAuditStatus").textContent="No se puede aprobar: al menos una toma no tiene un fotograma vectorial válido para revisar.";return;
+ }
  const total=visualAuditUnitCount();
  if(!window.confirm("Vas a aprobar manualmente "+total+" tomas. Confirma solo después de revisar cada fotograma individual mostrado en las tarjetas."))return;
  const reason=window.prompt("Escribe el motivo de aprobación manual (obligatorio):","Revisión visual humana completada");
@@ -603,6 +607,7 @@ $("approveAllVisuals").addEventListener("click",approveAllVisualScenes);
 function approveVisualScene(index){
  if(!Number.isInteger(index)||!currentScenes[index]||!jaiSceneImages[index]?.image)return;
  const unitIndexes=currentShotPlan.length?currentShotPlan.map((shot,shotIndex)=>Number(shot.scene_index)===index?shotIndex:-1).filter(shotIndex=>shotIndex>=0):[index];
+ if(currentShotPlan.length&&(!unitIndexes.length||unitIndexes.some(shotIndex=>!currentShotPlan[shotIndex]||!vectorShotPreview(currentShotPlan[shotIndex],.5)))){$("visualAuditStatus").textContent="No se puede aprobar esta escena: falta un fotograma vectorial válido de alguna toma.";return;}
  const shotCount=unitIndexes.length;const reason=window.prompt("Revisa las "+shotCount+" tomas mostradas en la escena "+(index+1)+". Escribe el motivo de aprobación (obligatorio):","Revisión visual humana completada");
  if(typeof reason!=="string"||!reason.trim()){$("visualAuditStatus").textContent="Aprobación cancelada: se requiere un motivo verificable.";return;}
  const reviewedAt=new Date().toISOString(),total=visualAuditUnitCount();
