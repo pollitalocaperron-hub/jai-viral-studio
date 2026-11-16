@@ -648,14 +648,14 @@ function renderTimeline(){
   const durationLabel=document.createElement("label");durationLabel.style.cssText="display:flex;align-items:center;gap:8px;margin:0;font-size:12px;color:#a9bfd4";durationLabel.textContent="Duración";
   const select=document.createElement("select");select.setAttribute("aria-label","Duración del bloque "+(index+1));select.style.cssText="width:auto;min-width:84px;padding:7px";
   for(let seconds=1;seconds<=6;seconds++){const option=document.createElement("option");option.value=String(seconds);option.textContent=seconds+" s";option.selected=Number(item.seconds)===seconds;select.appendChild(option);}
-  select.addEventListener("change",()=>{item.seconds=Number(select.value);updateTimelineDurations();renderTimeline();$("timelineStatus").textContent="Duración ajustada. Los tiempos posteriores se recalcularon y la narración se adaptará a la duración total al exportar.";});
+  select.addEventListener("change",()=>{item.seconds=Number(select.value);updateTimelineDurations();renderTimeline();renderMediaTracks();updateRenderGate();scheduleJaiAutosave();$("timelineStatus").textContent="Duración ajustada. Los tiempos posteriores se recalcularon y la narración se adaptará a la duración total al exportar.";});
   durationLabel.appendChild(select);
   const moveUp=document.createElement("button");moveUp.type="button";moveUp.className="secondary";moveUp.textContent="↑";moveUp.title="Mover bloque antes";moveUp.setAttribute("aria-label","Mover bloque "+(index+1)+" antes");moveUp.disabled=index===0;moveUp.style.padding="8px 12px";
-  moveUp.addEventListener("click",()=>{const [moved]=timelineState.items.splice(index,1);timelineState.items.splice(index-1,0,moved);updateTimelineDurations();renderTimeline();$("timelineStatus").textContent="Bloque movido antes. Se conserva su imagen y su escena original; los tiempos se recalcularon.";});
+  moveUp.addEventListener("click",()=>{const [moved]=timelineState.items.splice(index,1);timelineState.items.splice(index-1,0,moved);updateTimelineDurations();renderTimeline();renderMediaTracks();updateRenderGate();scheduleJaiAutosave();$("timelineStatus").textContent="Bloque movido antes. Se conserva su imagen y su escena original; los tiempos se recalcularon.";});
   const moveDown=document.createElement("button");moveDown.type="button";moveDown.className="secondary";moveDown.textContent="↓";moveDown.title="Mover bloque después";moveDown.setAttribute("aria-label","Mover bloque "+(index+1)+" después");moveDown.disabled=index===timelineState.items.length-1;moveDown.style.padding="8px 12px";
-  moveDown.addEventListener("click",()=>{const [moved]=timelineState.items.splice(index,1);timelineState.items.splice(index+1,0,moved);updateTimelineDurations();renderTimeline();$("timelineStatus").textContent="Bloque movido después. Se conserva su imagen y su escena original; los tiempos se recalcularon.";});
+  moveDown.addEventListener("click",()=>{const [moved]=timelineState.items.splice(index,1);timelineState.items.splice(index+1,0,moved);updateTimelineDurations();renderTimeline();renderMediaTracks();updateRenderGate();scheduleJaiAutosave();$("timelineStatus").textContent="Bloque movido después. Se conserva su imagen y su escena original; los tiempos se recalcularon.";});
   const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="Eliminar";remove.title="Eliminar este bloque del montaje";remove.setAttribute("aria-label","Eliminar bloque "+(index+1));remove.disabled=timelineState.items.length<=1;remove.style.padding="8px 10px";
-  remove.addEventListener("click",()=>{timelineState.items.splice(index,1);updateTimelineDurations();renderTimeline();$("timelineStatus").textContent="Bloque eliminado del montaje. El audio y los subtítulos conservan su pista original; revisa el ritmo antes de exportar.";});
+  remove.addEventListener("click",()=>{timelineState.items.splice(index,1);updateTimelineDurations();renderTimeline();renderMediaTracks();updateRenderGate();scheduleJaiAutosave();$("timelineStatus").textContent="Bloque eliminado del montaje. El audio y los subtítulos conservan su pista original; revisa el ritmo antes de exportar.";});
   const transitionLabel=document.createElement("label");transitionLabel.style.cssText="display:flex;align-items:center;gap:5px;font-size:12px;color:#a9bfd4";transitionLabel.textContent="Transición";
   const transitionSelect=document.createElement("select");transitionSelect.style.cssText="width:auto;min-width:100px;padding:7px";transitionSelect.setAttribute("aria-label","Transición del bloque "+(index+1));
   [["cut","Corte"],["fade","Fundido"],["wipe","Barrido"]].forEach(([value,label])=>{const option=document.createElement("option");option.value=value;option.textContent=label;option.selected=(item.transition||"fade")===value;transitionSelect.appendChild(option);});
@@ -1306,15 +1306,15 @@ function renderCaptionEditor(){
    const cut=Math.ceil(words.length/2),ratio=cut/words.length,mid=cue.start+(cue.end-cue.start)*ratio;
    const second={start:Number(mid.toFixed(2)),end:cue.end,text:words.slice(cut).join(" ")};
    cue.end=second.start;cue.text=words.slice(0,cut).join(" ");captionCues.splice(index+1,0,second);
-   renderCaptionEditor();renderMediaTracks();$("downloadSrt").disabled=false;
+   renderCaptionEditor();renderMediaTracks();scheduleJaiAutosave();$("downloadSrt").disabled=false;
   });
   const merge=document.createElement("button");merge.type="button";merge.className="secondary";merge.textContent="Unir con siguiente";merge.disabled=index===captionCues.length-1;
   merge.addEventListener("click",()=>{
    const next=captionCues[index+1];if(!next)return;
    cue.end=Math.max(cue.end,next.end);cue.text=[String(cue.text||"").trim(),String(next.text||"").trim()].filter(Boolean).join(" ");
-   captionCues.splice(index+1,1);renderCaptionEditor();renderMediaTracks();$("downloadSrt").disabled=!captionCues.length;
+   captionCues.splice(index+1,1);renderCaptionEditor();renderMediaTracks();scheduleJaiAutosave();$("downloadSrt").disabled=!captionCues.length;
   });
-  const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="Eliminar subtítulo";remove.addEventListener("click",()=>{captionCues.splice(index,1);renderCaptionEditor();renderMediaTracks();$("downloadSrt").disabled=!captionCues.length;});
+  const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="Eliminar subtítulo";remove.addEventListener("click",()=>{captionCues.splice(index,1);renderCaptionEditor();renderMediaTracks();scheduleJaiAutosave();$("downloadSrt").disabled=!captionCues.length;});
   actions.append(split,merge,remove);card.appendChild(actions);root.appendChild(card);
  });
 }
@@ -1358,12 +1358,12 @@ $("downloadSrt").addEventListener("click",()=>{
 $("generateCaptions").addEventListener("click",()=>{
  const script=cleanNarrationText($("script").textContent);
  if(!kokoroAudioDuration){$("captionStatus").textContent="Primero genera la narración para conocer la duración real del audio.";return;}
- captionCues=buildEstimatedCaptionCues(script,kokoroAudioDuration);renderCaptionEditor();renderMediaTracks();$("downloadSrt").disabled=!captionCues.length;
+ captionCues=buildEstimatedCaptionCues(script,kokoroAudioDuration);renderCaptionEditor();renderMediaTracks();scheduleJaiAutosave();$("downloadSrt").disabled=!captionCues.length;
  $("captionStatus").textContent=captionCues.length+" subtítulos regenerados con sincronización estimada. Puedes editar texto y tiempos antes de exportar.";
 });
 $("addCaptionCue").addEventListener("click",()=>{
  const last=captionCues[captionCues.length-1],start=last?last.end:0;
- captionCues.push({start,end:start+2,text:"Nuevo subtítulo"});renderCaptionEditor();renderMediaTracks();$("downloadSrt").disabled=false;
+ captionCues.push({start,end:start+2,text:"Nuevo subtítulo"});renderCaptionEditor();renderMediaTracks();scheduleJaiAutosave();$("downloadSrt").disabled=false;
 });
 
 $("generateNarration").addEventListener("click",async()=>{
@@ -1382,7 +1382,7 @@ $("generateNarration").addEventListener("click",async()=>{
   kokoroAudioBlob=makePcmWavBlob(data.audioBase64,kokoroSampleRate);
   kokoroAudioDuration=(kokoroAudioBlob.size-44)/(kokoroSampleRate*2);
   audioEdit={trimStart:0,trimEnd:kokoroAudioDuration,gain:1};
-  captionCues=buildEstimatedCaptionCues(text,kokoroAudioDuration);renderCaptionEditor();renderMediaTracks();$("downloadSrt").disabled=!captionCues.length;$("generateCaptions").disabled=false;
+  captionCues=buildEstimatedCaptionCues(text,kokoroAudioDuration);renderCaptionEditor();renderMediaTracks();scheduleJaiAutosave();$("downloadSrt").disabled=!captionCues.length;$("generateCaptions").disabled=false;
   $("captionStatus").textContent=captionCues.length+" subtítulos creados automáticamente con sincronización estimada sobre "+kokoroAudioDuration.toFixed(1)+" s de audio. Revisa y ajusta los tiempos si hace falta.";
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
   kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);
@@ -1392,12 +1392,12 @@ $("generateNarration").addEventListener("click",async()=>{
  }catch(error){$("kokoroStatus").textContent="No se pudo generar la voz: "+(error.message||"error desconocido");setTaskProgress("kokoroStatus",0,"Generación de voz fallida");}
  finally{narrationGenerating=false;button.disabled=false;}
 });
-$("audioTrimStart").addEventListener("change",()=>{audioEdit.trimStart=Number($("audioTrimStart").value)||0;if(audioEdit.trimEnd>0&&audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();});
-$("audioTrimEnd").addEventListener("change",()=>{audioEdit.trimEnd=Number($("audioTrimEnd").value)||kokoroAudioDuration;if(audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();});
-$("audioGain").addEventListener("input",()=>{audioEdit.gain=Number($("audioGain").value)/100;syncAudioEditControls();renderMediaTracks();});
-$("audioTrackOffset").addEventListener("change",()=>{const total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);audioTrackOffset=Math.max(0,Math.min(Math.max(0,total-.1),Number($("audioTrackOffset").value)||0));syncAudioEditControls();renderMediaTracks();$("timelineStatus").textContent="Posición de narración ajustada en la pista de audio.";});
-$("subtitleTrackOffset").addEventListener("change",()=>{subtitleTrackOffset=Math.max(-5,Math.min(5,Number($("subtitleTrackOffset").value)||0));$("subtitleTrackOffset").value=subtitleTrackOffset.toFixed(1);renderMediaTracks();$("captionStatus").textContent="Desfase de subtítulos: "+subtitleTrackOffset.toFixed(1)+" s. También se aplicará al SRT exportado.";});
-$("resetAudioEdit").addEventListener("click",()=>{audioEdit={trimStart:0,trimEnd:kokoroAudioDuration,gain:1};syncAudioEditControls();renderMediaTracks();$("kokoroStatus").textContent="Edición de audio restablecida: narración completa al 100%.";});
+$("audioTrimStart").addEventListener("change",()=>{audioEdit.trimStart=Number($("audioTrimStart").value)||0;if(audioEdit.trimEnd>0&&audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();scheduleJaiAutosave();});
+$("audioTrimEnd").addEventListener("change",()=>{audioEdit.trimEnd=Number($("audioTrimEnd").value)||kokoroAudioDuration;if(audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();scheduleJaiAutosave();});
+$("audioGain").addEventListener("input",()=>{audioEdit.gain=Number($("audioGain").value)/100;syncAudioEditControls();renderMediaTracks();scheduleJaiAutosave();});
+$("audioTrackOffset").addEventListener("change",()=>{const total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);audioTrackOffset=Math.max(0,Math.min(Math.max(0,total-.1),Number($("audioTrackOffset").value)||0));syncAudioEditControls();renderMediaTracks();updateRenderGate();scheduleJaiAutosave();$("timelineStatus").textContent="Posición de narración ajustada en la pista de audio.";});
+$("subtitleTrackOffset").addEventListener("change",()=>{subtitleTrackOffset=Math.max(-5,Math.min(5,Number($("subtitleTrackOffset").value)||0));$("subtitleTrackOffset").value=subtitleTrackOffset.toFixed(1);renderMediaTracks();scheduleJaiAutosave();$("captionStatus").textContent="Desfase de subtítulos: "+subtitleTrackOffset.toFixed(1)+" s. También se aplicará al SRT exportado.";});
+$("resetAudioEdit").addEventListener("click",()=>{audioEdit={trimStart:0,trimEnd:kokoroAudioDuration,gain:1};syncAudioEditControls();renderMediaTracks();scheduleJaiAutosave();$("kokoroStatus").textContent="Edición de audio restablecida: narración completa al 100%.";});
 $("stopKokoro").addEventListener("click",()=>{$("kokoroAudio").pause();if(kokoroSource){try{kokoroSource.stop();}catch(e){}kokoroSource=null;}});
 function cleanNarrationText(raw){
  return String(raw||"")
