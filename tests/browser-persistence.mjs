@@ -77,7 +77,7 @@ try {
     date: "Prueba automatizada",
     savedAt: 1730000000000,
     notes: "Notas de prueba",
-    plan: "{\\"script\\":\\"Guion persistido\\"}",
+    plan: JSON.stringify({ script: "Guion persistido" }),
     data: {
       category: "Educación",
       angle: "Comprobación de recuperación",
