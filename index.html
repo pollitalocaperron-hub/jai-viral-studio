@@ -922,7 +922,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  drawMotionGraphics(item,index,p,audioElapsed);
  const title=String(item.on_screen_text||"").trim();
  if(title){
-  const words=title.split(/\\s+/),lines=[];let line="",fontSize=36;
+  const words=title.split(/\s+/),lines=[];let line="",fontSize=36;
   ctx.font="800 "+fontSize+"px Arial";
   words.forEach(word=>{const candidate=line?line+" "+word:word;if(line&&ctx.measureText(candidate).width>w-112){lines.push(line);line=word;}else line=candidate;});
   if(line)lines.push(line);
