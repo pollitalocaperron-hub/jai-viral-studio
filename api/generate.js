@@ -116,7 +116,7 @@ async function generatePlanHandler(req, res) {
             temperature: 0.55,
             max_completion_tokens: 6000
           }),
-          signal: AbortSignal.timeout(18000)
+          signal: AbortSignal.timeout(12000)
         });
         const groqBody = await groqResponse.text();
         let groqData;
@@ -171,7 +171,7 @@ async function generatePlanHandler(req, res) {
                 maxOutputTokens: 5500
               }
             }),
-            signal: AbortSignal.timeout(18000)
+            signal: AbortSignal.timeout(12000)
           }
         );
         geminiResponse = await geminiRequest();
@@ -413,7 +413,7 @@ Return no other keys and no markdown.`;
                 temperature: 0.25,
                 max_completion_tokens: 5200
               }),
-              signal: AbortSignal.timeout(8000)
+              signal: AbortSignal.timeout(6000)
             });
             const repairRaw = await repairResponse.text();
             let repairBody = {};
@@ -425,7 +425,7 @@ Return no other keys and no markdown.`;
               method: "POST",
               headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
               body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: repairPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 5200 } }),
-              signal: AbortSignal.timeout(8000)
+              signal: AbortSignal.timeout(6000)
             });
             const repairRaw = await repairResponse.text();
             let repairBody = {};
