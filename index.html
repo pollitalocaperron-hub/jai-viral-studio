@@ -362,7 +362,7 @@ function renderStory(value){
 }
 
 let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,currentShotPlan=[];
-let planningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
+let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
 function visualAuditPassed(){return visualAuditResults.length===currentScenes.length&&currentScenes.length>0&&visualAuditResults.every((item,index)=>item&&item.scene_index===index&&item.status==="pass");}
 function visualText(value,fallback="Pendiente de definir"){
  if(value===null||value===undefined||value==="")return fallback;
@@ -407,7 +407,7 @@ function renderVisualScenes(){
    const verdict=document.createElement("p");verdict.className="hint";verdict.textContent=audit.manual?"APROBACIÓN MANUAL · "+visualText(audit.reason,""):(audit.status==="pass"?"INSPECCIÓN APROBADA":"REVISAR FOTOGRAMA")+" · "+visualText(audit.score,"—")+"/100 · "+visualText(audit.reason,"");meta.appendChild(verdict);
    if(Array.isArray(audit.issues)&&audit.issues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+audit.issues.map(x=>visualText(x,"")).join(" · ");meta.appendChild(issues);}
   }
-  const retry=document.createElement("button");retry.type="button";retry.className="secondary";retry.textContent="Rediseñar plan vectorial";retry.addEventListener("click",async()=>{await designAnimationShots();if(currentShotPlan.length){buildTimeline();renderVisualScenes();updateRenderGate();scheduleJaiAutosave();}});meta.appendChild(retry);
+  const retry=document.createElement("button");retry.type="button";retry.className="secondary";retry.textContent="Rediseñar todas las tomas";retry.addEventListener("click",async()=>{const ok=await designAnimationShots();if(ok)await generateAIVisuals();});meta.appendChild(retry);
   if(!audit||audit.status!=="pass"){const approve=document.createElement("button");approve.type="button";approve.className="secondary";approve.textContent="Aprobar manualmente";approve.addEventListener("click",()=>approveVisualScene(index));meta.appendChild(approve);}
   const promptDetails=document.createElement("details");promptDetails.style.cssText="margin-top:8px;font-size:12px;color:#b8c9dc";
   const promptSummary=document.createElement("summary");promptSummary.textContent="Ver dirección visual usada";
@@ -420,43 +420,56 @@ function renderVisualScenes(){
 }
 
 async function designAnimationShots(){
- if(!currentPlanData||!currentScenes.length){$("directScenesStatus").textContent="Primero genera un plan editorial completo.";return;}
- if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("directScenesStatus").textContent="Espera a que termine la tarea actual.";return;}
- const button=$("directScenes");button.disabled=true;$("makeVisuals").disabled=true;
- $("directScenesStatus").textContent="El director está descomponiendo las escenas, alineando la narración y definiendo elementos y acciones…";
- setTaskProgress("directScenesStatus",5,"Diseñando tomas animables…","indeterminate");
+ if(!currentPlanData||!currentScenes.length){$("directScenesStatus").textContent="Primero genera un plan editorial completo.";return false;}
+ if(shotPlanningInProgress||projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("directScenesStatus").textContent="Espera a que termine la tarea actual.";return false;}
+ const button=$("directScenes");shotPlanningInProgress=true;button.disabled=true;$("makeVisuals").disabled=true;
+ $("directScenesStatus").textContent="El director está descomponiendo las escenas, trazando objetos vectoriales y asignando transformaciones…";
+ setTaskProgress("directScenesStatus",5,"Diseñando tomas y capas vectoriales…","indeterminate");
  try{
-  const response=await fetch(jaiApiUrl("/api/direct-scenes"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:currentTopic,script:currentPlanData.script,story:currentScenes,retention_map:currentRetentionMap}),signal:AbortSignal.timeout(25000)});
-  const data=await readJsonResponse(response,"Director de escenas");
+  const response=await fetch(jaiApiUrl("/api/direct-scenes"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:currentTopic,script:currentPlanData.script,story:currentScenes,retention_map:currentRetentionMap}),signal:AbortSignal.timeout(55000)});
+  const data=await readJsonResponse(response,"Director vectorial de escenas");
   if(!response.ok)throw new Error(data.error||"No se pudo diseñar la secuencia de tomas.");
-  if(!Array.isArray(data.shots)||!data.shots.length)throw new Error("El director no devolvió tomas utilizables.");
+  if(data.animation_ready!==true||!Array.isArray(data.shots)||data.shots.length<currentScenes.length*2)throw new Error("El motor activo no devolvió un plan completo de capas vectoriales independientes.");
+  const validShots=data.shots.every(shot=>
+   Array.isArray(shot.layers)&&shot.layers.length>=3&&
+   shot.layers.every(layer=>typeof layer.path_d==="string"&&!!getVectorPath(layer))&&
+   Array.isArray(shot.animation_steps)&&shot.animation_steps.length>=2&&
+   shot.animation_steps.every(step=>shot.layers.some(layer=>layer.id===step.target_id)&&step.from_transform&&step.to_transform)
+  );
+  if(!validShots)throw new Error("Una o más rutas vectoriales no se pueden dibujar o sus acciones no apuntan a objetos reales. Rediseña el plan; no se exportará una escena incompleta.");
   currentShotPlan=data.shots;
+  // A new direction invalidates previous previews and approvals; never reuse an audit from an older shot plan.
+  jaiSceneImages=Array.from({length:currentScenes.length},()=>null);
+  visualAuditResults=Array.from({length:currentScenes.length},()=>null);
+  timelineState.items=[];buildTimeline();renderVisualScenes();updateRenderGate();
   const root=$("directScenesOutput");root.replaceChildren();
   data.shots.forEach((shot,index)=>{
    const card=document.createElement("article");card.className="scene";
    const title=document.createElement("h4");title.textContent="TOMA "+String(index+1).padStart(2,"0")+" · "+formatTimelineTime(shot.start_seconds)+"–"+formatTimelineTime(shot.end_seconds);card.appendChild(title);
    const subject=document.createElement("p");subject.textContent=shot.subject+" · "+shot.visual_action;card.appendChild(subject);
    const narration=document.createElement("p");narration.textContent="Narración: "+shot.narration_segment;card.appendChild(narration);
-   const layers=document.createElement("p");layers.textContent="Elementos identificados: "+shot.layers.map(layer=>layer.description).join(" · ");card.appendChild(layers);
-   const actions=document.createElement("p");actions.textContent="Acciones: "+shot.animation_steps.map(step=>step.action+" ("+step.target_id+")").join(" → ");card.appendChild(actions);
+   const layers=document.createElement("p");layers.textContent="Objetos vectoriales independientes: "+shot.layers.map(layer=>layer.description).join(" · ");card.appendChild(layers);
+   const actions=document.createElement("p");actions.textContent="Transformaciones: "+shot.animation_steps.map(step=>step.action+" ("+step.target_id+")").join(" → ");card.appendChild(actions);
    root.appendChild(card);
   });
-  $("directScenesStatus").textContent="Dirección vectorial validada: "+data.shot_count+" tomas derivadas de "+data.conceptual_scene_count+" escenas. Proveedor: "+data.provider+". Cada objeto tiene una ruta independiente y transformaciones temporales; J.A.I. las animará en la línea de tiempo.";
-  setTaskProgress("directScenesStatus",100,"Plan de tomas validado · "+data.shot_count+" tomas");
+  $("directScenesStatus").textContent="Dirección vectorial validada: "+data.shot_count+" tomas, "+data.conceptual_scene_count+" escenas. Proveedor: "+data.provider+". Todas las capas tienen rutas dibujables y transformaciones independientes.";
+  setTaskProgress("directScenesStatus",100,"Plan vectorial validado · "+data.shot_count+" tomas");
   scheduleJaiAutosave();
+  return true;
  }catch(error){
-  $("directScenesStatus").textContent="No se pudo completar el diseño de tomas: "+error.message;
- }finally{button.disabled=false;$("makeVisuals").disabled=false;}
+  $("directScenesStatus").textContent="No se pudo completar el diseño vectorial: "+error.message;
+  return false;
+ }finally{shotPlanningInProgress=false;button.disabled=false;$("makeVisuals").disabled=false;}
 }
 async function generateAIVisuals(){
  if(currentPlanData?.clarification_required){$("visualStatus").textContent="Producción visual detenida: "+(currentPlanData.clarification_question||"primero aclara el enfoque del tema.");return;}
  const productionCheck=validateStoryboardForProduction();if(!productionCheck.ok){$("visualStatus").textContent="Producción visual bloqueada: "+productionCheck.reason;return;}
- if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualStatus").textContent="Espera a que termine la tarea actual antes de generar ilustraciones o recuperar un proyecto.";return;}
+ if(projectRecoveryInProgress||planningInProgress||shotPlanningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualStatus").textContent="Espera a que termine la tarea actual antes de generar ilustraciones o recuperar un proyecto.";return;}
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Primero genera el guion y storyboard.";return;}
  if(!Array.isArray(currentShotPlan)||currentShotPlan.length===0){
   $("visualStatus").textContent="J.A.I. está diseñando las tomas y sus objetos vectoriales independientes…";
-  await designAnimationShots();
-  if(!Array.isArray(currentShotPlan)||currentShotPlan.length===0){
+  const directed=await designAnimationShots();
+  if(!directed||!Array.isArray(currentShotPlan)||currentShotPlan.length===0){
    $("visualStatus").textContent="Producción detenida: el director gratuito no entregó capas vectoriales válidas. No se generarán imágenes genéricas ni se marcará la animación como lista.";
    return;
   }

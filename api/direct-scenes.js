@@ -11,8 +11,8 @@ function clean(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 function validateShots(shots, story) {
-  if (!Array.isArray(shots) || shots.length < story.length * 2 || shots.length > 24) {
-    return "El director debe entregar entre 2 y 5 tomas visuales por escena conceptual, con un máximo de 24 tomas.";
+  if (!Array.isArray(shots) || shots.length < story.length * 2 || shots.length > 16) {
+    return "El director debe entregar entre 2 y 5 tomas visuales por escena conceptual, con un máximo de 16 tomas.";
   }
   const byScene = new Map();
   for (const [index, shot] of shots.entries()) {
@@ -27,7 +27,7 @@ function validateShots(shots, story) {
     for (const key of required) if (!clean(shot[key], key === "visual_prompt_en" ? 1800 : 700)) return "La toma " + (index + 1) + " no incluye " + key + ".";
     if (clean(shot.visual_prompt_en, 1800).split(/\s+/).length < 25) return "El prompt de la toma " + (index + 1) + " necesita describir un fotograma concreto con mayor precisión.";
     if (!/^#[0-9a-fA-F]{6}$/.test(clean(shot.background_color, 16))) return "La toma " + (index + 1) + " necesita un color de fondo hexadecimal válido.";
-    if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 8) return "La toma " + (index + 1) + " necesita entre 3 y 8 capas vectoriales independientes.";
+    if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 6) return "La toma " + (index + 1) + " necesita entre 3 y 6 capas vectoriales independientes.";
     const layerIds = new Set();
     for (const [layerIndex, layer] of shot.layers.entries()) {
       const id = clean(layer?.id, 60), path = typeof layer?.path_d === "string" ? layer.path_d.trim() : "";
@@ -36,13 +36,13 @@ function validateShots(shots, story) {
       if (!/^[a-zA-Z0-9_-]{1,60}$/.test(id) || layerIds.has(id) || !clean(layer?.description, 260) || !clean(layer?.role, 120)) {
         return "La capa " + (layerIndex + 1) + " de la toma " + (index + 1) + " tiene un identificador duplicado o datos incompletos.";
       }
-      if (path.length < 10 || path.length > 2400 || !/^[MmLlHhVvCcSsQqTtAaZz0-9.,+\-\s]+$/.test(path) || !/[Zz]/.test(path)) return "La capa " + id + " de la toma " + (index + 1) + " no contiene una ruta vectorial segura y cerrada.";
+      if (path.length < 10 || path.length > 1600 || !/^[MmLlHhVvCcSsQqTtAaZz0-9.,+\-\s]+$/.test(path) || !/[Zz]/.test(path)) return "La capa " + id + " de la toma " + (index + 1) + " no contiene una ruta vectorial segura y cerrada.";
       if (!/^#[0-9a-fA-F]{6}$/.test(fill) && fill !== "none") return "La capa " + id + " tiene un relleno no válido.";
       if (!/^#[0-9a-fA-F]{6}$/.test(stroke) && stroke !== "none") return "La capa " + id + " tiene un contorno no válido.";
       if (!Number.isFinite(strokeWidth) || strokeWidth < 0 || strokeWidth > 24 || !Number.isFinite(pivotX) || pivotX < 0 || pivotX > 720 || !Number.isFinite(pivotY) || pivotY < 0 || pivotY > 1280) return "La capa " + id + " tiene grosor o punto de pivote fuera del lienzo.";
       layerIds.add(id);
     }
-    if (!Array.isArray(shot.animation_steps) || shot.animation_steps.length < 2 || shot.animation_steps.length > 6) return "La toma " + (index + 1) + " necesita entre 2 y 6 acciones de animación.";
+    if (!Array.isArray(shot.animation_steps) || shot.animation_steps.length < 2 || shot.animation_steps.length > 4) return "La toma " + (index + 1) + " necesita entre 2 y 4 acciones de animación.";
     const validTransform = value => value && ["x", "y", "rotation", "scale", "opacity"].every(key => Number.isFinite(Number(value[key]))) &&
       Number(value.x) >= -300 && Number(value.x) <= 300 && Number(value.y) >= -300 && Number(value.y) <= 300 &&
       Number(value.rotation) >= -360 && Number(value.rotation) <= 360 && Number(value.scale) >= 0.2 && Number(value.scale) <= 3 &&
@@ -87,9 +87,9 @@ export default async function handler(req, res) {
   const prompt = [
     "Eres el DIRECTOR DE ESCENAS Y SUPERVISOR DE ANIMACIÓN de J.A.I. Convierte el storyboard conceptual en un plan de tomas ejecutable. Devuelve SOLO JSON válido con la propiedad shots.",
     "No generes una imagen final ni describas movimientos de cámara como sustituto de acciones. Cada toma debe mostrar un nuevo estado o acción didáctica.",
-    "Divide cada escena conceptual en 2 a 5 tomas, según la complejidad real. El total debe ser 8 a 24. No uses una cantidad fija por vídeo.",
+    "Divide cada escena conceptual en 2 a 5 tomas, según la complejidad real. El total debe ser 8 a 16. No uses una cantidad fija por vídeo.",
     "Las tomas de cada escena deben cubrir exactamente su intervalo, en orden, sin huecos ni solapamientos. Usa start_seconds y end_seconds numéricos absolutos dentro del vídeo.",
-    "Cada toma debe incluir: scene_index (índice base cero), start_seconds, end_seconds, narration_segment (fragmento literal de la narración), subtitle, subject, visual_state, visual_action, visual_prompt_en, continuity_anchor, background_color (#RRGGBB), layers (3–8 objetos independientes con id, description, role, path_d, fill, stroke, stroke_width, pivot_x, pivot_y) y animation_steps (2–6 acciones con target_id, action, from_state, to_state, start_progress, end_progress, from_transform y to_transform).",
+    "Cada toma debe incluir: scene_index (índice base cero), start_seconds, end_seconds, narration_segment (fragmento literal de la narración), subtitle, subject, visual_state, visual_action, visual_prompt_en, continuity_anchor, background_color (#RRGGBB), layers (3–6 objetos independientes con id, description, role, path_d, fill, stroke, stroke_width, pivot_x, pivot_y) y animation_steps (2–4 acciones con target_id, action, from_state, to_state, start_progress, end_progress, from_transform y to_transform).",
     "Los elementos deben ser concretos y separables: no uses 'todo el motor' como una sola capa si necesitas mover pistón, válvula y bujía independientemente. Mantén la misma identidad, geometría, paleta y orientación de objetos repetidos entre tomas.",
     "La ilustración vectorial es la escena de producción: cada objeto debe tener su propio path_d independiente, no agrupes objetos móviles en una sola ruta. Usa coordenadas de un lienzo vertical 720x1280; path_d debe contener SOLO comandos de ruta SVG (M,L,H,V,C,S,Q,T,A,Z) y números, nunca etiquetas XML/SVG ni texto. Ordena las capas de atrás hacia delante. Cada forma debe ser una silueta cerrada y reconocible, con relleno y contorno.",
     "Cada animation_step debe incluir from_transform y to_transform con x, y (desplazamiento en píxeles), rotation (grados), scale (multiplicador) y opacity (0–1). Anima el objeto real descrito por target_id; usa movimientos pequeños y físicamente correctos, no movimiento de cámara ni partículas decorativas. Las capas que no se mueven usan la misma transformación inicial y final.",
