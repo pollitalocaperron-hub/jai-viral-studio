@@ -161,7 +161,7 @@ function syncRecoveredPipeline(){
  setPipelineStage("audit",auditReady?100:imagesReady?75:0,auditReady?"Revisión visual aprobada":imagesReady?"Fotogramas listos · falta aprobar la revisión":"Pendiente de imágenes",auditReady?"done":"idle");
  setPipelineStage("voice",hasVoice?100:currentPlanData?.script?55:0,hasVoice?"Narración recuperada · "+kokoroAudioDuration.toFixed(1)+" s":currentPlanData?.script?"Guion listo · falta generar narración":"Pendiente de guion",hasVoice?"done":"idle");
  const montageReady=!!(timelineState.items.length&&imagesReady&&hasVoice&&auditReady);setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje recuperado · medios y revisión completos":timelineState.items.length?"Estructura recuperada · faltan medios o revisión":"Pendiente de escenas",montageReady?"done":"idle");
- const canExport=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&auditReady&&imagesReady);
+ const canExport=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&auditReady&&imagesReady&&hasVoice);
  setPipelineStage("render",canExport?25:0,canExport?"Listo para exportar":imagesReady&&!auditReady?"Pendiente de aprobación visual":"Pendiente de aprobación", "idle");
  $("pipelineHint").textContent="Estado reconstruido a partir de los recursos recuperados en este dispositivo.";
  updateRenderGate();
@@ -920,8 +920,18 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  }
  const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,"rgba(2,8,18,.10)");shade.addColorStop(.68,"rgba(2,8,18,.04)");shade.addColorStop(1,"rgba(2,8,18,.72)");ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
  drawMotionGraphics(item,index,p,audioElapsed);
- const title=String(item.on_screen_text||"").slice(0,62);
- if(title){ctx.fillStyle="#fff";ctx.font="800 36px Arial";ctx.textAlign="center";ctx.shadowColor="#000";ctx.shadowBlur=12;ctx.fillText(title,w/2,h-150);ctx.shadowBlur=0;}
+ const title=String(item.on_screen_text||"").trim();
+ if(title){
+  const words=title.split(/\\s+/),lines=[];let line="",fontSize=36;
+  ctx.font="800 "+fontSize+"px Arial";
+  words.forEach(word=>{const candidate=line?line+" "+word:word;if(line&&ctx.measureText(candidate).width>w-112){lines.push(line);line=word;}else line=candidate;});
+  if(line)lines.push(line);
+  while(lines.some(value=>ctx.measureText(value).width>w-112)&&fontSize>25){fontSize-=2;ctx.font="800 "+fontSize+"px Arial";}
+  const visible=lines.slice(0,2),lineHeight=fontSize*1.18;
+  ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";ctx.shadowColor="#000";ctx.shadowBlur=12;
+  visible.forEach((value,i)=>ctx.fillText(value,w/2,h-178+(i-(visible.length-1)/2)*lineHeight,w-112));
+  ctx.shadowBlur=0;ctx.textBaseline="alphabetic";
+ }
  if(Array.isArray(captionCues)&&captionCues.length){
   const subtitleTime=audioElapsed-subtitleTrackOffset;
   const cue=captionCues.slice().sort((a,b)=>a.start-b.start).find(entry=>subtitleTime>=entry.start&&subtitleTime<entry.end);
@@ -962,7 +972,7 @@ async function renderVideo(){
   if(stream)stream.getTracks().forEach(track=>track.stop());
   renderRecording=false;$("cancelRender").hidden=true;$("cancelRender").disabled=false;
   $("approveAllVisuals").disabled=!(jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
-  $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
+  updateRenderGate();
  };
  const fail=message=>{if(finished)return;finished=true;setPipelineStage("render",0,"Error: "+String(message).slice(0,110),"error");$("renderStatus").textContent=message;cleanup();};
  try{
