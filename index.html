@@ -1025,7 +1025,8 @@ async function renderVideo(){
    const trimEnd=Math.max(trimStart+.01,Math.min(1,Number.isFinite(Number(activeItem.trimEnd))?Number(activeItem.trimEnd):1));
    const sceneProgress=trimStart+blockProgress*(trimEnd-trimStart);
    const audioTiming=getAudioTrackTiming(timelineDuration),audioEditState=getAudioEdit();
-   drawVideoScene(activeItem,sceneIndex,sceneProgress,audioBuffer?(audioEditState.trimStart+Math.max(0,elapsed-audioTiming.offset)*audioTiming.rate):elapsed);
+   const audioElapsed=audioBuffer?(elapsed<audioTiming.offset?-1:audioEditState.trimStart+(elapsed-audioTiming.offset)*audioTiming.rate):elapsed;
+   drawVideoScene(activeItem,sceneIndex,sceneProgress,audioElapsed);
    $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";setTaskProgress("renderStatus",Math.min(100,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%");setPipelineStage("render",Math.min(99,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.round(elapsed/totalDuration*100)+"%","running");
    if(elapsed>=totalDuration){try{renderRecorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
    animationId=requestAnimationFrame(draw);
