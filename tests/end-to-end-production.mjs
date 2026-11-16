@@ -125,7 +125,7 @@ try {
   await page.route("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations", async route => {
     counters.images++;
     await page.evaluate(() => { window.__jaiImageClockOffset += 36000; });
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: [{ b64_json: pngBase64 }] }) });
+    await route.fulfill({ status: 200, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4174" }, body: JSON.stringify({ data: [{ b64_json: pngBase64 }] }) });
   });
 
   await page.locator("#create").click();
