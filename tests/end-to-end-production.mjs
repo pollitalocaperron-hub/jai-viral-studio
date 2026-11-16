@@ -123,9 +123,19 @@ try {
     return canvas.toDataURL("image/png").split(",")[1];
   });
   await page.route("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations", async route => {
+    const request = route.request();
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "http://127.0.0.1:4174",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    };
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
     counters.images++;
     await page.evaluate(() => { window.__jaiImageClockOffset += 36000; });
-    await route.fulfill({ status: 200, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "http://127.0.0.1:4174" }, body: JSON.stringify({ data: [{ b64_json: pngBase64 }] }) });
+    await route.fulfill({ status: 200, contentType: "application/json", headers: corsHeaders, body: JSON.stringify({ data: [{ b64_json: pngBase64 }] }) });
   });
 
   await page.locator("#create").click();
