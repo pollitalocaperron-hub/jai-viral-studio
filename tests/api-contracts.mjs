@@ -319,6 +319,7 @@ try {
     });
     globalThis.fetch = async url => {
       if (String(url).includes("api.groq.com")) return response({ choices: [{ message: { content: JSON.stringify({ shots }) } }] });
+      if (String(url).includes("generativelanguage.googleapis.com")) return response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ shots }) }] } }] });
       throw new Error("Unexpected provider in layer target validation test: " + url);
     };
     const res = mockResponse();

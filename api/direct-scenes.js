@@ -184,7 +184,11 @@ export default async function handler(req, res) {
       const raw = await response.text();
       let data;
       try { data = JSON.parse(raw); } catch { throw new Error("Gemini devolvió una respuesta no JSON (HTTP " + response.status + ")."); }
-      if (!response.ok) throw new Error(data?.error?.message || "Gemini HTTP " + response.status);
+      if (!response.ok) {
+        const error = new Error(data?.error?.message || "Gemini HTTP " + response.status);
+        error.status = response.status;
+        throw error;
+      }
       output = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("") || "";
       parsed = parseDirectorOutput(output);
       validationError = parsed ? validateShots(parsed?.shots, story) : "Gemini no devolvió JSON válido.";
