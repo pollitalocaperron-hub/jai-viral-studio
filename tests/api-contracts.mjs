@@ -121,6 +121,45 @@ try {
     assert.equal(res.body.research_sources.length, 0);
   }
 
+  // An incomplete model storyboard must be repaired and revalidated before production.
+  {
+    const validPlan = makeValidPlan();
+    const incompletePlan = { ...validPlan, story: [], retention_map: [] };
+    let groqCalls = 0;
+    globalThis.fetch = async (url, options = {}) => {
+      if (String(url).includes("api.openalex.org")) return response({ results: [] });
+      if (String(url).includes("api.groq.com")) {
+        groqCalls++;
+        const payload = JSON.parse(options.body || "{}");
+        const userPrompt = payload.messages?.[1]?.content || "";
+        if (userPrompt.includes("Repair ONLY the storyboard")) {
+          return response({
+            choices: [{
+              message: {
+                content: JSON.stringify({ story: validPlan.story, retention_map: validPlan.retention_map })
+              },
+              finish_reason: "stop"
+            }]
+          });
+        }
+        return response({
+          choices: [{ message: { content: JSON.stringify(incompletePlan) }, finish_reason: "stop" }]
+        });
+      }
+      throw new Error("Unexpected network request in storyboard repair test: " + url);
+    };
+    const res = mockResponse();
+    await generateHandler({
+      method: "POST",
+      body: { topic: "Un proceso que requiere reparar el storyboard", duration: "30–45 segundos", platform: "Reels" }
+    }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(groqCalls, 2, "The incomplete storyboard must trigger exactly one bounded repair request");
+    assert.equal(res.body.story.length, 4);
+    assert.equal(res.body.duration_validation.within_tolerance, true);
+    assert.ok(res.body.editorial_warnings.some(item => item.claim === "Reparación automática del storyboard"));
+  }
+
   // Narration input and provider payload must be validated before returning PCM data.
   {
     const res = mockResponse();
