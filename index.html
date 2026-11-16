@@ -972,7 +972,8 @@ async function renderVideo(){
   if(stream)stream.getTracks().forEach(track=>track.stop());
   renderRecording=false;$("cancelRender").hidden=true;$("cancelRender").disabled=false;
   $("approveAllVisuals").disabled=!(jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
-  updateRenderGate();
+  const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);
+  $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&voiceReady&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
  };
  const fail=message=>{if(finished)return;finished=true;setPipelineStage("render",0,"Error: "+String(message).slice(0,110),"error");$("renderStatus").textContent=message;cleanup();};
  try{
