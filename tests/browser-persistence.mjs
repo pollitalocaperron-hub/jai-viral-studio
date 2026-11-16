@@ -116,7 +116,7 @@ try {
   }, uiProject);
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Cargar" }).click();
-  await page.waitForFunction(() => document.querySelector("#autosaveStatus")?.textContent.includes("Proyecto completo recuperado"), null, { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelector("#status")?.textContent.includes("Proyecto restaurado con"), null, { timeout: 10000 });
   assert.equal(await page.locator("#topic").inputValue(), uiProject.topic);
   assert.equal(await page.locator("#script").innerText(), "Guion persistido");
   assert.equal(await page.locator("#kokoroAudio").isVisible(), true);
