@@ -1,4 +1,11 @@
+import { applyApiCors } from "../cors.js";
 export default async function handler(req, res) {
+  if (!applyApiCors(req, res)) {
+    return res.status(403).json({ error: "Origen no autorizado." });
+  }
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Método no permitido." });
