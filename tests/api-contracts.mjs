@@ -239,7 +239,7 @@ try {
     assert.equal(res.body.shot_count, 8);
     assert.equal(res.body.conceptual_scene_count, 4);
     assert.equal(res.body.animation_plan_validated, true);
-    assert.equal(res.body.animation_ready, false, "A shot plan alone must not claim that independent layers are already animated");
+    assert.equal(res.body.animation_ready, true, "Validated independent vector layers and transforms must be animation-ready");
     assert.equal(res.body.shots[0].shot_id, "shot-01");
     assert.equal(res.body.shots[0].layers.length, 2);
   }
@@ -313,7 +313,7 @@ try {
           visual_prompt_en: "Clean educational 2D editorial illustration of the exact mechanical component in a coherent portrait composition, clear shapes, consistent palette, separated readable parts and a specific teaching action.",
           continuity_anchor: "Same component geometry, color, scale and orientation across adjacent shots.",
           background_color: "#F2EEE4", layers: [{"id":"component","description":"Componente principal","role":"subject","path_d":"M 240 420 C 260 360 460 360 480 420 L 480 760 C 460 820 260 820 240 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"housing","description":"Estructura contenedora","role":"environment","path_d":"M 150 300 L 570 300 L 570 900 L 150 900 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
-          animation_steps: [{ target_id: "missing-layer", action: "move", from_state: "lower", to_state: "upper", start_progress: 0, end_progress: 1 }, { target_id: "housing", action: "hold", from_state: "fixed", to_state: "fixed", start_progress: 0, end_progress: 1 }]
+          animation_steps: [{ target_id: "missing-layer", action: "move", from_state: "lower", to_state: "upper", start_progress: 0, end_progress: 1, from_transform: { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 }, to_transform: { x: 0, y: -70, rotation: 0, scale: 1, opacity: 1 } }, { target_id: "housing", action: "hold", from_state: "fixed", to_state: "fixed", start_progress: 0, end_progress: 1, from_transform: { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 }, to_transform: { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 } }]
         });
       }
     });

@@ -144,7 +144,7 @@ function updateRenderGate(){
  const animationReady=animationRendererReady();
  const ready=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&voiceReady&&audioFits&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)&&animationReady);
  $("renderVideo").disabled=!ready||renderRecording;
- if(timelineState.items.length){const imagesReady=jaiSceneImages.length===currentScenes.length&&currentScenes.length>0&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);const montageReady=imagesReady&&voiceReady&&visualAuditPassed();setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje completo · imagen, narración y revisión integradas": "Estructura creada · pendiente de fotogramas, narración y revisión",montageReady?"done":"idle");}
+ if(timelineState.items.length){const imagesReady=jaiSceneImages.length===currentScenes.length&&currentScenes.length>0&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);const montageReady=imagesReady&&voiceReady&&visualAuditPassed()&&animationReady;setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje completo · imagen, narración y revisión integradas": "Estructura creada · pendiente de fotogramas, narración y revisión",montageReady?"done":"idle");}
  if(!ready&&!renderRecording){
   const reason=!currentScenes.length?"genera primero un plan":!animationReady?"el motor de capas vectoriales independientes no está completo; rediseña las tomas":!jaiSceneImages.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)?"genera los fotogramas que faltan":!voiceReady?"genera y revisa la narración antes de exportar":!visualAuditPassed()?"la revisión visual está pendiente: inspecciona o aprueba las escenas manualmente":!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":!audioFits?"la narración no cabe en la duración del montaje sin alterar demasiado su tono; ajusta la duración o vuelve a generar la voz":"faltan recursos";
   $("renderStatus").textContent="Exportación bloqueada: "+reason+".";
@@ -492,7 +492,6 @@ async function generateAIVisuals(){
  if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Primero genera el guion y storyboard.";return;}
  // El director de tomas forma parte de la producción, no es un paso opcional
  // que el usuario deba recordar ejecutar por separado.
- let shotPlanCreatedForThisRun=false;
  if(!Array.isArray(currentShotPlan)||currentShotPlan.length===0){
   $("visualStatus").textContent="Falta la dirección de tomas. J.A.I. la está preparando antes de producir los fotogramas…";
   await designAnimationShots();
@@ -500,11 +499,10 @@ async function generateAIVisuals(){
    $("visualStatus").textContent="Producción detenida: el director gratuito no pudo validar las tomas. No se crearán fotogramas genéricos ni se marcará la animación como lista.";
    return;
   }
-  shotPlanCreatedForThisRun=true;
  }
  // Reconstruye los bloques para asociar cada instante a su toma dirigida,
  // sin dejar una línea de tiempo anterior desconectada del nuevo plan.
- if(shotPlanCreatedForThisRun||!timelineState.items.length)buildTimeline();
+ if(currentShotPlan.length||!timelineState.items.length)buildTimeline();
  const scenes=currentScenes,button=$("makeVisuals");
  visualGenerationRunning=true;setPipelineStage("visual",0,"Preparando fotogramas…","running");$("create").disabled=true;button.disabled=true;$("renderVideo").disabled=true;
  if(jaiSceneImages.length!==scenes.length)jaiSceneImages=scenes.map((scene,index)=>jaiSceneImages[index]||null);
@@ -1061,7 +1059,10 @@ function paintVectorShot(ctx,w,h,shot,progress){
   const steps=(Array.isArray(shot.animation_steps)?shot.animation_steps:[]).filter(step=>step.target_id===layer.id).sort((a,b)=>Number(a.start_progress)-Number(b.start_progress));
   if(steps.length){
    let selected=steps.find(step=>p>=Number(step.start_progress)&&p<=Number(step.end_progress));
-   if(!selected)selected=p<Number(steps[0].start_progress)?steps[0]:steps[steps.length-1];
+   if(!selected){
+    const completed=steps.filter(step=>p>Number(step.end_progress));
+    selected=p<Number(steps[0].start_progress)?steps[0]:(completed[completed.length-1]||steps[0]);
+   }
    const a=selected.from_transform||transform,b=selected.to_transform||a;
    const raw=Math.max(0,Math.min(1,(p-Number(selected.start_progress))/Math.max(.001,Number(selected.end_progress)-Number(selected.start_progress))));
    const t=raw*raw*(3-2*raw);
@@ -1104,51 +1105,48 @@ function getPortraitFrame(source){
  portraitFrameCache.set(source,canvas);return canvas;
 }
 function drawVideoScene(item,index,progress,audioElapsed=0){
- const imageIndex=Number.isInteger(item?.visualIndex)?item.visualIndex:index;
- const generated=jaiSceneImages[imageIndex];
  const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height,p=Math.max(0,Math.min(1,Number(progress)||0));
  ctx.clearRect(0,0,w,h);
  const vectorShot=item?.directedShot;
- const hasVector=vectorShot&&paintVectorShot(ctx,w,h,vectorShot,p);
+ const hasVector=!!(vectorShot&&paintVectorShot(ctx,w,h,vectorShot,p));
  if(hasVector){
-  const previous= item?.previousDirectedShot;
-  const transition=String(item?.transition||"fade"),duration=Math.max(.1,Math.min(1,Number(item?.transitionDuration)||.3));
-  const t=Math.max(0,Math.min(1,(p*Math.max(.1,Number(item?.seconds)||3))/duration));
-  if(previous&&transition!=="cut"&&t<1){
-   const current=document.createElement("canvas");current.width=w;current.height=h;
-   const currentCtx=current.getContext("2d");paintVectorShot(currentCtx,w,h,vectorShot,p);
+  const previous=item?.previousDirectedShot,transition=String(item?.transition||"fade");
+  const duration=Math.max(.1,Math.min(1,Number(item?.transitionDuration)||.3));
+  const transitionProgress=Math.max(0,Math.min(1,(p*Math.max(.1,Number(item?.seconds)||3))/duration));
+  if(previous&&transition!=="cut"&&transitionProgress<1){
    paintVectorShot(ctx,w,h,previous,1);
-   ctx.save();if(transition==="wipe"){ctx.beginPath();ctx.rect(0,0,w*t,h);ctx.clip();ctx.clearRect(0,0,w,h);}else ctx.globalAlpha=t;
-   ctx.drawImage(current,0,0);ctx.restore();
+   ctx.save();
+   if(transition==="wipe"){ctx.beginPath();ctx.rect(0,0,w*transitionProgress,h);ctx.clip();}
+   else ctx.globalAlpha=transitionProgress;
+   paintVectorShot(ctx,w,h,vectorShot,p);
+   ctx.restore();
   }
- } else if(!generated||!generated.image){
-  ctx.fillStyle="#07101e";ctx.fillRect(0,0,w,h);ctx.fillStyle="#f5fbff";ctx.textAlign="center";ctx.font="700 28px Arial";ctx.fillText("FOTOGRAMA NO DISPONIBLE",w/2,h/2);return;
- }
- const img=getPortraitFrame(generated.image);
- // Conserva el encuadre completo de la imagen cuadrada: relleno ambiental desenfocado y sujeto íntegro al frente.
- const direction=index%2===0?1:-1;
- const eased=p*p*(3-2*p),animationText=String([item.animation,item.visual_action,item.visualAction,item.animation_type].filter(Boolean).join(" ")).toLowerCase();
- const zoomOut=/reveal|expose|open|widen|pull back|expand view|overview/.test(animationText);
- const scale=1.015+eased*(zoomOut?-.025:.055);
- const dw=w*scale,dh=h*scale;
- const driftX=direction*(eased-.5)*Math.min(30,w*.042);
- const driftY=Math.sin(eased*Math.PI+index*.55)*Math.min(22,h*.018);
- const dx=(w-dw)/2+driftX,dy=(h-dh)/2+driftY;
- ctx.drawImage(img,dx,dy,dw,dh);
- const previousIndex=item&&Object.prototype.hasOwnProperty.call(item,"previousVisualIndex")?(Number.isInteger(item.previousVisualIndex)?item.previousVisualIndex:-1):index-1;
- const transition=String(item?.transition||"fade"),transitionDuration=Math.max(.1,Math.min(1,Number(item?.transitionDuration)||.3)),transitionProgress=Math.max(0,Math.min(1,(p*Math.max(.1,Number(item?.seconds)||3))/transitionDuration));
- if(previousIndex>=0&&transition!=="cut"&&transitionProgress<1&&jaiSceneImages[previousIndex]?.image){
-  const previous=getPortraitFrame(jaiSceneImages[previousIndex].image),prevScale=1.015;ctx.save();
-  if(transition==="wipe"){ctx.beginPath();ctx.rect(0,0,w*(1-transitionProgress),h);ctx.clip();ctx.drawImage(previous,(w-w*prevScale)/2,(h-h*prevScale)/2,w*prevScale,h*prevScale);}
-  else{ctx.globalAlpha=1-transitionProgress;ctx.drawImage(previous,(w-w*prevScale)/2,(h-h*prevScale)/2,w*prevScale,h*prevScale);}
-  ctx.restore();
+ }else{
+  const imageIndex=Number.isInteger(item?.visualIndex)?item.visualIndex:index,generated=jaiSceneImages[imageIndex];
+  if(!generated||!generated.image){
+   ctx.fillStyle="#07101e";ctx.fillRect(0,0,w,h);ctx.fillStyle="#f5fbff";ctx.textAlign="center";ctx.font="700 28px Arial";ctx.fillText("FOTOGRAMA NO DISPONIBLE",w/2,h/2);return;
+  }
+  const img=getPortraitFrame(generated.image),direction=index%2===0?1:-1;
+  const eased=p*p*(3-2*p),animationText=String([item.animation,item.visual_action,item.visualAction,item.animation_type].filter(Boolean).join(" ")).toLowerCase();
+  const zoomOut=/reveal|expose|open|widen|pull back|expand view|overview/.test(animationText);
+  const scale=1.015+eased*(zoomOut?-.025:.055),dw=w*scale,dh=h*scale;
+  const driftX=direction*(eased-.5)*Math.min(30,w*.042),driftY=Math.sin(eased*Math.PI+index*.55)*Math.min(22,h*.018);
+  ctx.drawImage(img,(w-dw)/2+driftX,(h-dh)/2+driftY,dw,dh);
+  const previousIndex=item&&Object.prototype.hasOwnProperty.call(item,"previousVisualIndex")?(Number.isInteger(item.previousVisualIndex)?item.previousVisualIndex:-1):index-1;
+  const transition=String(item?.transition||"fade"),transitionDuration=Math.max(.1,Math.min(1,Number(item?.transitionDuration)||.3));
+  const transitionProgress=Math.max(0,Math.min(1,(p*Math.max(.1,Number(item?.seconds)||3))/transitionDuration));
+  if(previousIndex>=0&&transition!=="cut"&&transitionProgress<1&&jaiSceneImages[previousIndex]?.image){
+   const previous=getPortraitFrame(jaiSceneImages[previousIndex].image);ctx.save();
+   if(transition==="wipe"){ctx.beginPath();ctx.rect(0,0,w*(1-transitionProgress),h);ctx.clip();ctx.drawImage(previous,0,0,w,h);}
+   else{ctx.globalAlpha=1-transitionProgress;ctx.drawImage(previous,0,0,w,h);}
+   ctx.restore();
+  }
+  drawMotionGraphics(item,index,p,audioElapsed);
  }
  const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,"rgba(2,8,18,.10)");shade.addColorStop(.68,"rgba(2,8,18,.04)");shade.addColorStop(1,"rgba(2,8,18,.72)");ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
- if(!hasVector)drawMotionGraphics(item,index,p,audioElapsed);
  const title=String(item.on_screen_text||"").trim();
  if(title){
-  const words=title.split(/\s+/),lines=[];let line="",fontSize=36;
-  ctx.font="800 "+fontSize+"px Arial";
+  const words=title.split(/\s+/),lines=[];let line="",fontSize=36;ctx.font="800 "+fontSize+"px Arial";
   words.forEach(word=>{const candidate=line?line+" "+word:word;if(line&&ctx.measureText(candidate).width>w-112){lines.push(line);line=word;}else line=candidate;});
   if(line)lines.push(line);
   while(lines.some(value=>ctx.measureText(value).width>w-112)&&fontSize>25){fontSize-=2;ctx.font="800 "+fontSize+"px Arial";}
@@ -1161,13 +1159,11 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
   const subtitleTime=audioElapsed-subtitleTrackOffset;
   const cue=captionCues.slice().sort((a,b)=>a.start-b.start).find(entry=>subtitleTime>=entry.start&&subtitleTime<entry.end);
   if(cue&&String(cue.text||"").trim()){
-   const words=String(cue.text).trim().split(/\s+/),lines=[];let line="";
-   ctx.font="700 34px Arial";
+   const words=String(cue.text).trim().split(/\s+/),lines=[];let line="";ctx.font="700 34px Arial";
    words.forEach(word=>{const test=line?line+" "+word:word;if(line&&ctx.measureText(test).width>w-110){lines.push(line);line=word;}else line=test;});
    if(line)lines.push(line);
    const visible=lines.slice(0,2),lineHeight=43,boxHeight=visible.length*lineHeight+34,boxY=h-255-boxHeight/2;
-   const maxWidth=Math.max(...visible.map(value=>ctx.measureText(value).width),0)+44;
-   const boxX=(w-maxWidth)/2;
+   const maxWidth=Math.max(...visible.map(value=>ctx.measureText(value).width),0)+44,boxX=(w-maxWidth)/2;
    ctx.fillStyle="rgba(3,9,20,.82)";ctx.fillRect(boxX,boxY,maxWidth,boxHeight);
    ctx.fillStyle="#fff";ctx.textAlign="center";ctx.textBaseline="middle";
    visible.forEach((value,i)=>ctx.fillText(value,w/2,boxY+17+lineHeight*(i+.5)));
