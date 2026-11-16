@@ -207,6 +207,12 @@ try {
   await page.locator("#audioTrackOffset").fill("1.5");
   await page.locator("#audioTrackOffset").dispatchEvent("change");
   assert.equal(await page.locator("#audioTrackOffset").inputValue(), "1.5", "Narration offset must remain editable after recovery");
+  await trimEnd.fill("2");
+  await trimEnd.dispatchEvent("change");
+  assert.equal(await page.locator("#renderVideo").isDisabled(), true, "The export gate must immediately block narration trims that cannot fit the timeline safely");
+  await trimEnd.fill("11");
+  await trimEnd.dispatchEvent("change");
+  assert.equal(await page.locator("#renderVideo").isEnabled(), true, "Restoring a valid narration trim must immediately unlock export");
   await page.locator("#subtitleTrackOffset").fill("0.5");
   await page.locator("#subtitleTrackOffset").dispatchEvent("change");
   assert.equal(await page.locator("#subtitleTrackOffset").inputValue(), "0.5", "Subtitle offset must remain editable after recovery");
