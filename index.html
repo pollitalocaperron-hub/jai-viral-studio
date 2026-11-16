@@ -164,7 +164,82 @@ function syncRecoveredPipeline(){
  $("pipelineHint").textContent="Estado reconstruido a partir de los recursos recuperados en este dispositivo.";
  updateRenderGate();
 }
-async function restoreJaiRecovery(){try{const db=await openJaiRecoveryDB();const snapshot=await new Promise((resolve,reject)=>{const tx=db.transaction(JAI_AUTOSAVE_STORE,"readonly"),request=tx.objectStore(JAI_AUTOSAVE_STORE).get(JAI_AUTOSAVE_KEY);request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>reject(request.error);});db.close();if(!snapshot?.data||!snapshot.topic)return;loadSavedProject({topic:snapshot.topic,notes:snapshot.notes,plan:snapshot.plan,data:snapshot.data});currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;if(Array.isArray(snapshot.images)){jaiSceneImages=snapshot.images.map(item=>{if(!item?.src)return null;const image=new Image();image.src=item.src;return {...item,image};});renderVisualScenes();}visualAuditResults=Array.isArray(snapshot.audit)?snapshot.audit:[];if(snapshot.audio instanceof Blob){kokoroAudioBlob=snapshot.audio;kokoroAudioDuration=Number(snapshot.audioDuration)||0;kokoroSampleRate=Number(snapshot.audioSampleRate)||24000;kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);$("kokoroAudio").src=kokoroAudioUrl;$("kokoroAudio").style.display="block";$("downloadNarration").href=kokoroAudioUrl;$("downloadNarration").hidden=false;scheduleJaiAutosave();}audioEdit=snapshot.audioEdit||{trimStart:0,trimEnd:kokoroAudioDuration,gain:1};audioTrackOffset=Number(snapshot.audioTrackOffset)||0;subtitleTrackOffset=Number(snapshot.subtitleTrackOffset)||0;captionCues=Array.isArray(snapshot.captions)?snapshot.captions:[];if(Array.isArray(snapshot.timeline)&&snapshot.timeline.length){timelineState.items=snapshot.timeline.map(item=>({...item}));updateTimelineDurations();renderTimeline();}syncAudioEditControls();renderCaptionEditor();renderMediaTracks();$("downloadSrt").disabled=!captionCues.length;$("generateCaptions").disabled=!kokoroAudioBlob;$("inspectVisuals").disabled=!(jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,i)=>jaiSceneImages[i]?.image));await Promise.all(jaiSceneImages.filter(item=>item?.image).map(item=>item.image.decode?item.image.decode().catch(()=>{}):Promise.resolve()));renderVisualScenes();syncRecoveredPipeline();const status=$("autosaveStatus");if(status)status.textContent="Sesión recuperada automáticamente · "+new Date(snapshot.savedAt).toLocaleString("es-MX");$("status").textContent="J.A.I. recuperó tu último proyecto y los recursos guardados en este dispositivo. Revisa el montaje antes de exportar.";}catch(error){const status=$("autosaveStatus");if(status)status.textContent="La recuperación automática no está disponible en este navegador.";}}
+async function restoreJaiRecovery(){
+ let db=null;
+ try{
+  db=await openJaiRecoveryDB();
+  const snapshot=await new Promise((resolve,reject)=>{
+   const tx=db.transaction(JAI_AUTOSAVE_STORE,"readonly");
+   const request=tx.objectStore(JAI_AUTOSAVE_STORE).get(JAI_AUTOSAVE_KEY);
+   request.onsuccess=()=>resolve(request.result||null);
+   request.onerror=()=>reject(request.error);
+   tx.onabort=()=>reject(tx.error||new Error("Lectura de recuperación cancelada"));
+  });
+  if(!snapshot?.data||!snapshot.topic)return;
+  loadSavedProject({topic:snapshot.topic,notes:snapshot.notes,plan:snapshot.plan,data:snapshot.data});
+  currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;
+  if(Array.isArray(snapshot.images)){
+   jaiSceneImages=snapshot.images.map(item=>{
+    if(!item?.src)return null;
+    const image=new Image();
+    image.src=item.src;
+    return {...item,image};
+   });
+   await Promise.all(jaiSceneImages.map(async item=>{
+    if(!item?.image)return;
+    try{
+     if(item.image.decode)await item.image.decode();
+     else if(!item.image.complete)await new Promise((resolve,reject)=>{item.image.onload=resolve;item.image.onerror=()=>reject(new Error("Fotograma no disponible"));});
+     if(!item.image.naturalWidth||!item.image.naturalHeight)throw new Error("Fotograma vacío");
+    }catch(error){
+     const index=jaiSceneImages.indexOf(item);
+     jaiSceneImages[index]=null;
+     console.warn("[JAI] No se pudo recuperar el fotograma "+(index+1)+":",error);
+    }
+   }));
+  }
+  visualAuditResults=Array.isArray(snapshot.audit)?snapshot.audit:[];
+  jaiSceneImages.forEach((item,index)=>{if(!item?.image&&visualAuditResults[index])visualAuditResults[index]=null;});
+  if(snapshot.audio instanceof Blob){
+   kokoroAudioBlob=snapshot.audio;
+   kokoroAudioDuration=Number(snapshot.audioDuration)||0;
+   kokoroSampleRate=Number(snapshot.audioSampleRate)||24000;
+   kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);
+   $("kokoroAudio").src=kokoroAudioUrl;
+   $("kokoroAudio").style.display="block";
+   $("downloadNarration").href=kokoroAudioUrl;
+   $("downloadNarration").hidden=false;
+  }
+  audioEdit=snapshot.audioEdit||{trimStart:0,trimEnd:kokoroAudioDuration,gain:1};
+  audioTrackOffset=Number(snapshot.audioTrackOffset)||0;
+  subtitleTrackOffset=Number(snapshot.subtitleTrackOffset)||0;
+  captionCues=Array.isArray(snapshot.captions)?snapshot.captions:[];
+  if(Array.isArray(snapshot.timeline)&&snapshot.timeline.length){
+   timelineState.items=snapshot.timeline.map(item=>({...item}));
+   updateTimelineDurations();
+   renderTimeline();
+  }
+  syncAudioEditControls();
+  renderCaptionEditor();
+  renderMediaTracks();
+  $("downloadSrt").disabled=!captionCues.length;
+  $("generateCaptions").disabled=!kokoroAudioBlob;
+  $("inspectVisuals").disabled=!(jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,i)=>jaiSceneImages[i]?.image));
+  await Promise.all(jaiSceneImages.filter(item=>item?.image).map(item=>item.image.decode?item.image.decode().catch(()=>{}):Promise.resolve()));
+  renderVisualScenes();
+  syncRecoveredPipeline();
+  const missingImages=jaiSceneImages.filter(item=>!item?.image).length;
+  const status=$("autosaveStatus");
+  if(status)status.textContent="Sesión recuperada automáticamente · "+new Date(snapshot.savedAt).toLocaleString("es-MX");
+  $("status").textContent="J.A.I. recuperó tu último proyecto y los recursos guardados en este dispositivo. "+(missingImages?"Faltan "+missingImages+" fotogramas; vuelve a generarlos antes de exportar.":"Revisa el montaje antes de exportar.");
+ }catch(error){
+  const status=$("autosaveStatus");
+  if(status)status.textContent="La recuperación automática no está disponible en este navegador.";
+  console.error("[JAI] Falló la recuperación automática:",error);
+ }finally{
+  if(db)db.close();
+ }
+}
 
 async function readJsonResponse(response,label){
  const raw=await response.text();
