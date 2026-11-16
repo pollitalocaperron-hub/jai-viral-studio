@@ -247,7 +247,11 @@ async function generateAIVisuals(){
    const composition=visualText(scene.visual_composition,"single dominant subject, close cinematic three-quarter view, centered portrait-safe composition").slice(0,260);
    const proof=visualText(scene.visual_proof||scene.teaching_point,"the physical change described by the scene").slice(0,320);
    const authored=visualText(scene.visual_prompt_en,"").trim().slice(0,1300);
-   const prompt=[style,authored?"SHOT DESCRIPTION: "+authored:"","EXACT SUBJECT: "+subject+".","VISIBLE MATERIAL STATE: "+state+".","ONE OBSERVABLE PHYSICAL ACTION: "+action+".","VISIBLE SCIENTIFIC PROOF: "+proof+".","PHYSICAL ENVIRONMENT: "+environment+".","COMPOSITION: "+composition+".","Create a polished frame from an animated educational short, not a generic product photograph. Make the teaching mechanism immediately legible: show the relevant body position, muscle group, joint movement, machine part, material transformation, or cause-and-effect relationship when the topic calls for it. Prefer a full or medium view when the action matters and a close-up when the mechanism matters. Compose for a 9:16 portrait video with the main subject inside the central safe area. Keep the background clean enough for captions and editor-added callouts. One scene and one dominant action only. "+avoid].filter(Boolean).join(" ");
+   const medium=visualText(scene.visual_medium,"topic-appropriate visual representation").slice(0,220);
+   const animationType=visualText(scene.animation_type,"topic-appropriate animation technique").slice(0,220);
+   const motionSequence=Array.isArray(scene.motion_sequence)?scene.motion_sequence.map((step,n)=>"PHASE "+(n+1)+": "+visualText(typeof step==="string"?step:(step?.action||step?.description||JSON.stringify(step)),"").slice(0,220)).join(" | "):visualText(scene.motion_sequence,"").slice(0,650);
+   const continuity=visualText(scene.continuity_anchor,"maintain consistent subject identity and scene logic").slice(0,300);
+   const prompt=[style,"VISUAL MEDIUM: "+medium+".","ANIMATION TECHNIQUE: "+animationType+".",authored?"INITIAL FRAME DESCRIPTION: "+authored:"","EXACT SUBJECT: "+subject+".","VISIBLE STATE: "+state+".","SCENE ACTION: "+action+".","MOTION SEQUENCE: "+motionSequence+".","CONTINUITY: "+continuity+".","VISIBLE TEACHING PROOF: "+proof+".","ENVIRONMENT: "+environment+".","COMPOSITION: "+composition+".","Create one polished, animation-ready frame for a topic-specific educational explainer. Match the representation to the actual subject: do not add anatomy, characters, machinery, molecules, arrows or diagrams unless this topic requires them. Keep the main subject readable in a 9:16 portrait composition and leave caption-safe space. "+avoid].filter(Boolean).join(" ");
    $("visualStatus").textContent="Generando escena "+(i+1)+" de "+scenes.length+" · "+generatedCount+" listas · "+subject.slice(0,75);
    const generated=await requestVisualImage(prompt,i+1);
    jaiSceneImages[i]={...generated,shot:subject,time:scene.time,sceneIndex:i,prompt};
@@ -392,7 +396,7 @@ function validateStoryboardForProduction(){
   if(!range)return {ok:false,reason:"La escena "+(i+1)+" no tiene un intervalo válido de inicio y fin."};
   if(range.start!==cursor)return {ok:false,reason:"La cronología se rompe antes de la escena "+(i+1)+"."};
   cursor=range.end;
-  const required=["visual_subject","visual_state","visual_action","visual_composition","visual_environment","visual_prompt_en","visual_proof","teaching_point"];
+  const required=["visual_subject","visual_state","visual_action","visual_composition","visual_environment","visual_prompt_en","visual_medium","animation_type","continuity_anchor","visual_proof","teaching_point"];
   const missing=required.filter(key=>typeof scene[key]!=="string"||!scene[key].trim()||/pendiente|por definir|scene 2|escena 2/i.test(scene[key]));
   if(missing.length)return {ok:false,reason:"La escena "+(i+1)+" está incompleta. Faltan datos visuales válidos: "+missing.join(", ")+"."};
   if(scene.visual_prompt_en.trim().split(/\s+/).length<35)return {ok:false,reason:"El prompt visual de la escena "+(i+1)+" no tiene detalle suficiente."};
