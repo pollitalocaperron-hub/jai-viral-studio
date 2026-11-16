@@ -86,7 +86,7 @@ const server = http.createServer((req, res) => {
       const requestedStory = Array.isArray(body.story) ? body.story : story;
       const shots = [];
       requestedStory.forEach((scene, sceneIndex) => {
-        const match = String(scene.time || "").match(/(\d{1,2}):(\d{2})\\s*[-–—]\\s*(\d{1,2}):(\d{2})/);
+        const match = String(scene.time || "").match(/(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})/);
         const start = match ? Number(match[1]) * 60 + Number(match[2]) : sceneIndex * 9;
         const end = match ? Number(match[3]) * 60 + Number(match[4]) : start + 9;
         const midpoint = (start + end) / 2;
