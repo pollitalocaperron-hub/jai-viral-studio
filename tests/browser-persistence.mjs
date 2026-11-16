@@ -197,6 +197,42 @@ try {
   assert.equal(await page.locator("#kokoroAudio").isVisible(), true,
     "The recovered audio track must be available after a complete browser-context restart");
   assert.deepEqual(restartedPageErrors, [], "Browser restart recovery must not introduce uncaught page errors");
+  // Verify subtitle offsets at the rendered-frame level, not only in the editor/SRT metadata.
+  const subtitleTiming = await page.evaluate(() => {
+    const item = { visualIndex: 0, seconds: 3, transition: "cut", on_screen_text: "" };
+    const countBrightPixels = () => {
+      const pixels = renderCtx.getImageData(0, 900, 720, 300).data;
+      let count = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        if (pixels[i] > 225 && pixels[i + 1] > 225 && pixels[i + 2] > 225) count++;
+      }
+      return count;
+    };
+    captionCues = [];
+    subtitleTrackOffset = 0;
+    drawVideoScene(item, 0, 0.5, 5.5);
+    const baseline = countBrightPixels();
+    captionCues = [{ start: 5, end: 6, text: "SUBTITULO DE PRUEBA" }];
+    subtitleTrackOffset = 1;
+    drawVideoScene(item, 0, 0.5, 6.5);
+    const delayedVisible = countBrightPixels();
+    drawVideoScene(item, 0, 0.5, 5.5);
+    const delayedHidden = countBrightPixels();
+    subtitleTrackOffset = -1;
+    drawVideoScene(item, 0, 0.5, 4.5);
+    const advancedVisible = countBrightPixels();
+    drawVideoScene(item, 0, 0.5, 5.5);
+    const advancedHidden = countBrightPixels();
+    return { baseline, delayedVisible, delayedHidden, advancedVisible, advancedHidden };
+  });
+  assert.ok(subtitleTiming.delayedVisible > subtitleTiming.baseline + 30,
+    "A +1s subtitle offset must move the rendered cue one second later");
+  assert.ok(subtitleTiming.delayedHidden <= subtitleTiming.baseline + 5,
+    "A +1s subtitle offset must hide the cue at its original time");
+  assert.ok(subtitleTiming.advancedVisible > subtitleTiming.baseline + 30,
+    "A -1s subtitle offset must move the rendered cue one second earlier");
+  assert.ok(subtitleTiming.advancedHidden <= subtitleTiming.baseline + 5,
+    "A -1s subtitle offset must hide the cue after its shifted interval");
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Cargar" }).click();
   await page.waitForFunction(() => document.querySelector("#status")?.textContent.includes("Proyecto restaurado con"), null, { timeout: 10000 });
