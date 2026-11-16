@@ -221,28 +221,50 @@ try {
   }, null, { timeout: 45000 });
   const renderStatus = await page.locator("#renderStatus").innerText();
   assert.match(renderStatus, /Vídeo renderizado correctamente/, "Chromium must produce a completed video export, not merely enable the render button");
+  assert.match(renderStatus, /con narración integrada/, "The completed export must report that narration was muxed into the video");
   const download = page.locator("#downloadVideo");
   assert.equal(await download.isVisible(), true, "A completed render must expose its downloadable file");
   const exported = await page.evaluate(async () => {
     const link = document.querySelector("#downloadVideo");
     const blob = await fetch(link.href).then(response => response.blob());
     const video = document.createElement("video");
-    video.preload = "metadata";
+    video.preload = "auto";
+    video.muted = true;
     video.src = link.href;
     await new Promise((resolve, reject) => {
       video.onloadedmetadata = resolve;
       video.onerror = () => reject(new Error("Exported video metadata could not be decoded"));
       setTimeout(() => reject(new Error("Timed out reading exported video metadata")), 8000);
     });
-    return { type: blob.type, size: blob.size, width: video.videoWidth, height: video.videoHeight, duration: video.duration };
+    video.currentTime = Math.min(1, video.duration / 2);
+    await new Promise((resolve, reject) => {
+      video.onseeked = resolve;
+      video.onerror = () => reject(new Error("An exported video frame could not be decoded"));
+      setTimeout(() => reject(new Error("Timed out decoding an exported video frame")), 8000);
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = 160;
+    canvas.height = 284;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const colors = new Set();
+    for (let y = 12; y < canvas.height; y += 27) {
+      for (let x = 12; x < canvas.width; x += 23) {
+        const offset = (y * canvas.width + x) * 4;
+        colors.add([pixels[offset], pixels[offset + 1], pixels[offset + 2]].join(","));
+      }
+    }
+    return { type: blob.type, size: blob.size, width: video.videoWidth, height: video.videoHeight, duration: video.duration, distinctFrameColors: colors.size };
   });
   assert.match(exported.type, /^video\/(mp4|webm)/, "The export must be a real MP4 or WebM media blob");
   assert.ok(exported.size > 1000, "The exported media file must contain encoded data");
   assert.equal(exported.width, 720, "The exported video must be 720 pixels wide");
   assert.equal(exported.height, 1280, "The exported video must be portrait 9:16");
   assert.ok(exported.duration >= 9 && exported.duration <= 12, "The exported video duration must match the edited ten-second timeline");
+  assert.ok(exported.distinctFrameColors >= 8, "A decoded exported frame must contain actual visual content, not a blank or black canvas");
   assert.deepEqual(pageErrors, [], "The application must not throw uncaught browser errors during recovery, editing, synchronization, or export");
-  console.log("PASS: recovery, scene/timeline editing, audio/subtitle synchronization, and real Chromium 720x1280 video export with decodable media metadata.");
+  console.log("PASS: recovery, scene/timeline editing, audio/subtitle synchronization, and real Chromium portrait export with decodable metadata, visible frame content, and integrated narration.");
 } finally {
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));
