@@ -168,5 +168,5 @@ export default async function handler(req, res) {
     layers: shot.layers.map((layer, layerIndex) => ({ id: clean(layer?.id, 60) || "layer-" + (layerIndex + 1), description: clean(layer?.description, 260), role: clean(layer?.role, 120) })),
     animation_steps: shot.animation_steps.map(step => ({ target_id: clean(step?.target_id, 60), action: clean(step?.action, 180), from_state: clean(step?.from_state, 140), to_state: clean(step?.to_state, 140), start_progress: Math.max(0, Math.min(1, Number(step?.start_progress) || 0)), end_progress: Math.max(0, Math.min(1, Number(step?.end_progress) || 1)) }))
   }));
-  return res.status(200).json({ shots: normalized, shot_count: normalized.length, conceptual_scene_count: story.length, provider, animation_ready: true });
+  return res.status(200).json({ shots: normalized, shot_count: normalized.length, conceptual_scene_count: story.length, provider, animation_plan_validated: true, animation_ready: false });
 }
