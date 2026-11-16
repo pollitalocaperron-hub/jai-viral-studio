@@ -363,7 +363,8 @@ function renderStory(value){
 
 let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,currentShotPlan=[];
 let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
-function visualAuditPassed(){return visualAuditResults.length===currentScenes.length&&currentScenes.length>0&&visualAuditResults.every((item,index)=>item&&item.scene_index===index&&item.status==="pass");}
+function visualAuditUnitCount(){return currentShotPlan.length||currentScenes.length;}
+function visualAuditPassed(){const count=visualAuditUnitCount();return count>0&&visualAuditResults.length===count&&visualAuditResults.every((item,index)=>item&&item.scene_index===index&&item.status==="pass");}
 function visualText(value,fallback="Pendiente de definir"){
  if(value===null||value===undefined||value==="")return fallback;
  if(typeof value==="string"||typeof value==="number"||typeof value==="boolean")return String(value);
@@ -402,13 +403,17 @@ function renderVisualScenes(){
   const desc=document.createElement("p");desc.textContent=subject;
   const proofLine=document.createElement("p");proofLine.className="hint";proofLine.textContent="Demostración: "+proof;
   meta.append(heading,desc,proofLine);
-  const audit=visualAuditResults[index];
-  if(audit){
-   const verdict=document.createElement("p");verdict.className="hint";verdict.textContent=audit.manual?"APROBACIÓN MANUAL · "+visualText(audit.reason,""):(audit.status==="pass"?"INSPECCIÓN APROBADA":"REVISAR FOTOGRAMA")+" · "+visualText(audit.score,"—")+"/100 · "+visualText(audit.reason,"");meta.appendChild(verdict);
-   if(Array.isArray(audit.issues)&&audit.issues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+audit.issues.map(x=>visualText(x,"")).join(" · ");meta.appendChild(issues);}
-  }
+  const auditIndices=currentShotPlan.length?currentShotPlan.map((shot,shotIndex)=>Number(shot.scene_index)===index?shotIndex:-1).filter(shotIndex=>shotIndex>=0):[index];
+  const audits=auditIndices.map(shotIndex=>visualAuditResults[shotIndex]).filter(Boolean);
+  const allShotsPassed=auditIndices.length>0&&audits.length===auditIndices.length&&audits.every(item=>item.status==="pass");
+  const audit=audits.find(item=>item.status!=="pass")||audits[0];
+  const verdict=document.createElement("p");verdict.className="hint";
+  verdict.textContent=allShotsPassed?"INSPECCIÓN APROBADA · "+audits.length+"/"+auditIndices.length+" TOMAS":audits.length?"REVISAR TOMAS · "+audits.length+"/"+auditIndices.length+" · "+visualText(audit?.reason,"Revisa las observaciones"):"REVISIÓN PENDIENTE · 0/"+auditIndices.length+" TOMAS";
+  meta.appendChild(verdict);
+  const shotIssues=audits.filter(item=>Array.isArray(item.issues)&&item.issues.length).flatMap(item=>item.issues);
+  if(shotIssues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+shotIssues.map(x=>visualText(x,"")).join(" · ");meta.appendChild(issues);}
   const retry=document.createElement("button");retry.type="button";retry.className="secondary";retry.textContent="Rediseñar todas las tomas";retry.addEventListener("click",async()=>{const ok=await designAnimationShots();if(ok)await generateAIVisuals();});meta.appendChild(retry);
-  if(!audit||audit.status!=="pass"){const approve=document.createElement("button");approve.type="button";approve.className="secondary";approve.textContent="Aprobar manualmente";approve.addEventListener("click",()=>approveVisualScene(index));meta.appendChild(approve);}
+  if(!allShotsPassed){const approve=document.createElement("button");approve.type="button";approve.className="secondary";approve.textContent="Aprobar manualmente";approve.addEventListener("click",()=>approveVisualScene(index));meta.appendChild(approve);}
   const promptDetails=document.createElement("details");promptDetails.style.cssText="margin-top:8px;font-size:12px;color:#b8c9dc";
   const promptSummary=document.createElement("summary");promptSummary.textContent="Ver dirección visual usada";
   const promptText=document.createElement("p");promptText.style.cssText="white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere";promptText.textContent=visualText(firstDirectedShot?.visual_prompt_en||generated?.prompt||scene.visual_prompt_en,"El plan no entregó un prompt visual específico para esta escena.")+"\n\nCapas vectoriales: "+(firstDirectedShot?.layers||[]).map(layer=>layer.description).join(" · ");
@@ -440,7 +445,7 @@ async function designAnimationShots(){
   currentShotPlan=data.shots;
   // A new direction invalidates previous previews and approvals; never reuse an audit from an older shot plan.
   jaiSceneImages=Array.from({length:currentScenes.length},()=>null);
-  visualAuditResults=Array.from({length:currentScenes.length},()=>null);
+  visualAuditResults=Array.from({length:currentShotPlan.length||currentScenes.length},()=>null);
   timelineState.items=[];buildTimeline();renderVisualScenes();updateRenderGate();
   const root=$("directScenesOutput");root.replaceChildren();
   data.shots.forEach((shot,index)=>{
@@ -479,7 +484,7 @@ async function generateAIVisuals(){
  visualGenerationRunning=true;setPipelineStage("visual",0,"Construyendo ilustraciones vectoriales…","running");
  $("create").disabled=true;button.disabled=true;$("renderVideo").disabled=true;$("inspectVisuals").disabled=true;
  jaiSceneImages=Array.from({length:scenes.length},()=>null);
- visualAuditResults=Array.from({length:scenes.length},()=>null);
+ visualAuditResults=Array.from({length:currentShotPlan.length||scenes.length},()=>null);
  renderVisualScenes();
  try{
   let generatedCount=0;
@@ -514,49 +519,74 @@ async function generateAIVisuals(){
  }
 }
 async function inspectVisuals(){
- if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualAuditStatus").textContent="Espera a que termine la tarea actual o la recuperación del proyecto.";return;}
- if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){ $("visualAuditStatus").textContent="Primero genera todos los fotogramas.";return;}
- const button=$("inspectVisuals");setPipelineStage("audit",0,"Comparando imágenes con la enseñanza…","running");button.disabled=true;$("makeVisuals").disabled=true;$("renderVideo").disabled=true;
- $("visualAuditStatus").textContent="Gemini está comparando cada fotograma con la explicación y la prueba visual de su escena…";setTaskProgress("visualAuditStatus",0,"Inspeccionando "+currentScenes.length+" escenas…","indeterminate");
+ if(projectRecoveryInProgress||planningInProgress||shotPlanningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("visualAuditStatus").textContent="Espera a que termine la tarea actual o la recuperación del proyecto.";return;}
+ if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){$("visualAuditStatus").textContent="Primero genera todas las ilustraciones vectoriales.";return;}
+ const auditUnits=currentShotPlan.length?currentShotPlan.map((shot,index)=>({shot,sceneIndex:Number(shot.scene_index),auditIndex:index})):currentScenes.map((scene,index)=>({shot:null,sceneIndex:index,auditIndex:index}));
+ const total=auditUnits.length,button=$("inspectVisuals");visualAuditResults=Array.from({length:total},()=>null);
+ setPipelineStage("audit",0,"Comparando todas las tomas con la enseñanza…","running");button.disabled=true;$("makeVisuals").disabled=true;$("renderVideo").disabled=true;
+ $("visualAuditStatus").textContent="Gemini está inspeccionando "+total+" tomas vectoriales. Se revisará cada objeto y cada acción, no solo una imagen por escena.";
+ setTaskProgress("visualAuditStatus",0,"Inspección visual · 0/"+total+" tomas","indeterminate");
  try{
-  const images=currentScenes.map((scene,index)=>{
-   const shot=currentShotPlan.find(item=>Number(item.scene_index)===index);
-   const image=jaiSceneImages[index].image,canvas=document.createElement("canvas");canvas.width=640;canvas.height=1138;
-   const ctx=canvas.getContext("2d");
-   if(shot&&paintVectorShot(ctx,canvas.width,canvas.height,shot,.5)){}
-   else{const scale=Math.min(canvas.width/image.width,canvas.height/image.height);ctx.drawImage(image,(canvas.width-image.width*scale)/2,(canvas.height-image.height*scale)/2,image.width*scale,image.height*scale);}
-   return {scene_index:index,subject:visualText(shot?.subject||scene.visual_subject||scene.visual||scene.objective,"").slice(0,220),state:visualText(shot?.visual_state||scene.visual_state,"").slice(0,220),action:visualText(shot?.visual_action||scene.visual_action||scene.animation,"").slice(0,220),proof:visualText(scene.visual_proof||scene.teaching_point,"").slice(0,220),image_base64:canvas.toDataURL("image/jpeg",0.76).split(",")[1]};
-  });
-  const response=await fetch(jaiApiUrl("/api/inspect-visual"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images}),signal:AbortSignal.timeout(45000)});
-  const data=await readJsonResponse(response,"Inspector visual");
-  if(!response.ok)throw new Error(data.error||"No se pudo completar la inspección visual.");
-  if(!Array.isArray(data.results)||data.results.length!==currentScenes.length)throw new Error("El inspector no devolvió un resultado por cada escena.");
-  if(!data.results.every((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)))throw new Error("El inspector devolvió resultados desordenados o asociados a otra escena; la aprobación se descartó.");
-  visualAuditResults=data.results;scheduleJaiAutosave();setPipelineStage("audit",100,"Inspección terminada: "+data.results.filter(x=>x.status==="pass").length+" aprobadas","done");
-  renderVisualScenes();
+  for(let offset=0;offset<total;offset+=8){
+   const batch=auditUnits.slice(offset,offset+8);
+   const images=batch.map((unit,localIndex)=>{
+    const scene=currentScenes[unit.sceneIndex],shot=unit.shot;
+    const source=shot?vectorShotCanvas(shot,.5):jaiSceneImages[unit.sceneIndex].image;
+    if(!source)throw new Error("No se pudo rasterizar la toma "+(offset+localIndex+1)+" para inspección.");
+    const canvas=document.createElement("canvas");canvas.width=640;canvas.height=1138;
+    const ctx=canvas.getContext("2d");const scale=Math.min(canvas.width/source.width,canvas.height/source.height);
+    ctx.drawImage(source,(canvas.width-source.width*scale)/2,(canvas.height-source.height*scale)/2,source.width*scale,source.height*scale);
+    return {scene_index:localIndex,subject:visualText(shot?.subject||scene.visual_subject||scene.visual||scene.objective,"").slice(0,220),
+     state:visualText(shot?.visual_state||scene.visual_state,"").slice(0,220),
+     action:visualText(shot?.visual_action||scene.visual_action||scene.animation,"").slice(0,220),
+     proof:visualText(shot?.visual_action||scene.visual_proof||scene.teaching_point,"").slice(0,220),
+     image_base64:canvas.toDataURL("image/jpeg",0.76).split(",")[1]};
+   });
+   const response=await fetch(jaiApiUrl("/api/inspect-visual"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images}),signal:AbortSignal.timeout(45000)});
+   const data=await readJsonResponse(response,"Inspector visual");
+   if(!response.ok)throw new Error(data.error||"No se pudo completar la inspección visual.");
+   if(!Array.isArray(data.results)||data.results.length!==batch.length)throw new Error("El inspector no devolvió un resultado por cada toma del lote.");
+   if(!data.results.every((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)))throw new Error("El inspector devolvió resultados desordenados o asociados a otra toma; la aprobación se descartó.");
+   data.results.forEach((item,index)=>{visualAuditResults[offset+index]={...item,scene_index:offset+index,conceptual_scene_index:batch[index].sceneIndex};});
+   const completed=offset+batch.length,percent=Math.round(completed/total*100);
+   setTaskProgress("visualAuditStatus",percent,"Inspeccionadas "+completed+"/"+total+" tomas");
+   setPipelineStage("audit",percent,"Inspección de tomas: "+completed+" de "+total,"running");
+   renderVisualScenes();scheduleJaiAutosave();
+  }
+  const passed=visualAuditResults.filter(item=>item?.status==="pass").length,failed=total-passed;
+  setPipelineStage("audit",100,"Inspección terminada: "+passed+"/"+total+" tomas aprobadas","done");
   updateRenderGate();
-  const failed=visualAuditResults.filter(item=>item.status!=="pass").length;
-  $("visualAuditStatus").textContent=failed===0?"Inspección completada: todas las escenas superaron la revisión visual. Revisa los detalles de cada tarjeta.": "Inspección completada: "+failed+" de "+visualAuditResults.length+" escenas necesitan revisión. Consulta las observaciones de cada tarjeta.";
- }catch(error){setPipelineStage("audit",0,"Inspección no disponible; requiere revisión manual","error");$("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Puedes revisar las imágenes manualmente; no se modificaron ni se descartaron.";setTaskProgress("visualAuditStatus",0,"Inspección fallida; las imágenes se conservaron");}
- finally{$("makeVisuals").disabled=false;button.disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));}
+  $("visualAuditStatus").textContent=failed===0?"Inspección completada: las "+total+" tomas superaron la revisión visual.": "Inspección completada: "+failed+" de "+total+" tomas necesitan revisión. Consulta cada escena y sus observaciones.";
+ }catch(error){
+  setPipelineStage("audit",0,"Inspección incompleta; requiere revisión manual","error");
+  $("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Las tomas ya revisadas se conservaron; puedes aprobar manualmente las escenas tras revisarlas.";
+  setTaskProgress("visualAuditStatus",0,"Inspección incompleta; recursos conservados");
+  renderVisualScenes();updateRenderGate();
+ }finally{
+  $("makeVisuals").disabled=false;
+  button.disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
+ }
 }
 function approveAllVisualScenes(){
  if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){
-  $("visualAuditStatus").textContent="No se puede aprobar: primero deben estar generadas las imágenes de todas las escenas.";return;
+  $("visualAuditStatus").textContent="No se puede aprobar: primero deben estar generadas las ilustraciones de todas las escenas.";return;
  }
- visualAuditResults=currentScenes.map((scene,index)=>({scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar el fotograma.",issues:[],manual:true}));scheduleJaiAutosave();
- setPipelineStage("audit",100,"Aprobación manual · "+currentScenes.length+" escenas revisadas","done");
- renderVisualScenes();
- $("visualAuditStatus").textContent="Las "+currentScenes.length+" escenas quedaron aprobadas manualmente. La exportación ya puede prepararse.";
+ const total=visualAuditUnitCount();
+ visualAuditResults=Array.from({length:total},(_,index)=>({scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar la toma vectorial.",issues:[],manual:true}));
+ scheduleJaiAutosave();setPipelineStage("audit",100,"Aprobación manual · "+total+" tomas revisadas","done");
+ renderVisualScenes();$("visualAuditStatus").textContent="Las "+total+" tomas quedaron aprobadas manualmente. La exportación puede continuar.";
  updateRenderGate();
 }
+
 $("approveAllVisuals").addEventListener("click",approveAllVisualScenes);
 function approveVisualScene(index){
  if(!Number.isInteger(index)||!currentScenes[index]||!jaiSceneImages[index]?.image)return;
- if(visualAuditResults.length!==currentScenes.length)visualAuditResults=Array.from({length:currentScenes.length},(_,i)=>visualAuditResults[i]||null);
- visualAuditResults[index]={scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar la imagen.",issues:[],manual:true};scheduleJaiAutosave();
- renderVisualScenes();
- $("visualAuditStatus").textContent="Escena "+(index+1)+" aprobada manualmente. La exportación se habilitará cuando todas las escenas estén aprobadas por IA o manualmente.";
+ const unitIndexes=currentShotPlan.length?currentShotPlan.map((shot,shotIndex)=>Number(shot.scene_index)===index?shotIndex:-1).filter(shotIndex=>shotIndex>=0):[index];
+ const total=visualAuditUnitCount();
+ if(visualAuditResults.length!==total)visualAuditResults=Array.from({length:total},(_,i)=>visualAuditResults[i]||null);
+ unitIndexes.forEach(shotIndex=>{visualAuditResults[shotIndex]={scene_index:shotIndex,status:"pass",score:null,reason:"Aprobada manualmente tras revisar la toma de esta escena.",issues:[],manual:true};});
+ scheduleJaiAutosave();renderVisualScenes();
+ $("visualAuditStatus").textContent="Escena "+(index+1)+" aprobada manualmente: "+unitIndexes.length+" toma(s).";
  updateRenderGate();
 }
 
@@ -1311,7 +1341,7 @@ async function makePlan(){
   showClarification(data);
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual · Medio elegido según el tema</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
-  renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];currentShotPlan=[];$("directScenes").disabled=!currentScenes.length;$("directScenesOutput").replaceChildren();$("directScenesStatus").textContent="Plan nuevo: diseña ahora las tomas y acciones animables.";jaiSceneImages=[];visualAuditResults=[];$("inspectVisuals").disabled=true;$("visualAuditStatus").textContent="La inspección visual independiente estará disponible cuando todas las escenas tengan imagen.";$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma educativo por escena, con la representación apropiada al tema.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
+  renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];currentShotPlan=[];currentShotPlan=[];$("directScenes").disabled=!currentScenes.length;$("directScenesOutput").replaceChildren();$("directScenesStatus").textContent="Plan nuevo: diseña ahora las tomas y acciones animables.";jaiSceneImages=[];visualAuditResults=[];$("inspectVisuals").disabled=true;$("visualAuditStatus").textContent="La inspección visual independiente estará disponible cuando todas las escenas tengan imagen.";$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma educativo por escena, con la representación apropiada al tema.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
   setPipelineStage("plan",100,data.clarification_required?"Aclaración necesaria":"Plan editorial y storyboard listos",data.clarification_required?"warning":"done");rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan=[
    "J.A.I. VIRAL STUDIO",
    "Tema: "+topic,

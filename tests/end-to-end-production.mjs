@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const html = fs.readFileSync(path.join(root, "index.html"));
-const counters = { generate: 0, directScenes: 0, narrate: 0, inspect: 0, images: 0 };
+const counters = { generate: 0, directScenes: 0, narrate: 0, inspect: 0, inspectedImages: 0, images: 0 };
 const sceneTimes = Array.from({ length: 4 }, (_, i) => {
   const start = i * 9, end = start + 9;
   return "0:" + String(start).padStart(2, "0") + " - 0:" + String(end).padStart(2, "0");
@@ -117,6 +117,7 @@ const server = http.createServer((req, res) => {
     if (req.url === "/api/inspect-visual") {
       counters.inspect++;
       const images = Array.isArray(body.images) ? body.images : [];
+      counters.inspectedImages += images.length;
       res.end(JSON.stringify({ results: images.map((_, scene_index) => ({
         scene_index, status: "pass", score: 96,
         reason: "El fotograma representa el sujeto y la acción solicitados.",
@@ -163,7 +164,8 @@ try {
 
   await page.locator("#inspectVisuals").click();
   await page.waitForFunction(() => (document.querySelector("#visualAuditStatus")?.textContent || "").includes("todas las escenas superaron"), null, { timeout: 20000 });
-  assert.equal(counters.inspect, 1, "All scene images must reach the independent visual audit API");
+  assert.equal(counters.inspect, 1, "Eight directed shots fit in one visual-inspection batch");
+  assert.equal(counters.inspectedImages, 8, "Every directed shot must be independently inspected before export");
   assert.equal(await page.locator("#renderVideo").isEnabled(), true, "Only the complete plan, image set, narration, and approved audit may unlock export");
 
   await page.locator("#renderVideo").click();
