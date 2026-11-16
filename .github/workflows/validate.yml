@@ -23,6 +23,7 @@ jobs:
           node --check --input-type=module < api/generate.js
           node --check --input-type=module < api/narrate.js
           node --check --input-type=module < api/inspect-visual.js
+          node --check --input-type=module < api/direct-scenes.js
       - name: Check inline browser scripts
         run: |
           node --input-type=module <<'NODE'
