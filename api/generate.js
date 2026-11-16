@@ -65,7 +65,7 @@ async function generatePlanHandler(req, res) {
     "Solo usa IDs [S1]...[S3] existentes. No atribuyas respaldo directo por coincidencia de palabras. Copia las fuentes usadas en research_sources; descarta las irrelevantes.",
     "",
     "ENTREGABLE:",
-    "- clarification_required (boolean) y clarification_question (string o null). Si se requiere aclaración, no generes guion ni storyboard: story=[], retention_map=[] y script vacío.",
+    "- clarification_required (boolean), clarification_question (string o null) y clarification_options (array de 3–5 opciones breves en español, strings). Si se requiere aclaración, formula una sola pregunta y ofrece opciones concretas, mutuamente distinguibles y pertinentes al tema; incluye una opción amplia tipo Otro solo si hace falta. Si se requiere aclaración, no generes guion ni storyboard: story=[], retention_map=[] y script vacío.",
     "- category, angle, hook.",
     "- script: 75–90 palabras realmente narradas para 30–45 s; excluye etiquetas [HOOK], [PROMESA], [CONTEXTO], [EXPLICACIÓN], [REVELACIÓN], [CIERRE]. Español claro, mecanismo causal, sin relleno.",
     "- research_brief: 4–6 puntos; causal_chain: pasos ordenados; concept_explanations: objetos con term, plain_explanation, role.",
@@ -271,6 +271,8 @@ async function generatePlanHandler(req, res) {
       const question = String(plan.clarification_question || "").trim() || "¿Qué interpretación o enfoque quieres que desarrollemos?";
       plan.clarification_required = true;
       plan.clarification_question = question;
+      plan.clarification_options = Array.isArray(plan.clarification_options) ? plan.clarification_options.filter(item => typeof item === "string" && item.trim()).slice(0, 5) : [];
+      if (!plan.clarification_options.length) plan.clarification_options = ["La interpretación más habitual del tema", "Otra interpretación relacionada", "Quiero explicar otro enfoque"];
       plan.script = "";
       plan.story = [];
       plan.retention_map = [];
