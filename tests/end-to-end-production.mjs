@@ -186,7 +186,7 @@ try {
   assert.ok(exported.duration >= 35 && exported.duration <= 38, "The final export must preserve the 36-second storyboard duration");
   assert.ok(exported.size > 100000, "The final export must contain a substantial encoded video and audio payload");
   assert.deepEqual(errors, [], "The integrated browser flow must not produce uncaught JavaScript errors");
-  console.log("PASS: full browser production flow from editorial API through four generated frames, neural narration, visual audit, captions, and decoded 9:16 video export.");
+  console.log("PASS: full browser production flow through vector-shot direction, independent layer animation, neural narration, per-shot visual audit, captions, and decoded 9:16 video export.");
 } finally {
   if (browser) await browser.close();
   await new Promise(resolve => server.close(resolve));
