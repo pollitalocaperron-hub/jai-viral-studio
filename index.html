@@ -713,7 +713,7 @@ function resumeTimelinePreview(){
 }
 
 const renderCanvas=$("renderCanvas"),renderCtx=renderCanvas.getContext("2d");
-let renderFrame=0,renderRecording=false,renderCancelRequested=false;
+let renderFrame=0,renderRecording=false,renderCancelRequested=false,renderRecorder=null;
 function drawMotionGraphics(item,index,progress,audioElapsed=0){
  const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height;
  const p=Math.max(0,Math.min(1,Number(progress)||0));
@@ -861,7 +861,7 @@ async function renderVideo(){
  const mime=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
  if(!mime){setPipelineStage("render",0,"Formato de vídeo no compatible con este navegador","error");$("renderStatus").textContent="Este navegador no admite grabación MP4 ni WebM desde el editor. Prueba Chrome actualizado.";return;}
  renderRecording=true;renderCancelRequested=false;setPipelineStage("render",2,"Preparando lienzo vertical 720 × 1280…","running");$("renderVideo").disabled=true;$("cancelRender").hidden=false;$("cancelRender").disabled=false;$("approveAllVisuals").disabled=true;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
- let stream=null,audioBuffer=null,audioSource=null,audioStartOffset=0,recorder=null,animationId=null,finished=false;
+ let stream=null,audioBuffer=null,audioSource=null,audioStartOffset=0,animationId=null,finished=false;
  const cleanup=()=>{
   if(animationId!==null)cancelAnimationFrame(animationId);
   if(audioSource){try{audioSource.stop();}catch{}}
@@ -893,11 +893,11 @@ async function renderVideo(){
    destination.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
   }
   setPipelineStage("render",12,"Iniciando codificador "+mime+"…","running");
-  recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:4500000});
+  renderRecorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:4500000});
   const chunks=[];
-  recorder.ondataavailable=event=>{if(event.data&&event.data.size)chunks.push(event.data);};
-  recorder.onerror=event=>{const detail=event?.error?.message||"Error del grabador multimedia.";fail("Falló la grabación del navegador: "+detail+" No se creó un archivo incompleto.");};
-  recorder.onstop=()=>{
+  renderRecorder.ondataavailable=event=>{if(event.data&&event.data.size)chunks.push(event.data);};
+  renderRecorder.onerror=event=>{const detail=event?.error?.message||"Error del grabador multimedia.";fail("Falló la grabación del navegador: "+detail+" No se creó un archivo incompleto.");};
+  renderRecorder.onstop=()=>{
    if(finished)return;
    finished=true;
    if(renderCancelRequested){cleanup();setPipelineStage("render",0,"Render cancelado por el usuario","idle");$("renderStatus").textContent="Render cancelado. No se generó ningún archivo; puedes ajustar el montaje y volver a intentarlo.";return;}
@@ -906,7 +906,7 @@ async function renderVideo(){
    if(!blob.size){setPipelineStage("render",0,"El navegador no entregó datos de vídeo","error");$("renderStatus").textContent="El navegador terminó la grabación sin generar datos. No se creó un archivo descargable. Prueba Chrome actualizado, mantén esta pestaña visible y vuelve a renderizar.";return;}
    const previous=$("downloadVideo").dataset.objectUrl;if(previous)URL.revokeObjectURL(previous);
    const url=URL.createObjectURL(blob);$("downloadVideo").dataset.objectUrl=url;
-   const actualMime=recorder?.mimeType||mime;const isMp4=actualMime.includes("mp4");const extension=isMp4?"mp4":"webm";
+   const actualMime=renderRecorder?.mimeType||mime;const isMp4=actualMime.includes("mp4");const extension=isMp4?"mp4":"webm";
    $("downloadVideo").href=url;$("downloadVideo").download="jai-viral-studio."+extension;$("downloadVideo").textContent="Descargar video "+extension.toUpperCase();$("downloadVideo").hidden=false;
    $("renderStatus").textContent="Vídeo renderizado correctamente ("+(blob.size/1048576).toFixed(1)+" MB), formato "+extension.toUpperCase()+(audioBuffer?" con narración integrada ("+audioBuffer.duration.toFixed(1)+" s).":" sin narración.")+(isMp4?"":" Este navegador exportó WebM porque no admite MP4 directo.");setTaskProgress("renderStatus",100,"Exportación completada · "+extension.toUpperCase());setPipelineStage("render",100,"Vídeo listo · "+extension.toUpperCase()+" · "+(blob.size/1048576).toFixed(1)+" MB","done");
   };
@@ -934,11 +934,11 @@ async function renderVideo(){
    const audioTiming=getAudioTrackTiming(timelineDuration),audioEditState=getAudioEdit();
    drawVideoScene(activeItem,sceneIndex,sceneProgress,audioBuffer?(audioEditState.trimStart+Math.max(0,elapsed-audioTiming.offset)*audioTiming.rate):elapsed);
    $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";setTaskProgress("renderStatus",Math.min(100,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%");setPipelineStage("render",Math.min(99,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.round(elapsed/totalDuration*100)+"%","running");
-   if(elapsed>=totalDuration){try{recorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
+   if(elapsed>=totalDuration){try{renderRecorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
    animationId=requestAnimationFrame(draw);
    }catch(error){fail("Falló la composición de un fotograma durante la exportación: "+(error?.message||"error desconocido")+". El render se detuvo para evitar un archivo dañado.");}
   };
-  recorder.start(250);
+  renderRecorder.start(250);
   setPipelineStage("render",15,"Grabando fotogramas y mezclando audio…","running");
   animationId=requestAnimationFrame(draw);
   $("renderStatus").textContent="Render iniciado. Mantén la pestaña abierta y visible hasta que aparezca el enlace de descarga; puedes cancelarlo sin crear un archivo parcial.";setTaskProgress("renderStatus",0,"Renderizando · 0%");
@@ -947,7 +947,7 @@ async function renderVideo(){
  }
 }
 $("renderVideo").addEventListener("click",renderVideo);
-$("cancelRender").addEventListener("click",()=>{if(!renderRecording||!recorder||recorder.state==="inactive")return;renderCancelRequested=true;$("cancelRender").disabled=true;$("renderStatus").textContent="Cancelando render de forma segura…";try{recorder.stop();}catch(error){renderCancelRequested=false;$("cancelRender").disabled=false;$("renderStatus").textContent="No se pudo cancelar el render: "+(error?.message||"error desconocido");}});
+$("cancelRender").addEventListener("click",()=>{if(!renderRecording||!renderRecorder||renderRecorder.state==="inactive")return;renderCancelRequested=true;$("cancelRender").disabled=true;$("renderStatus").textContent="Cancelando render de forma segura…";try{renderRecorder.stop();}catch(error){renderCancelRequested=false;$("cancelRender").disabled=false;$("renderStatus").textContent="No se pudo cancelar el render: "+(error?.message||"error desconocido");}});
 
 $("buildTimeline").addEventListener("click",buildTimeline);
 $("previewTimeline").addEventListener("click",()=>previewTimeline(0));
