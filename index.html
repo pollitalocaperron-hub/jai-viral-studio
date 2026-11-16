@@ -368,7 +368,7 @@ async function requestVisualImage(prompt,sceneNumber){
   }
   lastImageRequestAt=Date.now();saveLastImageRequestAt(lastImageRequestAt);
   try{
-   const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,negative_prompt:"rocket, spacecraft, spaceship, industrial machinery, unrelated objects, unrelated subject, abstract gray scene, monochrome gray palette, random geometric objects, generic science illustration, generic laboratory, text, letters, numbers, watermark, logo, collage, split screen, blurry, low detail, malformed objects, duplicated objects",size:"1024x1024"}),signal:AbortSignal.timeout(90000)});
+   const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"stable-diffusion-xl-base-v10",prompt,negative_prompt:"unrelated subject, unrelated objects, random geometric objects, abstract gray scene, monochrome gray palette, generic stock-science imagery, decorative fog, random glowing blobs, generated text, misspelled text, watermark, logo, collage, split screen, blurry, low detail, malformed objects, duplicated objects",size:"1024x1024"}),signal:AbortSignal.timeout(90000)});
    const raw=await response.text();
    if(!response.ok){
     const detail=raw.replace(/\s+/g," ").slice(0,220);
