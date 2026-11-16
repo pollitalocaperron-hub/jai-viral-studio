@@ -48,3 +48,5 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Test IndexedDB persistence in Chromium
         run: npm run test:browser
+      - name: Test complete production flow in Chromium
+        run: npm run test:e2e
