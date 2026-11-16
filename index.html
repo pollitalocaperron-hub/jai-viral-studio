@@ -935,7 +935,7 @@ async function renderVideo(){
   const draw=now=>{
    try{
    if(!renderRecording||finished)return;
-   if(startedAt===null){startedAt=now;if(audioSource){const edit=getAudioEdit();audioSource.start(audioStartOffset,edit.trimStart,edit.duration);}}
+   if(startedAt===null){startedAt=now;if(audioSource){const edit=getAudioEdit();audioSource.start(kokoroAudioContext.currentTime+audioStartOffset,edit.trimStart,edit.duration);}}
    const elapsed=Math.max(0,(now-startedAt)/1000);
    const visualElapsed=Math.min(timelineDuration,elapsed*visualTimeScale);
    let cursor=0,blockIndex=timelineState.items.length-1,blockProgress=1;
