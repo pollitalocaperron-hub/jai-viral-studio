@@ -455,7 +455,7 @@ async function inspectVisuals(){
   if(!Array.isArray(data.results)||data.results.length!==currentScenes.length)throw new Error("El inspector no devolvió un resultado por cada escena.");
   visualAuditResults=data.results;setPipelineStage("audit",100,"Inspección terminada: "+data.results.filter(x=>x.status==="pass").length+" aprobadas","done");
   renderVisualScenes();
-  $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)&&visualAuditPassed());
+  updateRenderGate();
   const failed=visualAuditResults.filter(item=>item.status!=="pass").length;
   $("visualAuditStatus").textContent=failed===0?"Inspección completada: todas las escenas superaron la revisión visual. Revisa los detalles de cada tarjeta.": "Inspección completada: "+failed+" de "+visualAuditResults.length+" escenas necesitan revisión. Consulta las observaciones de cada tarjeta.";
  }catch(error){setPipelineStage("audit",0,"Inspección no disponible; requiere revisión manual","error");$("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Puedes revisar las imágenes manualmente; no se modificaron ni se descartaron.";setTaskProgress("visualAuditStatus",0,"Inspección fallida; las imágenes se conservaron");}
