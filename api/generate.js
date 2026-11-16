@@ -259,6 +259,27 @@ async function generatePlanHandler(req, res) {
       });
     }
 
+    if (plan.clarification_required === true) {
+      const question = String(plan.clarification_question || "").trim() || "¿Qué interpretación o enfoque quieres que desarrollemos?";
+      plan.clarification_required = true;
+      plan.clarification_question = question;
+      plan.script = "";
+      plan.story = [];
+      plan.retention_map = [];
+      plan.duration_validation = {
+        script_word_count: 0, estimated_narration_seconds: 0, storyboard_seconds: 0,
+        scene_count: 0, scene_coverage_valid: false, retention_blocks: 0,
+        retention_map_valid: false, narration_within_tolerance: false,
+        word_count_within_target: false, within_tolerance: false,
+        status: "pendiente de aclaración",
+        warning: "No se generó un plan porque el tema requiere precisar su interpretación."
+      };
+      const warnings = Array.isArray(plan.editorial_warnings) ? plan.editorial_warnings : [];
+      plan.editorial_warnings = [...warnings, { claim: "Aclaración necesaria", reason: question }];
+      console.info("[JAI] Plan detenido para aclaración editorial.");
+      return res.status(200).json(plan);
+    }
+
     // Reparación automática del storyboard: nunca se devuelve una producción visual incompleta.
     const parseModelObject = rawText => {
       const textValue = String(rawText || "").replace(/^\uFEFF/, "").replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
