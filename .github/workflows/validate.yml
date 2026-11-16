@@ -1,5 +1,9 @@
 name: Validate J.A.I. source
 
+concurrency:
+  group: jai-viral-studio-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
