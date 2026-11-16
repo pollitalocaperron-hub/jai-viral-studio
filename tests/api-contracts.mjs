@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import generateHandler from "../api/generate.js";
 import narrateHandler from "../api/narrate.js";
 import inspectVisualHandler from "../api/inspect-visual.js";
+import directScenesHandler from "../api/direct-scenes.js";
 
 // Guard the worst-case provider + retry + repair path against Vercel's 60s function limit.
 const generationSource = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
@@ -97,7 +98,7 @@ try {
   // GitHub Pages must be able to call the Vercel API through a strict origin allowlist.
   {
     const allowedOrigin = "https://pollitalocaperron-hub.github.io";
-    for (const handler of [generateHandler, narrateHandler, inspectVisualHandler]) {
+    for (const handler of [generateHandler, narrateHandler, inspectVisualHandler, directScenesHandler]) {
       const res = mockResponse();
       await handler({ method: "OPTIONS", headers: { origin: allowedOrigin }, body: {} }, res);
       assert.equal(res.statusCode, 204, "Allowed Pages preflight must complete without invoking the provider");
@@ -199,6 +200,47 @@ try {
     assert.equal(res.body.story.length, 4);
     assert.equal(res.body.duration_validation.within_tolerance, true);
     assert.ok(res.body.editorial_warnings.some(item => item.claim === "Reparación automática del storyboard"));
+  }
+
+  // The scene director expands conceptual scenes into time-aligned, animation-ready shots.
+  {
+    const res = mockResponse();
+    await directScenesHandler({ method: "GET", body: {} }, res);
+    assert.equal(res.statusCode, 405);
+  }
+  {
+    const story = makeValidPlan().story;
+    const shots = [];
+    story.forEach((scene, sceneIndex) => {
+      const start = sceneIndex * 9;
+      for (let part = 0; part < 2; part++) {
+        const shotStart = start + part * 4.5;
+        shots.push({
+          scene_index: sceneIndex, start_seconds: shotStart, end_seconds: shotStart + 4.5,
+          narration_segment: "La explicación describe esta acción concreta.",
+          subtitle: "Acción " + (part + 1), subject: "Componente mecánico identificable",
+          visual_state: "Estado inicial y cambio visible", visual_action: "El componente se desplaza de forma observable",
+          visual_prompt_en: "Clean educational 2D editorial illustration of the exact mechanical component in a coherent portrait composition, clear shapes, consistent palette, separated readable parts and a specific teaching action.",
+          continuity_anchor: "Same component geometry, color, scale and orientation across adjacent shots.",
+          layers: [{ id: "component", description: "Componente principal", role: "subject" }, { id: "housing", description: "Estructura contenedora", role: "environment" }],
+          animation_steps: [{ target_id: "component", action: "move", from_state: "lower", to_state: "upper", start_progress: 0, end_progress: 1 }, { target_id: "housing", action: "hold", from_state: "fixed", to_state: "fixed", start_progress: 0, end_progress: 1 }]
+        });
+      }
+    });
+    globalThis.fetch = async (url, options = {}) => {
+      assert.ok(String(url).includes("api.groq.com"));
+      const payload = JSON.parse(options.body || "{}");
+      assert.match(payload.messages?.[1]?.content || "", /fotograma maestro de referencia/);
+      return response({ choices: [{ message: { content: JSON.stringify({ shots }) } }] });
+    };
+    const res = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.shot_count, 8);
+    assert.equal(res.body.conceptual_scene_count, 4);
+    assert.equal(res.body.animation_ready, true);
+    assert.equal(res.body.shots[0].shot_id, "shot-01");
+    assert.equal(res.body.shots[0].layers.length, 2);
   }
 
   // Narration input and provider payload must be validated before returning PCM data.
