@@ -70,7 +70,12 @@ try {
     caption: "Hola",
     deleted: true
   });
-  const sceneTimes = ["00:00 - 00:03", "00:03 - 00:06", "00:06 - 00:09", "00:09 - 00:12"];
+  const sceneTimes = ["00:00 - 00:09", "00:09 - 00:18", "00:18 - 00:27", "00:27 - 00:36"];
+  const beatTimes = Array.from({ length: 12 }, (_, index) => {
+    const start = index * 3;
+    const end = start + 3;
+    return "00:" + String(start).padStart(2, "0") + " - 00:" + String(end).padStart(2, "0");
+  });
   const story = sceneTimes.map((time, index) => ({
     scene_index: index,
     time,
@@ -89,7 +94,7 @@ try {
     continuity_anchor: "Mantener el mismo sujeto, escala y paleta visual entre escenas",
     motion_sequence: ["Acercamiento lento al sujeto", "Mostrar el cambio y mantener el resultado"]
   }));
-  const retentionMap = sceneTimes.map((time, index) => ({
+  const retentionMap = beatTimes.map((time, index) => ({
     time,
     new_stimulus: "Nuevo estímulo " + (index + 1),
     narrative_advance: "Avance narrativo " + (index + 1),
