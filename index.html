@@ -196,6 +196,7 @@ async function restoreJaiProjectRecord(project){
   if(currentPlanData!==stateAtRequest||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="La sesión cambió mientras se recuperaba el proyecto; no se reemplazó el trabajo actual.";return;}
   loadSavedProject(project,{recovery:true});
   currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;
+  currentShotPlan=Array.isArray(snapshot.shotPlan)?snapshot.shotPlan:[];
   if(Array.isArray(snapshot.images)){
    jaiSceneImages=snapshot.images.map(item=>{if(!item?.src)return null;const image=new Image();image.src=item.src;return {...item,image};});
    await Promise.all(jaiSceneImages.map(async item=>{if(!item?.image)return;try{if(item.image.decode)await item.image.decode();else if(!item.image.complete)await new Promise((resolve,reject)=>{item.image.onload=resolve;item.image.onerror=()=>reject(new Error("Fotograma no disponible"));});if(!item.image.naturalWidth||!item.image.naturalHeight)throw new Error("Fotograma vacío");}catch(error){const index=jaiSceneImages.indexOf(item);jaiSceneImages[index]=null;console.warn("[JAI] Fotograma guardado no disponible:",error);}}));
@@ -695,7 +696,7 @@ function renderTimeline(){
   const row=document.createElement("div");row.className="scene";row.style.display="grid";row.style.gridTemplateColumns="minmax(0,1fr) auto";row.style.alignItems="center";row.style.gap="10px";
   const info=document.createElement("div");
   const heading=document.createElement("h4");heading.textContent=String(index+1).padStart(2,"0")+" · "+(item.time||"Tiempo por definir");
-  const desc=document.createElement("p");desc.textContent=String(item.on_screen_text||item.objective||item.visualAction||"Escena visual");
+  const desc=document.createElement("p");desc.textContent=[item.shot_id?item.shot_id.toUpperCase():"",item.on_screen_text||item.objective||item.visualAction||"Escena visual",item.visualAction||""].filter(Boolean).join(" · ");
   const control=document.createElement("div");control.className="row";control.style.cssText="align-items:center;gap:8px;margin-top:8px";
   const durationLabel=document.createElement("label");durationLabel.style.cssText="display:flex;align-items:center;gap:8px;margin:0;font-size:12px;color:#a9bfd4";durationLabel.textContent="Duración";
   const select=document.createElement("select");select.setAttribute("aria-label","Duración del bloque "+(index+1));select.style.cssText="width:auto;min-width:84px;padding:7px";
