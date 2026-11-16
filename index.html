@@ -918,12 +918,13 @@ async function renderVideo(){
    if(finished)return;
    finished=true;
    if(renderCancelRequested){cleanup();setPipelineStage("render",0,"Render cancelado por el usuario","idle");$("renderStatus").textContent="Render cancelado. No se generó ningún archivo; puedes ajustar el montaje y volver a intentarlo.";return;}
-   const blob=new Blob(chunks,{type:mime});
+   const actualMime=renderRecorder?.mimeType||mime;
+   const blob=new Blob(chunks,{type:actualMime});
    cleanup();
    if(!blob.size){setPipelineStage("render",0,"El navegador no entregó datos de vídeo","error");$("renderStatus").textContent="El navegador terminó la grabación sin generar datos. No se creó un archivo descargable. Prueba Chrome actualizado, mantén esta pestaña visible y vuelve a renderizar.";return;}
    const previous=$("downloadVideo").dataset.objectUrl;if(previous)URL.revokeObjectURL(previous);
    const url=URL.createObjectURL(blob);$("downloadVideo").dataset.objectUrl=url;
-   const actualMime=renderRecorder?.mimeType||mime;const isMp4=actualMime.includes("mp4");const extension=isMp4?"mp4":"webm";
+   const isMp4=actualMime.toLowerCase().includes("mp4");const extension=isMp4?"mp4":"webm";
    $("downloadVideo").href=url;$("downloadVideo").download="jai-viral-studio."+extension;$("downloadVideo").textContent="Descargar video "+extension.toUpperCase();$("downloadVideo").hidden=false;
    $("renderStatus").textContent="Vídeo renderizado correctamente ("+(blob.size/1048576).toFixed(1)+" MB), formato "+extension.toUpperCase()+(audioBuffer?" con narración integrada ("+audioBuffer.duration.toFixed(1)+" s).":" sin narración.")+(isMp4?"":" Este navegador exportó WebM porque no admite MP4 directo.");setTaskProgress("renderStatus",100,"Exportación completada · "+extension.toUpperCase());setPipelineStage("render",100,"Vídeo listo · "+extension.toUpperCase()+" · "+(blob.size/1048576).toFixed(1)+" MB","done");
   };
