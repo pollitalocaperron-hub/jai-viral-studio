@@ -103,17 +103,21 @@ try {
     const parsed = mockResponse();
     assert.equal(enforceRequestBodyLimit({ headers: {}, body: { notes: "x".repeat(24001) } }, parsed, 24000), false);
     assert.equal(parsed.statusCode, 413);
+    assert.equal(parsed.body.diagnosticCode, "REQUEST_TOO_LARGE");
     const accepted = mockResponse();
     assert.equal(enforceRequestBodyLimit({ headers: {}, body: { topic: "Tema breve" } }, accepted, 24000), true);
     const wrongType = mockResponse();
     assert.equal(enforceRequestBodyLimit({ headers: { "content-type": "text/plain" }, body: { topic: "Tema" } }, wrongType, 24000), false);
     assert.equal(wrongType.statusCode, 415);
+    assert.equal(wrongType.body.diagnosticCode, "UNSUPPORTED_CONTENT_TYPE");
     const arrayBody = mockResponse();
     assert.equal(enforceRequestBodyLimit({ headers: {}, body: [] }, arrayBody, 24000), false);
     assert.equal(arrayBody.statusCode, 400);
+    assert.equal(arrayBody.body.diagnosticCode, "INVALID_REQUEST_BODY");
     const invalidLength = mockResponse();
     assert.equal(enforceRequestBodyLimit({ headers: { "content-length": "-1" }, body: {} }, invalidLength, 24000), false);
     assert.equal(invalidLength.statusCode, 400);
+    assert.equal(invalidLength.body.diagnosticCode, "INVALID_CONTENT_LENGTH");
   }
 
   process.env.GROQ_API_KEY = "test-groq-key";
