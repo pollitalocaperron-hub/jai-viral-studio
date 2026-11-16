@@ -102,8 +102,8 @@ const server = http.createServer((req, res) => {
             visual_action: part === 0 ? "El objeto inicia su transformación" : "El resultado de la transformación queda visible",
             visual_prompt_en: "A polished educational 2D editorial illustration showing the exact subject, its physical state and one clear teaching action, portrait composition, coherent color palette, separated recognizable objects and clean outlines.",
             continuity_anchor: "Preserve the same object identity, geometry, scale and palette between adjacent shots.",
-            layers: [{ id: "main-object", description: "Objeto principal", role: "subject" }, { id: "environment", description: "Entorno pertinente", role: "environment" }],
-            animation_steps: [{ target_id: "main-object", action: "move", from_state: "initial", to_state: "changed", start_progress: 0, end_progress: 1 }, { target_id: "environment", action: "hold", from_state: "fixed", to_state: "fixed", start_progress: 0, end_progress: 1 }]
+            background_color: "#F2EEE4", layers: [{"id":"main-object","description":"Objeto principal","role":"subject","path_d":"M 220 420 C 250 350 470 350 500 420 L 500 760 C 470 830 250 830 220 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"environment","description":"Entorno pertinente","role":"environment","path_d":"M 100 280 L 620 280 L 620 960 L 100 960 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":8,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
+            animation_steps: [{"target_id":"main-object","action":"move","from_state":"initial","to_state":"changed","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":-60,"rotation":0,"scale":1,"opacity":1}},{"target_id":"environment","action":"hold","from_state":"fixed","to_state":"fixed","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}},{"target_id":"detail","action":"reveal","from_state":"hidden","to_state":"visible","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":15,"rotation":0,"scale":0.85,"opacity":0},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}}]
           });
         }
       });
@@ -176,6 +176,7 @@ try {
   await page.locator("#makeVisuals").click();
   await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Producción visual lista"), null, { timeout: 30000 });
   assert.equal(counters.directScenes, 1, "Visual production must automatically request and validate the directed shot plan");
+  assert.equal(await page.locator("#timelineTracks .scene").count(), 8, "The editable timeline must use the eight directed shots, not repeat four conceptual stills.");
   assert.ok((await page.locator("#timelineTracks").innerText()).includes("SHOT-01"), "Directed shot IDs must be carried into the editable timeline");
   assert.equal(counters.images, 4, "The visual director must request one unique image for every conceptual scene");
   assert.equal(await page.locator("#visualScenes img").count(), 4, "All generated image frames must be decoded and displayed");
