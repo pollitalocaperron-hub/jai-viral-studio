@@ -7,7 +7,7 @@ import { chromium } from "playwright";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const html = fs.readFileSync(path.join(root, "index.html"));
-const counters = { generate: 0, narrate: 0, inspect: 0, images: 0 };
+const counters = { generate: 0, directScenes: 0, narrate: 0, inspect: 0, images: 0 };
 const sceneTimes = Array.from({ length: 4 }, (_, i) => {
   const start = i * 9, end = start + 9;
   return "0:" + String(start).padStart(2, "0") + " - 0:" + String(end).padStart(2, "0");
@@ -81,6 +81,35 @@ const server = http.createServer((req, res) => {
       counters.generate++;
       res.end(JSON.stringify(plan)); return;
     }
+    if (req.url === "/api/direct-scenes") {
+      counters.directScenes++;
+      const requestedStory = Array.isArray(body.story) ? body.story : story;
+      const shots = [];
+      requestedStory.forEach((scene, sceneIndex) => {
+        const match = String(scene.time || "").match(/(\\d{1,2}):(\\d{2})\\s*[-–—]\\s*(\\d{1,2}):(\\d{2})/);
+        const start = match ? Number(match[1]) * 60 + Number(match[2]) : sceneIndex * 9;
+        const end = match ? Number(match[3]) * 60 + Number(match[4]) : start + 9;
+        const midpoint = (start + end) / 2;
+        for (let part = 0; part < 2; part++) {
+          const shotStart = part === 0 ? start : midpoint;
+          const shotEnd = part === 0 ? midpoint : end;
+          shots.push({
+            scene_index: sceneIndex, start_seconds: shotStart, end_seconds: shotEnd,
+            shot_id: "shot-" + String(shots.length + 1).padStart(2, "0"),
+            narration_segment: "La explicación muestra esta etapa del proceso.",
+            subtitle: "Etapa " + (part + 1), subject: "El objeto principal del proceso",
+            visual_state: "Estado " + (part + 1) + " del objeto",
+            visual_action: part === 0 ? "El objeto inicia su transformación" : "El resultado de la transformación queda visible",
+            visual_prompt_en: "A polished educational 2D editorial illustration showing the exact subject, its physical state and one clear teaching action, portrait composition, coherent color palette, separated recognizable objects and clean outlines.",
+            continuity_anchor: "Preserve the same object identity, geometry, scale and palette between adjacent shots.",
+            layers: [{ id: "main-object", description: "Objeto principal", role: "subject" }, { id: "environment", description: "Entorno pertinente", role: "environment" }],
+            animation_steps: [{ target_id: "main-object", action: "move", from_state: "initial", to_state: "changed", start_progress: 0, end_progress: 1 }, { target_id: "environment", action: "hold", from_state: "fixed", to_state: "fixed", start_progress: 0, end_progress: 1 }]
+          });
+        }
+      });
+      res.end(JSON.stringify({ shots, shot_count: shots.length, conceptual_scene_count: requestedStory.length, provider: "Mock free-tier", animation_ready: true }));
+      return;
+    }
     if (req.url === "/api/narrate") {
       counters.narrate++;
       res.end(JSON.stringify({ audioBase64, mimeType: "audio/L16;codec=pcm;rate=24000", sampleRate })); return;
@@ -143,8 +172,11 @@ try {
   assert.equal(counters.generate, 1, "The user action must reach the editorial API exactly once");
   assert.equal(await page.locator("#story .story-card, #story article").count() > 0, true, "The generated storyboard must populate the UI");
 
+  // La producción visual debe invocar automáticamente al director de tomas.
   await page.locator("#makeVisuals").click();
   await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Producción visual lista"), null, { timeout: 30000 });
+  assert.equal(counters.directScenes, 1, "Visual production must automatically request and validate the directed shot plan");
+  assert.ok((await page.locator("#timelineTracks").innerText()).includes("shot-01"), "Directed shot IDs must be carried into the editable timeline");
   assert.equal(counters.images, 4, "The visual director must request one unique image for every conceptual scene");
   assert.equal(await page.locator("#visualScenes img").count(), 4, "All generated image frames must be decoded and displayed");
   await page.evaluate(() => { if (window.__jaiRealNow) Date.now = window.__jaiRealNow; });
