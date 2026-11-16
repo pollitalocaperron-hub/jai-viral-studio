@@ -159,9 +159,12 @@ try {
   await page.getByRole("button", { name: "Mover bloque 1 después" }).click();
   assert.equal(await page.locator("#timelineTracks .scene p").first().innerText(), "Paso 2", "Reordering must move the complete scene block, not just its label");
   const durationControl = page.locator('#timelineTracks select[aria-label="Duración del bloque 1"]');
-  await durationControl.selectOption("4");
-  assert.equal(await durationControl.inputValue(), "4", "Timeline duration must remain editable after recovery");
-  assert.match(await page.locator("#timelineTracks .scene h4").first().innerText(), /00:00 - 00:04/, "Changing duration must recalculate subsequent timeline timecodes");
+  await durationControl.selectOption("1");
+  assert.equal(await durationControl.inputValue(), "1", "Timeline duration must remain editable after recovery");
+  assert.match(await page.locator("#timelineTracks .scene h4").first().innerText(), /00:00 - 00:01/, "Changing duration must recalculate subsequent timeline timecodes");
+  const initialAudioClip = page.locator("#mediaTracks .media-clip.audio");
+  assert.equal(await initialAudioClip.count(), 1);
+  assert.ok(parseFloat(await initialAudioClip.evaluate(node => node.style.width)) > 99, "The audio clip must occupy the full visual timeline after time-stretching, not use its unadjusted source duration");
   const trimStart = page.locator("#audioTrimStart");
   const trimEnd = page.locator("#audioTrimEnd");
   await trimStart.fill("1");
