@@ -52,7 +52,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <label for="topic">¿Qué vídeo quieres crear?</label><input id="topic" maxlength="160" placeholder="Ej. ¿Por qué se sella la carne?"><div class="hint">Escribe una pregunta, un dato o una idea concreta.</div><div style="height:16px"></div>
 <label for="research">Tu investigación o indicaciones (opcional)</label><textarea id="research" placeholder="Pega aquí tus notas, fuentes, datos que quieras incluir o el enfoque que imaginas..."></textarea><div class="hint">Tus notas se enviarán al motor editorial de J.A.I. para preparar el plan. No incluyas información sensible.</div><div style="height:16px"></div>
 <div class="grid"><div><label for="duration">Duración objetivo</label><select id="duration"><option>30–45 segundos</option><option>45–60 segundos</option><option>60–90 segundos</option></select></div><div><label for="platform">Destino principal</label><select id="platform"><option>Reels</option><option>YouTube Shorts</option><option>TikTok</option><option>Multiplataforma</option></select></div></div>
-<button class="primary" id="create">Crear plan de producción con IA</button><div class="hint status" id="status">Motor editorial Groq + Gemini · Dirección visual adaptada al tema · Narración neuronal · Exportación MP4/WebM según navegador.</div><div class="hint" id="memoryStatus">Memoria editorial: preparando historial de aprendizaje…</div></section>
+<div class="row" style="gap:8px;flex-wrap:wrap"><button class="primary" id="create">Crear plan de producción con IA</button><button class="secondary" id="newProject" type="button">Nuevo proyecto</button></div><div class="hint status" id="status">Motor editorial Groq + Gemini · Dirección visual adaptada al tema · Narración neuronal · Exportación MP4/WebM según navegador.</div><div class="hint" id="memoryStatus">Memoria editorial: preparando historial de aprendizaje…</div></section>
 <section class="card output" id="output"><div class="row" style="justify-content:space-between"><h3 class="section-title">Plan de producción</h3><span class="tag">9:16 · 720 × 1280</span></div><div id="category" style="margin-bottom:10px"></div>
 <div class="jai-pipeline" id="pipelineProgress" aria-live="polite">
  <div class="row" style="justify-content:space-between"><b>Progreso de producción</b><span class="tag" id="pipelineOverall">0 de 6 etapas</span></div>
@@ -1334,6 +1334,24 @@ $("listenScript").addEventListener("click",()=>{
 $("stopScript").addEventListener("click",()=>{if("speechSynthesis" in window)speechSynthesis.cancel();$("voiceStatus").textContent="Narración detenida.";});
 
 $("create").addEventListener("click",makePlan);
+$("newProject").addEventListener("click",async()=>{
+ if(!window.confirm("¿Iniciar un proyecto nuevo? Se borrará la recuperación automática de la sesión actual. Los proyectos guardados manualmente no se eliminarán."))return;
+ const button=$("newProject");button.disabled=true;button.textContent="Preparando…";
+ try{
+  if(jaiAutosaveTimer){clearTimeout(jaiAutosaveTimer);jaiAutosaveTimer=null;}
+  const db=await openJaiRecoveryDB();
+  await new Promise((resolve,reject)=>{
+   const tx=db.transaction(JAI_AUTOSAVE_STORE,"readwrite");
+   tx.objectStore(JAI_AUTOSAVE_STORE).delete(JAI_AUTOSAVE_KEY);
+   tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("No se pudo limpiar la recuperación"));
+  });
+  db.close();
+  window.location.reload();
+ }catch(error){
+  button.disabled=false;button.textContent="Nuevo proyecto";
+  $("status").textContent="No se pudo iniciar un proyecto nuevo: "+(error?.message||"error de almacenamiento");
+ }
+});
 $("copy").addEventListener("click",async()=>{if(!currentPlan)return;try{await navigator.clipboard.writeText(currentPlan);$("status").textContent="Plan copiado.";}catch(e){$("status").textContent="No se pudo copiar automáticamente. Selecciona el texto para copiarlo.";}});
 function getProjects(){try{const value=JSON.parse(localStorage.getItem("jaiProjects")||"[]");return Array.isArray(value)?value:[]}catch(e){return[]}}
 function escapeHtml(value){return String(value).replace(/[&<>"\']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","\'":"&#39;"}[char]));}
