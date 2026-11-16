@@ -1,0 +1,202 @@
+import assert from "node:assert/strict";
+import generateHandler from "../api/generate.js";
+import narrateHandler from "../api/narrate.js";
+import inspectVisualHandler from "../api/inspect-visual.js";
+
+const originalFetch = globalThis.fetch;
+const originalGroqKey = process.env.GROQ_API_KEY;
+const originalGeminiKey = process.env.GEMINI_API_KEY;
+
+function response(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" }
+  });
+}
+
+function mockResponse() {
+  return {
+    statusCode: 200,
+    headers: {},
+    body: null,
+    setHeader(name, value) { this.headers[name] = value; },
+    status(code) { this.statusCode = code; return this; },
+    json(body) { this.body = body; return this; }
+  };
+}
+
+function makeValidPlan() {
+  const story = Array.from({ length: 4 }, (_, index) => {
+    const start = index * 9;
+    const end = start + 9;
+    return {
+      time: "0:" + String(start).padStart(2, "0") + " - 0:" + String(end).padStart(2, "0"),
+      objective: "Explicar la etapa " + (index + 1),
+      teaching_point: "La etapa transforma una condición inicial en un resultado observable.",
+      visual_proof: "La representación muestra el cambio específico de esta etapa.",
+      visual_subject: "El objeto principal del proceso",
+      visual_state: "Estado inicial y resultado visibles",
+      visual_action: "El objeto cambia de forma observable",
+      visual_composition: "Sujeto central con encuadre vertical equilibrado",
+      visual_environment: "Entorno pertinente al proceso explicado",
+      visual_prompt_en: "A realistic educational scene showing a clear subject in its natural environment, with precise materials, balanced cinematic lighting, a central focal action, portrait-safe framing, coherent proportions, and enough visual detail to demonstrate the specific teaching point without labels or decorative clutter.",
+      visual_medium: "Ilustración educativa realista",
+      animation_type: "Transformación progresiva",
+      motion_sequence: ["Mostrar el estado inicial", "Revelar el cambio y su resultado"],
+      continuity_anchor: "Conservar la identidad, escala y paleta del sujeto",
+      visual: "El objeto principal en su entorno",
+      animation: "Transformación progresiva",
+      on_screen_text: "Etapa " + (index + 1),
+      transition: "fade"
+    };
+  });
+  const retention_map = Array.from({ length: 12 }, (_, index) => {
+    const start = index * 3;
+    const end = start + 3;
+    return {
+      time: "0:" + String(start).padStart(2, "0") + " - 0:" + String(end).padStart(2, "0"),
+      new_stimulus: "Estímulo " + (index + 1),
+      narrative_advance: "Avance " + (index + 1),
+      curiosity: "Qué ocurrirá en el siguiente paso",
+      visual_action: "Mostrar el cambio de la etapa",
+      on_screen_text: "Paso " + (index + 1)
+    };
+  });
+  return {
+    clarification_required: false,
+    clarification_question: null,
+    category: "Educación",
+    angle: "Explicación por etapas",
+    hook: "Observa cómo cambia el proceso",
+    script: Array.from({ length: 84 }, () => "palabra").join(" "),
+    research_brief: ["Resumen de prueba"],
+    causal_chain: ["Inicio", "Transformación", "Resultado"],
+    concept_explanations: [],
+    fact_audit: [],
+    story,
+    retention_map,
+    editorial_warnings: [],
+    verification: "Prueba de validación",
+    quality_check: "Prueba de estructura"
+  };
+}
+
+try {
+  process.env.GROQ_API_KEY = "test-groq-key";
+  process.env.GEMINI_API_KEY = "test-gemini-key";
+
+  // The editorial endpoint must reject invalid methods and empty topics safely.
+  {
+    const res = mockResponse();
+    await generateHandler({ method: "GET", body: {} }, res);
+    assert.equal(res.statusCode, 405);
+    assert.equal(res.headers.Allow, "POST");
+  }
+  {
+    const res = mockResponse();
+    await generateHandler({ method: "POST", body: { topic: " " } }, res);
+    assert.equal(res.statusCode, 400);
+  }
+
+  // A complete 36-second plan must pass chronology, scene and retention-map validation.
+  {
+    const plan = makeValidPlan();
+    globalThis.fetch = async url => {
+      if (String(url).includes("api.openalex.org")) return response({ results: [] });
+      if (String(url).includes("api.groq.com")) {
+        return response({ choices: [{ message: { content: JSON.stringify(plan) }, finish_reason: "stop" }] });
+      }
+      throw new Error("Unexpected network request in API contract test: " + url);
+    };
+    const res = mockResponse();
+    await generateHandler({
+      method: "POST",
+      body: { topic: "Un proceso educativo", duration: "30–45 segundos", platform: "Reels" }
+    }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.story.length, 4);
+    assert.equal(res.body.retention_map.length, 12);
+    assert.equal(res.body.duration_validation.within_tolerance, true);
+    assert.equal(res.body.duration_validation.script_word_count, 84);
+    assert.equal(res.body.research_sources.length, 0);
+  }
+
+  // Narration input and provider payload must be validated before returning PCM data.
+  {
+    const res = mockResponse();
+    await narrateHandler({ method: "POST", body: { text: "Hola", voice: "VozInventada" } }, res);
+    assert.equal(res.statusCode, 400);
+  }
+  {
+    globalThis.fetch = async () => response({
+      candidates: [{
+        content: {
+          parts: [{ inlineData: { data: "AQIDBA==", mimeType: "audio/L16;codec=pcm;rate=24000" } }]
+        }
+      }]
+    });
+    const res = mockResponse();
+    await narrateHandler({ method: "POST", body: { text: "Hola, esta es una prueba de voz.", voice: "Kore" } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.audioBase64, "AQIDBA==");
+    assert.equal(res.body.sampleRate, 24000);
+  }
+
+  // Visual QA must fail closed when the model reports issues, even with a high score.
+  {
+    globalThis.fetch = async () => response({
+      candidates: [{
+        content: {
+          parts: [{
+            text: JSON.stringify({
+              results: [
+                { scene_index: 0, status: "pass", score: 96, reason: "El sujeto y la acción coinciden con la escena.", issues: [] },
+                { scene_index: 1, status: "pass", score: 98, reason: "La imagen es nítida pero incluye un objeto ajeno.", issues: ["Objeto ajeno al tema"] }
+              ]
+            })
+          }]
+        }
+      }]
+    });
+    const res = mockResponse();
+    await inspectVisualHandler({
+      method: "POST",
+      body: { images: [{ image_base64: "AQID" }, { image_base64: "BAUG" }] }
+    }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.results[0].status, "pass");
+    assert.equal(res.body.results[1].status, "revise");
+  }
+
+  // Duplicate scene indexes must never be accepted as a complete visual audit.
+  {
+    globalThis.fetch = async () => response({
+      candidates: [{
+        content: {
+          parts: [{
+            text: JSON.stringify({
+              results: [
+                { scene_index: 0, status: "pass", score: 96, reason: "La imagen coincide claramente con el sujeto.", issues: [] },
+                { scene_index: 0, status: "pass", score: 96, reason: "La imagen coincide claramente con el sujeto.", issues: [] }
+              ]
+            })
+          }]
+        }
+      }]
+    });
+    const res = mockResponse();
+    await inspectVisualHandler({
+      method: "POST",
+      body: { images: [{ image_base64: "AQID" }, { image_base64: "BAUG" }] }
+    }, res);
+    assert.equal(res.statusCode, 502);
+  }
+
+  console.log("PASS: editorial generation contract, chronology validation, narration validation/PCM response, and fail-closed visual audit contracts.");
+} finally {
+  globalThis.fetch = originalFetch;
+  if (originalGroqKey === undefined) delete process.env.GROQ_API_KEY;
+  else process.env.GROQ_API_KEY = originalGroqKey;
+  if (originalGeminiKey === undefined) delete process.env.GEMINI_API_KEY;
+  else process.env.GEMINI_API_KEY = originalGeminiKey;
+}
