@@ -40,7 +40,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 .jai-pipeline-track{height:7px;border-radius:99px;background:#1b2b40;overflow:hidden}
 .jai-pipeline-fill{height:100%;width:0;background:linear-gradient(90deg,#34bfa6,#75e7c9);transition:width .25s ease}
 .jai-pipeline-row.running .jai-pipeline-fill{width:35%;animation:jai-progress-move 1.2s ease-in-out infinite}
-.topic-suggestion-wrap{display:grid;gap:5px;margin-top:9px;padding:10px 12px;border:1px dashed #34445f;border-radius:12px;background:rgba(28,43,67,.28)}.topic-suggestion{display:block;width:100%;padding:0;border:0;background:transparent;color:#a9b9d2;text-align:left;font-size:14px;font-style:italic;line-height:1.45;cursor:pointer}.topic-suggestion:hover{color:#e4efff}.topic-suggestion:focus-visible{outline:2px solid #75e7c9;outline-offset:4px}
+.topic-suggestion-wrap{display:grid;gap:5px;margin-top:9px;padding:10px 12px;border:1px dashed #34445f;border-radius:12px;background:rgba(28,43,67,.28)}.topic-suggestion{display:block;width:100%;padding:0;border:0;background:transparent;color:#a9b9d2;text-align:left;font-size:14px;font-style:italic;line-height:1.45;cursor:pointer}.topic-suggestion:hover{color:#e4efff}.topic-suggestion:focus-visible{outline:2px solid #75e7c9;outline-offset:4px}.clarification-panel{margin:16px 0;padding:14px;border:1px solid #58718f;border-radius:14px;background:rgba(36,56,82,.35)}.clarification-panel h3{margin:0 0 8px;font-size:17px}.clarification-options{display:grid;gap:8px;margin:12px 0}.clarification-option{width:100%;text-align:left;white-space:normal;line-height:1.4}.clarification-option:before{content:"";display:inline-block;width:7px;height:7px;margin:0 10px 1px 0;border-radius:50%;background:#75e7c9}
 .jai-pipeline-row.done .jai-pipeline-fill{width:100%;background:#48c69d}
 .jai-pipeline-row.error .jai-pipeline-fill{background:#e5a35b}
 @media(max-width:560px){.jai-pipeline-row{grid-template-columns:1fr;gap:5px}}
@@ -65,6 +65,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <div class="jai-pipeline-row" data-pipeline="render"><div><div class="jai-pipeline-name">06 · Exportación</div><div class="jai-pipeline-detail">Pendiente de aprobación</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
  <div class="jai-pipeline-detail" id="pipelineHint">Cada barra refleja el avance real; las tareas externas muestran actividad mientras responden.</div>
 </div>
+<section id="clarificationPanel" class="clarification-panel" hidden aria-live="polite"><h3>J.A.I. necesita una aclaración</h3><p id="clarificationQuestion"></p><div id="clarificationOptions" class="clarification-options"></div><div id="clarificationOtherWrap" hidden><label for="clarificationOther">Cuéntanos qué quieres decir</label><textarea id="clarificationOther" rows="2" placeholder="Escribe tu aclaración…"></textarea><button id="clarificationSubmit" class="primary" type="button">Continuar con esta aclaración</button></div><p class="hint">Al elegir una respuesta, J.A.I. conserva tu tema y continúa la producción con el enfoque indicado.</p></section>
 <label>Enfoque recomendado</label><div class="result" id="angle"></div><div style="height:13px"></div><label>Investigación y comprensión</label><div class="result" id="researchBrief"></div><div style="height:13px"></div><label>Fuentes académicas recuperadas</label><div class="result" id="researchSources">Las fuentes aparecerán si el buscador académico encuentra resultados pertinentes.</div><div style="height:13px"></div><label>Cadena de causa y efecto</label><div class="result" id="causalChain"></div><div style="height:13px"></div><label>Conceptos explicados</label><div class="result" id="conceptExplanations"></div><div style="height:13px"></div><label>Auditoría de afirmaciones</label><div class="result" id="factAudit"></div><div style="height:13px"></div><label>Hook inicial</label><div class="result" id="hook"></div><div style="height:13px"></div><label>Guion base</label><div class="result" id="script"></div><div style="height:13px"></div>
 <section class="card" id="voiceStudio" style="display:none" aria-hidden="true">
  <div class="row" style="justify-content:space-between"><h3 class="section-title">Estudio de voz</h3><span class="tag">Voz del dispositivo · Sin coste</span></div>
@@ -1078,6 +1079,29 @@ function updateLearningMemoryStatus(){
  const node=$("memoryStatus");
  if(node)node.textContent="Memoria editorial activa: "+count+" planes aprendidos en este navegador. J.A.I. los usará para evitar repetir enfoques y recursos.";
 }
+function showClarification(data){
+ const panel=$("clarificationPanel"),root=$("clarificationOptions"),other=$("clarificationOtherWrap");
+ if(!panel||!data?.clarification_required){panel.hidden=true;return;}
+ $("clarificationQuestion").textContent=String(data.clarification_question||"¿Qué enfoque quieres que desarrollemos?");
+ root.replaceChildren();other.hidden=true;$("clarificationOther").value="";
+ const options=Array.isArray(data.clarification_options)?data.clarification_options.filter(x=>typeof x==="string"&&x.trim()).slice(0,5):[];
+ options.forEach((option,index)=>{
+  const button=document.createElement("button");button.type="button";button.className="secondary clarification-option";button.textContent=String(index+1)+". "+option;
+  button.addEventListener("click",()=>continueWithClarification(option));root.appendChild(button);
+ });
+ const otherButton=document.createElement("button");otherButton.type="button";otherButton.className="secondary clarification-option";otherButton.textContent=(options.length+1)+". Otra interpretación / quiero explicarlo";otherButton.addEventListener("click",()=>{other.hidden=false;$("clarificationOther").focus();});root.appendChild(otherButton);
+ panel.hidden=false;
+}
+function continueWithClarification(answer){
+ const value=String(answer||"").trim();if(!value)return;
+ const research=$("research"),marker="Aclaración del usuario:";
+ const clean=research.value.split(marker)[0].trim();
+ research.value=(clean?clean+"\n\n":"")+marker+" "+value;
+ $("clarificationPanel").hidden=true;
+ $("status").textContent="Aclaración recibida. J.A.I. está continuando con el enfoque elegido…";
+ makePlan();
+}
+$("clarificationSubmit").addEventListener("click",()=>{const answer=$("clarificationOther").value.trim();if(!answer){$("clarificationOther").focus();return;}continueWithClarification(answer);});
 async function makePlan(){
  if(planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual antes de iniciar otro plan.";return;}
  planningInProgress=true;
@@ -1091,6 +1115,7 @@ async function makePlan(){
   $("kokoroAudio").pause();$("kokoroAudio").removeAttribute("src");$("kokoroAudio").style.display="none";
   $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("generateCaptions").disabled=true;
   $("captionStatus").textContent="Nuevo guion: genera la narración y J.A.I. preparará sus subtítulos automáticamente.";
+  showClarification(data);
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Dirección visual · Medio elegido según el tema</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];jaiSceneImages=[];visualAuditResults=[];$("inspectVisuals").disabled=true;$("visualAuditStatus").textContent="La inspección visual independiente estará disponible cuando todas las escenas tengan imagen.";$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma educativo por escena, con la representación apropiada al tema.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
