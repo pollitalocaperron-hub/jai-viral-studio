@@ -42,6 +42,8 @@ jobs:
           node-version: 20
       - name: Install browser test dependencies
         run: npm install --no-audit --no-fund
+      - name: Test API contracts
+        run: npm run test:api
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Test IndexedDB persistence in Chromium
