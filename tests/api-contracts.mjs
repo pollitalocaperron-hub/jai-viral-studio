@@ -349,6 +349,34 @@ try {
     assert.equal(res.body.sampleRate, 24000);
   }
 
+  // Gemini quota exhaustion must activate the no-auth, free OVH Spanish TTS backup.
+  {
+    const sampleRate = 22000, pcm = Buffer.from([0, 0, 24, 0, 0, 0, 232, 255, 0, 0, 12, 0]);
+    const wav = Buffer.alloc(44 + pcm.length);
+    wav.write("RIFF", 0); wav.writeUInt32LE(36 + pcm.length, 4); wav.write("WAVE", 8);
+    wav.write("fmt ", 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20);
+    wav.writeUInt16LE(1, 22); wav.writeUInt32LE(sampleRate, 24);
+    wav.writeUInt32LE(sampleRate * 2, 28); wav.writeUInt16LE(2, 32);
+    wav.writeUInt16LE(16, 34); wav.write("data", 36); wav.writeUInt32LE(pcm.length, 40); pcm.copy(wav, 44);
+    const calls = [];
+    globalThis.fetch = async (url, options = {}) => {
+      calls.push({ url: String(url), options });
+      if (String(url).includes("generativelanguage.googleapis.com")) return response({ error: { message: "Free quota exhausted" } }, 429);
+      if (String(url).includes("nvr-tts-es-es.endpoints.kepler.ai.cloud.ovh.net")) return new Response(wav, { status: 200, headers: { "content-type": "audio/wav" } });
+      throw new Error("Unexpected provider in free TTS failover test: " + url);
+    };
+    const res = mockResponse();
+    await narrateHandler({ method: "POST", body: { text: "Esta es una prueba breve de narración gratuita.", voice: "Kore" } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.provider, "OVHcloud NVIDIA Riva (respaldo gratuito)");
+    assert.equal(res.body.sampleRate, sampleRate);
+    assert.equal(Buffer.from(res.body.audioBase64, "base64").toString("hex"), pcm.toString("hex"), "The WAV container must be removed and its PCM payload preserved.");
+    assert.equal(calls.length, 2);
+    assert.ok(calls[0].url.includes("generativelanguage.googleapis.com"));
+    assert.ok(calls[1].url.includes("nvr-tts-es-es.endpoints.kepler.ai.cloud.ovh.net"));
+    assert.equal(calls[1].options.headers.Authorization, undefined, "The free OVH fallback must not use a paid project key or payment-backed credential.");
+  }
+
   // Visual QA must fail closed when the model reports issues, even with a high score.
   {
     globalThis.fetch = async () => response({
