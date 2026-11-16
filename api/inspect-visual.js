@@ -66,11 +66,13 @@ Aprueba solo si la imagen comunica correctamente la escena. Si falta evidencia o
     if (!Array.isArray(parsed.results)) return res.status(502).json({ error: "El informe visual está incompleto." });
     const results = images.map((_, index) => {
       const result = parsed.results.find(item => Number(item.scene_index) === index) || {};
-      const score = Math.max(0, Math.min(100, Math.round(Number(result.score) || 0)));
-      const reason = String(result.reason || "").trim();
-      const issues = Array.isArray(result.issues) ? result.issues.slice(0, 5).map(issue => String(issue).slice(0, 180)) : [];
-      // Una etiqueta "pass" no basta: exigimos confianza alta, justificación y cero problemas reportados.
-      const status = result.status === "pass" && score >= 80 && reason.length >= 18 && issues.length === 0 ? "pass" : "revise";
+      const numericScore = Number(result.score);
+      const score = Number.isFinite(numericScore) ? Math.max(0, Math.min(100, Math.round(numericScore))) : 0;
+      const reason = typeof result.reason === "string" ? result.reason.trim() : "";
+      const issuesValid = Array.isArray(result.issues);
+      const issues = issuesValid ? result.issues.slice(0, 5).map(issue => String(issue).slice(0, 180)) : ["El inspector no devolvió una lista válida de problemas."];
+      // Fallo seguro: campos ausentes o mal formados nunca se interpretan como evidencia limpia.
+      const status = result.status === "pass" && score >= 80 && reason.length >= 18 && issuesValid && issues.length === 0 ? "pass" : "revise";
       return {
         scene_index: index,
         status,
