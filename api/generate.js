@@ -43,7 +43,7 @@ async function generatePlanHandler(req, res) {
   }
   const researchQuery = topic.trim();
   const researchSources = await fetchResearchSources(researchQuery);
-  const researchContext = researchSources.length ? researchSources.map(s => "[" + s.id + "] " + s.title + " (" + (s.year || "año no indicado") + "). Autores: " + (s.authors || "no disponibles") + ". DOI/URL: " + (s.url || "no disponible") + ". Resumen: " + (s.abstract || "sin resumen recuperado")).join("\n") : "No se recuperaron fuentes académicas. No afirmes que la investigación fue verificada."
+  const researchContext = researchSources.length ? researchSources.map(s => "[" + s.id + "] " + s.title + " (" + (s.year || "año no indicado") + "; tipo: " + (s.type || "no indicado") + "; publicación: " + (s.source_name || "no indicada") + "). Autores: " + (s.authors || "no disponibles") + ". DOI/URL: " + (s.url || "no disponible") + ". Resumen: " + (s.abstract || "sin resumen recuperado")).join("\n") : "No se recuperaron fuentes académicas. No afirmes que la investigación fue verificada."
   const prompt = [
     "Eres el equipo editorial científico y director de producción de J.A.I. Crea un plan educativo vertical 9:16. Devuelve SOLO JSON válido.",
     "",
