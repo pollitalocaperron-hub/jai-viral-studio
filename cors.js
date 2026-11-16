@@ -6,7 +6,9 @@ export function applyApiCors(req, res) {
   const origin = String(req.headers?.origin || "");
   res.setHeader("Vary", "Origin");
 
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  // Browser-facing AI endpoints require the exact Pages origin.
+  // This rejects origin-less direct requests; it is not authentication or a rate limiter.
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
     return false;
   }
 

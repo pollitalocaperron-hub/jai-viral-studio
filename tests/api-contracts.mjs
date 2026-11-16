@@ -12,6 +12,7 @@ assert.deepEqual(generationTimeouts, [2500, 12000, 12000, 6000, 6000], "Generati
 const worstCaseGenerationMs = 2500 + 12000 + (12000 * 2) + 1000 + (6000 * 2);
 assert.ok(worstCaseGenerationMs < 60000, "Worst-case generation path must leave headroom inside Vercel's 60s limit.");
 
+const PAGES_ORIGIN = "https://pollitalocaperron-hub.github.io";
 const originalFetch = globalThis.fetch;
 const originalGroqKey = process.env.GROQ_API_KEY;
 const originalGeminiKey = process.env.GEMINI_API_KEY;
@@ -107,6 +108,9 @@ try {
       assert.equal(res.headers["Access-Control-Allow-Headers"], "Content-Type");
       assert.equal(res.ended, true);
     }
+    const missingOrigin = mockResponse();
+    await narrateHandler({ method: "OPTIONS", headers: {}, body: {} }, missingOrigin);
+    assert.equal(missingOrigin.statusCode, 403, "Requests without an Origin must be rejected before provider access");
     const blocked = mockResponse();
     await narrateHandler({ method: "OPTIONS", headers: { origin: "https://untrusted.example" }, body: {} }, blocked);
     assert.equal(blocked.statusCode, 403, "Untrusted origins must not receive cross-origin API access");
@@ -115,13 +119,13 @@ try {
   // The editorial endpoint must reject invalid methods and empty topics safely.
   {
     const res = mockResponse();
-    await generateHandler({ method: "GET", body: {} }, res);
+    await generateHandler({ headers: { origin: PAGES_ORIGIN }, method: "GET", body: {} }, res);
     assert.equal(res.statusCode, 405);
     assert.equal(res.headers.Allow, "POST");
   }
   {
     const res = mockResponse();
-    await generateHandler({ method: "POST", body: { topic: " " } }, res);
+    await generateHandler({ headers: { origin: PAGES_ORIGIN }, method: "POST", body: { topic: " " } }, res);
     assert.equal(res.statusCode, 400);
   }
 
@@ -148,7 +152,7 @@ try {
       throw new Error("Unexpected network request in API contract test: " + url);
     };
     const res = mockResponse();
-    await generateHandler({
+    await generateHandler({ headers: { origin: PAGES_ORIGIN },
       method: "POST",
       body: { topic: "Un proceso educativo", duration: "30–45 segundos", platform: "Reels" }
     }, res);
@@ -191,7 +195,7 @@ try {
       throw new Error("Unexpected network request in storyboard repair test: " + url);
     };
     const res = mockResponse();
-    await generateHandler({
+    await generateHandler({ headers: { origin: PAGES_ORIGIN },
       method: "POST",
       body: { topic: "Un proceso que requiere reparar el storyboard", duration: "30–45 segundos", platform: "Reels" }
     }, res);
@@ -205,7 +209,7 @@ try {
   // The scene director expands conceptual scenes into time-aligned, animation-ready shots.
   {
     const res = mockResponse();
-    await directScenesHandler({ method: "GET", body: {} }, res);
+    await directScenesHandler({ headers: { origin: PAGES_ORIGIN }, method: "GET", body: {} }, res);
     assert.equal(res.statusCode, 405);
   }
   {
@@ -234,7 +238,7 @@ try {
       return response({ choices: [{ message: { content: JSON.stringify({ shots }) } }] });
     };
     const res = mockResponse();
-    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
+    await directScenesHandler({ headers: { origin: PAGES_ORIGIN }, method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.shot_count, 8);
     assert.equal(res.body.conceptual_scene_count, 4);
@@ -274,7 +278,7 @@ try {
       throw new Error("Unexpected provider in free-tier failover test: " + url);
     };
     const res = mockResponse();
-    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
+    await directScenesHandler({ headers: { origin: PAGES_ORIGIN }, method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
     assert.equal(res.statusCode, 200, "Gemini free fallback must complete the task after Groq quota exhaustion");
     assert.equal(res.body.provider, "Gemini 3.8 Flash");
     assert.equal(res.body.shot_count, 8);
@@ -291,7 +295,7 @@ try {
       throw new Error("Unexpected paid or unknown provider call: " + url);
     };
     const res = mockResponse();
-    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story: makeValidPlan().story, retention_map: [] } }, res);
+    await directScenesHandler({ headers: { origin: PAGES_ORIGIN }, method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story: makeValidPlan().story, retention_map: [] } }, res);
     assert.equal(res.statusCode, 429);
     assert.equal(res.body.diagnosticCode, "FREE_QUOTA_EXHAUSTED");
     assert.match(res.body.error, /No se realizará ningún cobro/);
@@ -323,7 +327,7 @@ try {
       throw new Error("Unexpected provider in layer target validation test: " + url);
     };
     const res = mockResponse();
-    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
+    await directScenesHandler({ headers: { origin: PAGES_ORIGIN }, method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
     assert.equal(res.statusCode, 502);
     assert.equal(res.body.diagnosticCode, "SCENE_DIRECTOR_INVALID_SHOTS");
     assert.match(res.body.error, /no apunta a una capa válida/);
@@ -340,7 +344,7 @@ try {
       throw new Error("Unexpected provider in scene repair quota test: " + url);
     };
     const res = mockResponse();
-    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
+    await directScenesHandler({ headers: { origin: PAGES_ORIGIN }, method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
     assert.equal(res.statusCode, 429);
     assert.equal(res.body.diagnosticCode, "FREE_QUOTA_EXHAUSTED");
     assert.match(res.body.error, /No se realizará ningún cobro/);
@@ -350,7 +354,7 @@ try {
   // Narration input and provider payload must be validated before returning PCM data.
   {
     const res = mockResponse();
-    await narrateHandler({ method: "POST", body: { text: "Hola", voice: "VozInventada" } }, res);
+    await narrateHandler({ headers: { origin: PAGES_ORIGIN }, method: "POST", body: { text: "Hola", voice: "VozInventada" } }, res);
     assert.equal(res.statusCode, 400);
   }
   {
@@ -362,7 +366,7 @@ try {
       }]
     });
     const res = mockResponse();
-    await narrateHandler({ method: "POST", body: { text: "Hola, esta es una prueba de voz.", voice: "Kore" } }, res);
+    await narrateHandler({ headers: { origin: PAGES_ORIGIN }, method: "POST", body: { text: "Hola, esta es una prueba de voz.", voice: "Kore" } }, res);
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.audioBase64, "AQIDBA==");
     assert.equal(res.body.sampleRate, 24000);
@@ -385,7 +389,7 @@ try {
       throw new Error("Unexpected provider in free TTS failover test: " + url);
     };
     const res = mockResponse();
-    await narrateHandler({ method: "POST", body: { text: "Esta es una prueba breve de narración gratuita.", voice: "Kore" } }, res);
+    await narrateHandler({ headers: { origin: PAGES_ORIGIN }, method: "POST", body: { text: "Esta es una prueba breve de narración gratuita.", voice: "Kore" } }, res);
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.provider, "OVHcloud NVIDIA Riva (respaldo gratuito)");
     assert.equal(res.body.sampleRate, sampleRate);
@@ -413,7 +417,7 @@ try {
       }]
     });
     const res = mockResponse();
-    await inspectVisualHandler({
+    await inspectVisualHandler({ headers: { origin: PAGES_ORIGIN },
       method: "POST",
       body: { images: [{ image_base64: "AQID" }, { image_base64: "BAUG" }] }
     }, res);
@@ -439,7 +443,7 @@ try {
       }]
     });
     const res = mockResponse();
-    await inspectVisualHandler({
+    await inspectVisualHandler({ headers: { origin: PAGES_ORIGIN },
       method: "POST",
       body: { images: [{ image_base64: "AQID" }, { image_base64: "BAUG" }] }
     }, res);

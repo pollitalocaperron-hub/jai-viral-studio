@@ -156,6 +156,9 @@ function openJaiRecoveryDB(){return new Promise((resolve,reject)=>{if(!("indexed
 function jaiRecoverySnapshot(){if(!currentPlanData||!currentTopic)return null;return {savedAt:Date.now(),topic:currentTopic,notes:$("research").value,plan:currentPlan,data:currentPlanData,retentionMap:currentRetentionMap,shotPlan:currentShotPlan,images:jaiSceneImages.map(item=>item&&item.src?{src:item.src,shot:item.shot,time:item.time,sceneIndex:item.sceneIndex,prompt:item.prompt}:null),audit:visualAuditResults,timeline:timelineState.items.map(item=>({...item})),audio:kokoroAudioBlob,audioDuration:kokoroAudioDuration,audioSampleRate:kokoroSampleRate,audioEdit:{...audioEdit},audioTrackOffset,subtitleTrackOffset,captions:captionCues.map(cue=>({...cue}))};}
 async function writeJaiRecovery(){if(jaiAutosaveBusy){jaiAutosavePending=true;return;}const snapshot=jaiRecoverySnapshot();if(!snapshot)return;const revision=jaiAutosaveRevision;jaiAutosaveBusy=true;let db=null;try{db=await openJaiRecoveryDB();if(revision!==jaiAutosaveRevision)return;await new Promise((resolve,reject)=>{const tx=db.transaction(JAI_AUTOSAVE_STORE,"readwrite");tx.objectStore(JAI_AUTOSAVE_STORE).put(snapshot,JAI_AUTOSAVE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Guardado cancelado"));});const status=$("autosaveStatus");if(status)status.textContent="Recuperación automática guardada · "+new Date(snapshot.savedAt).toLocaleTimeString("es-MX");}catch(error){const status=$("autosaveStatus");if(status)status.textContent="No se pudo guardar automáticamente: "+(error?.name==="QuotaExceededError"?"almacenamiento del dispositivo lleno":error.message);}finally{if(db)db.close();jaiAutosaveBusy=false;if(jaiAutosavePending){jaiAutosavePending=false;writeJaiRecovery();}}}
 function scheduleJaiAutosave(){if(!currentPlanData||!currentTopic)return;if(jaiAutosaveTimer)clearTimeout(jaiAutosaveTimer);const status=$("autosaveStatus");if(status)status.textContent="Guardando cambios de recuperación…";jaiAutosaveTimer=setTimeout(writeJaiRecovery,900);}
+function flushJaiAutosave(){if(jaiAutosaveTimer){clearTimeout(jaiAutosaveTimer);jaiAutosaveTimer=null;}if(currentPlanData&&currentTopic)writeJaiRecovery();}
+window.addEventListener("pagehide",flushJaiAutosave);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flushJaiAutosave();});
 function syncRecoveredPipeline(){
  const hasPlan=!!(currentPlanData&&currentScenes.length);
  const imagesReady=hasPlan&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,i)=>jaiSceneImages[i]?.image);
@@ -571,12 +574,16 @@ async function inspectVisuals(){
 }
 function approveAllVisualScenes(){
  if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){
-  $("visualAuditStatus").textContent="No se puede aprobar: primero deben estar generadas las ilustraciones de todas las escenas.";return;
+  $("visualAuditStatus").textContent="No se puede aprobar: primero deben estar generadas las ilustraciones vectoriales.";return;
  }
  const total=visualAuditUnitCount();
- visualAuditResults=Array.from({length:total},(_,index)=>({scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar la toma vectorial.",issues:[],manual:true}));
- scheduleJaiAutosave();setPipelineStage("audit",100,"Aprobación manual · "+total+" tomas revisadas","done");
- renderVisualScenes();$("visualAuditStatus").textContent="Las "+total+" tomas quedaron aprobadas manualmente. La exportación puede continuar.";
+ if(!window.confirm("Vas a aprobar manualmente "+total+" tomas. Confirma solo si has revisado visualmente TODAS las tomas."))return;
+ const reason=window.prompt("Escribe el motivo de aprobación manual (obligatorio):","Revisión visual humana completada");
+ if(typeof reason!=="string"||!reason.trim()){$("visualAuditStatus").textContent="Aprobación cancelada: se requiere un motivo verificable.";return;}
+ const reviewedAt=new Date().toISOString();
+ visualAuditResults=Array.from({length:total},(_,index)=>({scene_index:index,status:"pass",score:null,reason:reason.trim().slice(0,500),issues:[],manual:true,decision:"approved",reviewedAt,reviewer:"Operador local"}));
+ scheduleJaiAutosave();setPipelineStage("audit",100,"Aprobación manual registrada · "+total+" tomas","done");
+ renderVisualScenes();$("visualAuditStatus").textContent="Aprobación manual registrada para "+total+" tomas · "+new Date(reviewedAt).toLocaleString("es-MX")+". La exportación puede continuar.";
  updateRenderGate();
 }
 
@@ -584,11 +591,13 @@ $("approveAllVisuals").addEventListener("click",approveAllVisualScenes);
 function approveVisualScene(index){
  if(!Number.isInteger(index)||!currentScenes[index]||!jaiSceneImages[index]?.image)return;
  const unitIndexes=currentShotPlan.length?currentShotPlan.map((shot,shotIndex)=>Number(shot.scene_index)===index?shotIndex:-1).filter(shotIndex=>shotIndex>=0):[index];
- const total=visualAuditUnitCount();
+ const reason=window.prompt("Revisa las tomas de la escena "+(index+1)+". Escribe el motivo de aprobación (obligatorio):","Revisión visual humana completada");
+ if(typeof reason!=="string"||!reason.trim()){$("visualAuditStatus").textContent="Aprobación cancelada: se requiere un motivo verificable.";return;}
+ const reviewedAt=new Date().toISOString(),total=visualAuditUnitCount();
  if(visualAuditResults.length!==total)visualAuditResults=Array.from({length:total},(_,i)=>visualAuditResults[i]||null);
- unitIndexes.forEach(shotIndex=>{visualAuditResults[shotIndex]={scene_index:shotIndex,status:"pass",score:null,reason:"Aprobada manualmente tras revisar la toma de esta escena.",issues:[],manual:true};});
+ unitIndexes.forEach(shotIndex=>{visualAuditResults[shotIndex]={scene_index:shotIndex,status:"pass",score:null,reason:reason.trim().slice(0,500),issues:[],manual:true,decision:"approved",reviewedAt,reviewer:"Operador local"};});
  scheduleJaiAutosave();renderVisualScenes();
- $("visualAuditStatus").textContent="Escena "+(index+1)+" aprobada manualmente: "+unitIndexes.length+" toma(s).";
+ $("visualAuditStatus").textContent="Escena "+(index+1)+" aprobada manualmente: "+unitIndexes.length+" toma(s) · "+new Date(reviewedAt).toLocaleString("es-MX")+".";
  updateRenderGate();
 }
 
