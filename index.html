@@ -595,6 +595,12 @@ function resumeTimelinePreview(){
  if(timelineState.previewPlaying||!timelineState.items.length)return;
  const total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
  if(timelineState.previewElapsed>=(timelineState.previewEnd??total)){previewTimeline(0);return;}
+ if(kokoroAudioBlob){
+  const audio=$("kokoroAudio"),rate=kokoroAudioDuration/Math.max(.1,total);
+  audio.currentTime=Math.min(kokoroAudioDuration,timelineState.previewElapsed*rate);
+  audio.playbackRate=Math.max(.25,Math.min(4,rate));
+  audio.play().catch(()=>{$("timelineStatus").textContent="Vista previa visual activa; el navegador bloqueó el audio.";});
+ }
  timelineState.previewStartedAt=performance.now();timelineState.previewPlaying=true;$("pausePreview").textContent="Pausar";runTimelinePreview();
 }
 
