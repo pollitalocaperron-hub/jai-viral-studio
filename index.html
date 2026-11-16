@@ -868,7 +868,18 @@ function resumeTimelinePreview(){
 }
 
 const renderCanvas=$("renderCanvas"),renderCtx=renderCanvas.getContext("2d");
-let renderFrame=0,renderRecording=false,renderCancelRequested=false,renderRecorder=null;
+let renderFrame=0,renderRecording=false,renderCancelRequested=false,renderRecorder=null,renderLockedControls=[];
+function setRenderEditingLock(locked){
+ if(locked){
+  if(renderLockedControls.length)return;
+  const selectors="#voiceStudio button,#voiceStudio select,#kokoroStudio button,#kokoroStudio select,#kokoroStudio input,#captionEditor button,#captionEditor input,#captionEditor select,#captionEditor textarea,#subtitleTrackOffset,#visualStudio button,#visualStudio input,#visualStudio select,#timelineTracks button,#timelineTracks input,#timelineTracks select,#buildTimeline,#previewTimeline,#pausePreview,#stopPreview";
+  renderLockedControls=Array.from(document.querySelectorAll(selectors)).map(control=>[control,control.disabled]);
+  renderLockedControls.forEach(([control])=>{control.disabled=true;});
+  return;
+ }
+ renderLockedControls.forEach(([control,wasDisabled])=>{if(control.isConnected)control.disabled=wasDisabled;});
+ renderLockedControls=[];
+}
 function drawMotionGraphics(item,index,progress,audioElapsed=0){
  const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height;
  const p=Math.max(0,Math.min(1,Number(progress)||0));
@@ -1041,13 +1052,13 @@ async function renderVideo(){
  const mimeCandidates=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
  const mime=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
  if(!mime){setPipelineStage("render",0,"Formato de vídeo no compatible con este navegador","error");$("renderStatus").textContent="Este navegador no admite grabación MP4 ni WebM desde el editor. Prueba Chrome actualizado.";return;}
- renderRecording=true;renderCancelRequested=false;setPipelineStage("render",2,"Preparando lienzo vertical 720 × 1280…","running");$("renderVideo").disabled=true;$("cancelRender").hidden=false;$("cancelRender").disabled=false;$("approveAllVisuals").disabled=true;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
+ renderRecording=true;renderCancelRequested=false;setRenderEditingLock(true);setPipelineStage("render",2,"Preparando lienzo vertical 720 × 1280…","running");$("renderVideo").disabled=true;$("cancelRender").hidden=false;$("cancelRender").disabled=false;$("approveAllVisuals").disabled=true;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
  let stream=null,audioBuffer=null,audioSource=null,audioStartOffset=0,animationId=null,finished=false;
  const cleanup=()=>{
   if(animationId!==null)cancelAnimationFrame(animationId);
   if(audioSource){try{audioSource.stop();}catch{}}
   if(stream)stream.getTracks().forEach(track=>track.stop());
-  renderRecording=false;$("cancelRender").hidden=true;$("cancelRender").disabled=false;
+  renderRecording=false;setRenderEditingLock(false);$("cancelRender").hidden=true;$("cancelRender").disabled=false;
   $("approveAllVisuals").disabled=!(jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
   const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);
   $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&voiceReady&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
