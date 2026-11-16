@@ -61,7 +61,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <div class="jai-pipeline-row" data-pipeline="visual"><div><div class="jai-pipeline-name">02 · Fotogramas</div><div class="jai-pipeline-detail">Esperando storyboard</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
  <div class="jai-pipeline-row" data-pipeline="audit"><div><div class="jai-pipeline-name">03 · Revisión visual</div><div class="jai-pipeline-detail">Pendiente de imágenes</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
  <div class="jai-pipeline-row" data-pipeline="voice"><div><div class="jai-pipeline-name">04 · Narración</div><div class="jai-pipeline-detail">Pendiente de guion</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
- <div class="jai-pipeline-row" data-pipeline="timeline"><div><div class="jai-pipeline-name">05 · Montaje</div><div class="jai-pipeline-detail">Pendiente de escenas</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
+ <div class="jai-pipeline-row" data-pipeline="timeline"><div><div class="jai-pipeline-name">05 · Estructura de montaje</div><div class="jai-pipeline-detail">Pendiente de escenas</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
  <div class="jai-pipeline-row" data-pipeline="render"><div><div class="jai-pipeline-name">06 · Exportación</div><div class="jai-pipeline-detail">Pendiente de aprobación</div></div><div class="jai-pipeline-track"><div class="jai-pipeline-fill"></div></div></div>
  <div class="jai-pipeline-detail" id="pipelineHint">Cada barra refleja el avance real; las tareas externas muestran actividad mientras responden.</div>
 </div>
@@ -139,7 +139,7 @@ function setPipelineStage(key,percent,label,status){
 function updateRenderGate(){
  const ready=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
  $("renderVideo").disabled=!ready||renderRecording;
- if(timelineState.items.length)setPipelineStage("timeline",100,"Línea de tiempo preparada · "+timelineState.items.length+" bloques","done");
+ if(timelineState.items.length)setPipelineStage("timeline",100,"Estructura de montaje creada · "+timelineState.items.length+" bloques; faltan fotogramas, voz y revisión","done");
  if(!ready&&!renderRecording){
   const reason=!currentScenes.length?"genera primero un plan":!jaiSceneImages.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)?"genera los fotogramas que faltan":!visualAuditPassed()?"la revisión automática está pendiente o falló: revisa los fotogramas y pulsa «Aprobar todas manualmente»":!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":"faltan recursos";
   $("renderStatus").textContent="Exportación bloqueada: "+reason+".";
@@ -939,8 +939,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
    ctx.textBaseline="alphabetic";
   }
  }
- ctx.fillStyle="rgba(255,255,255,.82)";ctx.font="700 17px Arial";ctx.textAlign="center";ctx.fillText("ESCENA "+String(index+1).padStart(2,"0")+" / "+String(currentScenes.length),w/2,h-62);
- ctx.fillStyle="rgba(255,255,255,.25)";ctx.fillRect(55,h-34,610,6);ctx.fillStyle="#72e5d0";ctx.fillRect(55,h-34,610*p,6);
+ // El progreso de render es exclusivo de la interfaz; nunca se dibuja dentro del vídeo exportado.
 }
 async function renderVideo(){
  if(currentPlanData?.clarification_required){$("renderStatus").textContent="Exportación bloqueada: "+(currentPlanData.clarification_question||"primero aclara el enfoque del tema.");return;}
