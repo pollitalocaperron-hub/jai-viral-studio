@@ -96,7 +96,7 @@ async function generatePlanHandler(req, res) {
             ],
             response_format: { type: "json_object" },
             temperature: 0.55,
-            max_completion_tokens: 3800
+            max_completion_tokens: 6000
           }),
           signal: AbortSignal.timeout(13000)
         });
@@ -150,7 +150,7 @@ async function generatePlanHandler(req, res) {
               generationConfig: {
                 responseMimeType: "application/json",
                 temperature: 0.55,
-                maxOutputTokens: 3000
+                maxOutputTokens: 5500
               }
             }),
             signal: AbortSignal.timeout(13000)
@@ -362,9 +362,9 @@ Return no other keys and no markdown.`;
                 messages: [{ role: "system", content: "Return only complete valid JSON. Follow the requested schema exactly." }, { role: "user", content: repairPrompt }],
                 response_format: { type: "json_object" },
                 temperature: 0.25,
-                max_completion_tokens: 3000
+                max_completion_tokens: 5200
               }),
-              signal: AbortSignal.timeout(7000)
+              signal: AbortSignal.timeout(14000)
             });
             const repairRaw = await repairResponse.text();
             let repairBody = {};
