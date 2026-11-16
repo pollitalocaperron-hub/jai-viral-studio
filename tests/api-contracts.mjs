@@ -238,7 +238,8 @@ try {
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.shot_count, 8);
     assert.equal(res.body.conceptual_scene_count, 4);
-    assert.equal(res.body.animation_ready, true);
+    assert.equal(res.body.animation_plan_validated, true);
+    assert.equal(res.body.animation_ready, false, "A shot plan alone must not claim that independent layers are already animated");
     assert.equal(res.body.shots[0].shot_id, "shot-01");
     assert.equal(res.body.shots[0].layers.length, 2);
   }
