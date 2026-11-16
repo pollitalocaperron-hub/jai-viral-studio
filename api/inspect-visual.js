@@ -63,9 +63,22 @@ Aprueba solo si la imagen comunica correctamente la escena. Si falta evidencia o
       console.error("[JAI][Visual QA] Gemini no devolvió el JSON esperado:", text.slice(0, 500));
       return res.status(502).json({ error: "El inspector no devolvió un informe estructurado válido." });
     }
-    if (!Array.isArray(parsed.results)) return res.status(502).json({ error: "El informe visual está incompleto." });
+    if (!Array.isArray(parsed.results) || parsed.results.length !== images.length) {
+      return res.status(502).json({ error: "El inspector no devolvió exactamente un resultado por fotograma." });
+    }
+    const indexedResults = new Map();
+    for (const item of parsed.results) {
+      const sceneIndex = Number(item?.scene_index);
+      if (!Number.isInteger(sceneIndex) || sceneIndex < 0 || sceneIndex >= images.length || indexedResults.has(sceneIndex)) {
+        return res.status(502).json({ error: "El inspector devolvió índices ausentes, duplicados o fuera de orden." });
+      }
+      indexedResults.set(sceneIndex, item);
+    }
+    if (indexedResults.size !== images.length) {
+      return res.status(502).json({ error: "La auditoría visual dejó escenas sin evaluar." });
+    }
     const results = images.map((_, index) => {
-      const result = parsed.results.find(item => Number(item.scene_index) === index) || {};
+      const result = indexedResults.get(index);
       const numericScore = Number(result.score);
       const score = Number.isFinite(numericScore) ? Math.max(0, Math.min(100, Math.round(numericScore))) : 0;
       const reason = typeof result.reason === "string" ? result.reason.trim() : "";
