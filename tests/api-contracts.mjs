@@ -241,7 +241,7 @@ try {
     assert.equal(res.body.animation_plan_validated, true);
     assert.equal(res.body.animation_ready, true, "Validated independent vector layers and transforms must be animation-ready");
     assert.equal(res.body.shots[0].shot_id, "shot-01");
-    assert.equal(res.body.shots[0].layers.length, 2);
+    assert.equal(res.body.shots[0].layers.length, 3, "Each shot must contain multiple independently rendered vector layers");
   }
 
   // A free-tier quota error from Groq must route the scene plan to the configured free Gemini fallback.
