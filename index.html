@@ -327,7 +327,7 @@ function renderVisualScenes(){
   const subject=visualText(scene.visual_subject||scene.teaching_point||scene.objective,"Escena "+(index+1));
   const proof=visualText(scene.visual_proof||scene.teaching_point||scene.visual,"Demostración pendiente");
   if(generated&&generated.src){
-   const img=document.createElement("img");img.src=generated.src;img.alt="Fotograma educativo: "+subject;img.loading="lazy";img.style.cssText="width:100%;aspect-ratio:9/16;object-fit:cover;object-position:center;display:block";card.appendChild(img);
+   const img=document.createElement("img");img.src=generated.src;img.alt="Fotograma educativo: "+subject;img.loading="lazy";img.style.cssText="width:100%;aspect-ratio:9/16;object-fit:contain;object-position:center;display:block;background:radial-gradient(ellipse at center,#182536 0%,#070d16 78%)";card.appendChild(img);
   }else{
    const placeholder=document.createElement("div");placeholder.style.cssText="aspect-ratio:9/16;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:18px;background:radial-gradient(ellipse at 50% 35%,#173b58,#07101e 72%);color:#eaf7ff;text-align:center";
    const kicker=document.createElement("span");kicker.style.cssText="font-size:10px;letter-spacing:2px;color:#77e6d1";kicker.textContent="FOTOGRAMA PENDIENTE";
@@ -890,6 +890,19 @@ function drawMotionGraphics(item,index,progress,audioElapsed=0){
  // no se dibuja una flecha o un objeto genérico que pueda falsear la explicación.
  ctx.restore();
 }
+const portraitFrameCache=new WeakMap();
+function getPortraitFrame(source){
+ if(!source||typeof source!=="object")return source;
+ const cached=portraitFrameCache.get(source);if(cached)return cached;
+ const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
+ const ctx=canvas.getContext("2d");if(!ctx)return source;
+ const scale=Math.max(720/source.width,1280/source.height),dw=source.width*scale,dh=source.height*scale;
+ ctx.save();ctx.filter="blur(30px) brightness(.42) saturate(.82)";ctx.drawImage(source,(720-dw)/2,(1280-dh)/2,dw,dh);ctx.restore();
+ const shade=ctx.createLinearGradient(0,0,0,1280);shade.addColorStop(0,"rgba(2,8,18,.18)");shade.addColorStop(1,"rgba(2,8,18,.48)");ctx.fillStyle=shade;ctx.fillRect(0,0,720,1280);
+ const contain=Math.min(720/source.width,1280/source.height),fw=source.width*contain,fh=source.height*contain;
+ ctx.save();ctx.shadowColor="rgba(0,0,0,.34)";ctx.shadowBlur=26;ctx.drawImage(source,(720-fw)/2,(1280-fh)/2,fw,fh);ctx.restore();
+ portraitFrameCache.set(source,canvas);return canvas;
+}
 function drawVideoScene(item,index,progress,audioElapsed=0){
  const imageIndex=Number.isInteger(item?.visualIndex)?item.visualIndex:index;
  const generated=jaiSceneImages[imageIndex];
@@ -898,24 +911,23 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  if(!generated||!generated.image){
   ctx.fillStyle="#07101e";ctx.fillRect(0,0,w,h);ctx.fillStyle="#f5fbff";ctx.textAlign="center";ctx.font="700 28px Arial";ctx.fillText("FOTOGRAMA NO DISPONIBLE",w/2,h/2);return;
  }
- const img=generated.image;
- // Movimiento continuo más perceptible durante TODO el bloque, con dirección alternada.
+ const img=getPortraitFrame(generated.image);
+ // Conserva el encuadre completo de la imagen cuadrada: relleno ambiental desenfocado y sujeto íntegro al frente.
  const direction=index%2===0?1:-1;
  const eased=p*p*(3-2*p),animationText=String(item.animation||item.visual_action||"").toLowerCase();
  const zoomOut=/reveal|expose|open|widen|pull back|expand view|overview/.test(animationText);
- const zoomAmount=zoomOut?-.055:.17;
- const scale=Math.max(w/img.width,h/img.height)*(1.055+eased*zoomAmount);
- const dw=img.width*scale,dh=img.height*scale;
- const driftX=direction*(eased-.5)*Math.min(104,w*.145);
- const driftY=Math.sin(eased*Math.PI+index*.55)*Math.min(52,h*.04);
+ const scale=1.015+eased*(zoomOut?-.025:.055);
+ const dw=w*scale,dh=h*scale;
+ const driftX=direction*(eased-.5)*Math.min(30,w*.042);
+ const driftY=Math.sin(eased*Math.PI+index*.55)*Math.min(22,h*.018);
  const dx=(w-dw)/2+driftX,dy=(h-dh)/2+driftY;
  ctx.drawImage(img,dx,dy,dw,dh);
  const previousIndex=Number.isInteger(item?.previousVisualIndex)?item.previousVisualIndex:index-1;
  const transition=String(item?.transition||"fade"),transitionDuration=Math.max(.1,Math.min(1,Number(item?.transitionDuration)||.3)),transitionProgress=Math.max(0,Math.min(1,(p*Math.max(.1,Number(item?.seconds)||3))/transitionDuration));
  if(previousIndex>=0&&transition!=="cut"&&transitionProgress<1&&jaiSceneImages[previousIndex]?.image){
-  const previous=jaiSceneImages[previousIndex].image,prevScale=Math.max(w/previous.width,h/previous.height)*1.055;ctx.save();
-  if(transition==="wipe"){ctx.beginPath();ctx.rect(0,0,w*(1-transitionProgress),h);ctx.clip();ctx.drawImage(previous,(w-previous.width*prevScale)/2,(h-previous.height*prevScale)/2,previous.width*prevScale,previous.height*prevScale);}
-  else{ctx.globalAlpha=1-transitionProgress;ctx.drawImage(previous,(w-previous.width*prevScale)/2,(h-previous.height*prevScale)/2,previous.width*prevScale,previous.height*prevScale);}
+  const previous=getPortraitFrame(jaiSceneImages[previousIndex].image),prevScale=1.015;ctx.save();
+  if(transition==="wipe"){ctx.beginPath();ctx.rect(0,0,w*(1-transitionProgress),h);ctx.clip();ctx.drawImage(previous,(w-w*prevScale)/2,(h-h*prevScale)/2,w*prevScale,h*prevScale);}
+  else{ctx.globalAlpha=1-transitionProgress;ctx.drawImage(previous,(w-w*prevScale)/2,(h-h*prevScale)/2,w*prevScale,h*prevScale);}
   ctx.restore();
  }
  const shade=ctx.createLinearGradient(0,0,0,h);shade.addColorStop(0,"rgba(2,8,18,.10)");shade.addColorStop(.68,"rgba(2,8,18,.04)");shade.addColorStop(1,"rgba(2,8,18,.72)");ctx.fillStyle=shade;ctx.fillRect(0,0,w,h);
