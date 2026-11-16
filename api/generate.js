@@ -375,8 +375,8 @@ Return no other keys and no markdown.`;
             const repairResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
               method: "POST",
               headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
-              body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: repairPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 3000 } }),
-              signal: AbortSignal.timeout(7000)
+              body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: repairPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 5200 } }),
+              signal: AbortSignal.timeout(14000)
             });
             const repairRaw = await repairResponse.text();
             let repairBody = {};
