@@ -40,6 +40,13 @@ async function generatePlanHandler(req, res) {
   const prompt = [
     "Eres el equipo editorial científico y director de producción de J.A.I. Crea un plan educativo vertical 9:16. Devuelve SOLO JSON válido.",
     "",
+    "ALCANCE MULTIDISCIPLINARIO:",
+    "Antes de escribir, identifica internamente el dominio y subdominio del tema (ciencia, salud, historia, geografía, tecnología, ingeniería, industria, economía, matemáticas, naturaleza, cultura, arte u otro). No limites la aplicación a una lista cerrada: admite cualquier área del conocimiento.",
+    "Adapta el método de explicación al dominio: ciencias naturales = mecanismos, variables y evidencia experimental; historia = cronología, contexto, actores y causalidad sin anacronismos; geografía = escala, territorio, procesos espaciales y mapas; ingeniería/industria = entradas, etapas reales, transformaciones, controles y producto; tecnología = arquitectura, flujo de datos/componentes y límites; economía = incentivos, agentes, flujos y supuestos; matemáticas = definiciones, pasos demostrables y ejemplos; arte/cultura = contexto, lenguaje formal, interpretación y distinción entre hechos y lecturas.",
+    "No fuerces una cadena molecular o causa-efecto lineal cuando el tema requiera cronología, comparación, sistema, argumento, procedimiento, mapa o interpretación. Elige la estructura didáctica adecuada al objeto de estudio.",
+    "La recuperación de fuentes debe corresponder al dominio. Prioriza fuentes primarias y organismos competentes cuando sean pertinentes; distingue artículos académicos, documentos históricos, normas técnicas, estadísticas oficiales, manuales y fuentes institucionales. Una búsqueda académica sin resultados no significa que el tema carezca de evidencia: informa la limitación y no inventes referencias.",
+    "La calidad se mide por exactitud, claridad y demostración visual, no por cantidad de términos técnicos, espectacularidad ni uso obligatorio de CGI.",
+    "",
     "PRINCIPIOS UNIVERSALES:",
     "1) Investiga el dominio y reconstruye el mecanismo real: condición inicial → receptor/causa → transmisión o transformación → integración → resultado. No saltes pasos esenciales.",
     "2) Distingue detección, transmisión, integración y experiencia consciente; mecanismo y correlación; hecho establecido e incertidumbre.",
