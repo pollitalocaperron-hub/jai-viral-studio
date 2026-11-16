@@ -974,9 +974,9 @@ function renderCaptionEditor(){
   times.append(startLabel,endLabel);card.appendChild(times);
   const text=document.createElement("textarea");text.rows=2;text.value=cue.text;text.setAttribute("aria-label","Texto del subtítulo");text.addEventListener("input",()=>{cue.text=text.value;renderMediaTracks();});card.appendChild(text);
   const actions=document.createElement("div");actions.className="row";actions.style.cssText="gap:8px;flex-wrap:wrap";
-  const split=document.createElement("button");split.type="button";split.className="secondary";split.textContent="Dividir subtítulo";split.disabled=String(cue.text||"").trim().split(/\\s+/).length<2||cue.end-cue.start<.3;
+  const split=document.createElement("button");split.type="button";split.className="secondary";split.textContent="Dividir subtítulo";split.disabled=String(cue.text||"").trim().split(/\s+/).length<2||cue.end-cue.start<.3;
   split.addEventListener("click",()=>{
-   const words=String(cue.text||"").trim().split(/\\s+/);if(words.length<2)return;
+   const words=String(cue.text||"").trim().split(/\s+/);if(words.length<2)return;
    const cut=Math.ceil(words.length/2),ratio=cut/words.length,mid=cue.start+(cue.end-cue.start)*ratio;
    const second={start:Number(mid.toFixed(2)),end:cue.end,text:words.slice(cut).join(" ")};
    cue.end=second.start;cue.text=words.slice(0,cut).join(" ");captionCues.splice(index+1,0,second);
