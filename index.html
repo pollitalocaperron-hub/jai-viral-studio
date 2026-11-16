@@ -339,7 +339,7 @@ $("inspectVisuals").addEventListener("click",inspectVisuals);
 $("makeVisuals").textContent="Generar fotogramas cinematográficos";
 $("makeVisuals").addEventListener("click",generateAIVisuals);
 
-const timelineState={items:[],index:0,timer:null,previewFrame:null,previewStartedAt:null,previewElapsed:0,previewPlaying:false,storyDuration:0,mapDuration:0};
+const timelineState={items:[],index:0,timer:null,previewFrame:null,previewStartedAt:null,previewElapsed:0,previewEnd:null,previewPlaying:false,storyDuration:0,mapDuration:0};
 const GENERIC_MODE_SEQUENCE=[];
 function normalizeVisualText(value){return String(value||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();}
 function chooseVisualMode(beat,scene,index,usedModes){
@@ -411,7 +411,7 @@ function renderTimeline(){
   const applyTrim=(changed)=>{let a=Math.max(0,Math.min(95,Number(trimIn.value)||0)),b=Math.max(5,Math.min(100,Number(trimOut.value)||100));if(b-a<5){if(changed==="in")a=Math.max(0,b-5);else b=Math.min(100,a+5);}item.trimStart=a/100;item.trimEnd=b/100;trimIn.value=String(a);trimOut.value=String(b);};
   trimIn.addEventListener("change",()=>{applyTrim("in");$("timelineStatus").textContent="Entrada del movimiento ajustada. El bloque reproducirá una parte distinta de la animación de su escena.";});
   trimOut.addEventListener("change",()=>{applyTrim("out");$("timelineStatus").textContent="Salida del movimiento ajustada. El bloque reproducirá una parte distinta de la animación de su escena.";});
-  const preview=document.createElement("button");preview.type="button";preview.className="secondary";preview.textContent="Vista previa";preview.title="Reproducir este bloque en el monitor";preview.setAttribute("aria-label","Vista previa del bloque "+(index+1));preview.style.padding="8px 10px";preview.addEventListener("click",()=>previewTimeline(index));
+  const preview=document.createElement("button");preview.type="button";preview.className="secondary";preview.textContent="Vista previa";preview.title="Reproducir este bloque en el monitor";preview.setAttribute("aria-label","Vista previa del bloque "+(index+1));preview.style.padding="8px 10px";preview.addEventListener("click",()=>previewTimeline(index,true));
   control.append(durationLabel,preview,moveUp,moveDown,remove);info.append(heading,desc,control);
   const trimControls=document.createElement("div");trimControls.className="row";trimControls.style.cssText="align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap";trimControls.append(trimLabel,trimInLabel,trimIn,trimOutLabel,trimOut);info.appendChild(trimControls);
   const duration=document.createElement("span");duration.className="tag";duration.textContent=item.seconds+" s";
@@ -531,11 +531,12 @@ function stopTimelinePreview(message="Vista previa detenida."){
  timelineState.previewFrame=null;timelineState.previewPlaying=false;timelineState.previewStartedAt=null;
  $("pausePreview").textContent="Reanudar";if(message)$("timelineStatus").textContent=message;
 }
-function previewTimeline(startIndex=0){
+function previewTimeline(startIndex=0,singleBlock=false){
  if(!timelineState.items.length||renderRecording)return;
  stopTimelinePreview("");
  const start=Math.max(0,Math.min(timelineState.items.length-1,Number(startIndex)||0));
  timelineState.previewElapsed=timelineState.items.slice(0,start).reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
+ timelineState.previewEnd=singleBlock?timelineState.previewElapsed+Math.max(.1,Number(timelineState.items[start].seconds)||0):null;
  timelineState.previewStartedAt=performance.now();timelineState.previewPlaying=true;renderCanvas.style.display="block";
  $("pausePreview").textContent="Pausar";$("pausePreview").disabled=false;$("stopPreview").disabled=false;runTimelinePreview();
 }
@@ -543,8 +544,8 @@ function runTimelinePreview(){
  const rows=[...$("timelineTracks").children];
  const draw=now=>{
   if(!timelineState.previewPlaying)return;
-  const elapsed=timelineState.previewElapsed+(now-timelineState.previewStartedAt)/1000,total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
-  if(elapsed>=total){const last=timelineState.items.length-1,item=timelineState.items[last];item.previousVisualIndex=last>0?Number(timelineState.items[last-1].visualIndex):null;drawVideoScene(item,item.sceneIndex||0,Number(item.trimEnd??1),elapsed);timelineState.previewElapsed=total;stopTimelinePreview("Vista previa terminada. Narración no reproducida en este monitor; se integra durante la exportación.");return;}
+  const elapsed=timelineState.previewElapsed+(now-timelineState.previewStartedAt)/1000,total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0),endAt=timelineState.previewEnd??total;
+  if(elapsed>=endAt){const last=timelineState.items.length-1,item=timelineState.items[last];item.previousVisualIndex=last>0?Number(timelineState.items[last-1].visualIndex):null;drawVideoScene(item,item.sceneIndex||0,Number(item.trimEnd??1),elapsed);timelineState.previewElapsed=endAt;timelineState.previewEnd=null;stopTimelinePreview("Vista previa terminada. Narración no reproducida en este monitor; se integra durante la exportación.");return;}
   let cursor=0,index=0;for(;index<timelineState.items.length;index++){const d=Math.max(.1,Number(timelineState.items[index].seconds)||0);if(elapsed<cursor+d)break;cursor+=d;}
   const item=timelineState.items[index],duration=Math.max(.1,Number(item.seconds)||0),progress=Math.max(0,Math.min(1,(elapsed-cursor)/duration));
   item.previousVisualIndex=index>0?Number(timelineState.items[index-1].visualIndex):null;
@@ -565,7 +566,7 @@ function pauseTimelinePreview(){
 function resumeTimelinePreview(){
  if(timelineState.previewPlaying||!timelineState.items.length)return;
  const total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
- if(timelineState.previewElapsed>=total){previewTimeline(0);return;}
+ if(timelineState.previewElapsed>=(timelineState.previewEnd??total)){previewTimeline(0);return;}
  timelineState.previewStartedAt=performance.now();timelineState.previewPlaying=true;$("pausePreview").textContent="Pausar";runTimelinePreview();
 }
 
@@ -791,7 +792,7 @@ $("renderVideo").addEventListener("click",renderVideo);
 $("buildTimeline").addEventListener("click",buildTimeline);
 $("previewTimeline").addEventListener("click",()=>previewTimeline(0));
  $("pausePreview").addEventListener("click",()=>timelineState.previewPlaying?pauseTimelinePreview():resumeTimelinePreview());
- $("stopPreview").addEventListener("click",()=>{stopTimelinePreview("Vista previa detenida.");timelineState.previewElapsed=0;});
+ $("stopPreview").addEventListener("click",()=>{stopTimelinePreview("Vista previa detenida.");timelineState.previewElapsed=0;timelineState.previewEnd=null;});
 
 const JAI_MEMORY_KEY="jaiEditorialMemoryV1";
 function getLearningMemory(){
