@@ -64,6 +64,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
    <label>Recorte inicial (s)<input id="audioTrimStart" type="number" min="0" step="0.1" value="0"></label>
    <label>Recorte final (s)<input id="audioTrimEnd" type="number" min="0" step="0.1" value="0"></label>
    <label>Volumen <span id="audioGainValue">100%</span><input id="audioGain" type="range" min="0" max="150" step="5" value="100"></label>
+   <button class="secondary" id="resetAudioEdit" type="button">Restablecer audio</button>
   </div>
   <div class="hint" id="audioEditStatus">Ajusta el fragmento y el volumen que se integrarán al vídeo. El WAV original permanece intacto.</div>
  </div>
@@ -842,7 +843,7 @@ async function renderVideo(){
    const trimStart=Math.max(0,Math.min(1,Number(activeItem.trimStart)||0));
    const trimEnd=Math.max(trimStart+.01,Math.min(1,Number.isFinite(Number(activeItem.trimEnd))?Number(activeItem.trimEnd):1));
    const sceneProgress=trimStart+blockProgress*(trimEnd-trimStart);
-   drawVideoScene(activeItem,sceneIndex,sceneProgress,elapsed);
+   drawVideoScene(activeItem,sceneIndex,sceneProgress,audioBuffer?(getAudioEdit().trimStart+elapsed*getAudioEdit().duration/Math.max(.1,timelineDuration)):elapsed);
    $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";
    if(elapsed>=totalDuration){try{recorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
    animationId=requestAnimationFrame(draw);
@@ -1095,6 +1096,7 @@ $("generateNarration").addEventListener("click",async()=>{
 $("audioTrimStart").addEventListener("change",()=>{audioEdit.trimStart=Number($("audioTrimStart").value)||0;if(audioEdit.trimEnd>0&&audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();});
 $("audioTrimEnd").addEventListener("change",()=>{audioEdit.trimEnd=Number($("audioTrimEnd").value)||kokoroAudioDuration;if(audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();});
 $("audioGain").addEventListener("input",()=>{audioEdit.gain=Number($("audioGain").value)/100;syncAudioEditControls();renderMediaTracks();});
+$("resetAudioEdit").addEventListener("click",()=>{audioEdit={trimStart:0,trimEnd:kokoroAudioDuration,gain:1};syncAudioEditControls();renderMediaTracks();$("kokoroStatus").textContent="Edición de audio restablecida: narración completa al 100%.";});
 $("stopKokoro").addEventListener("click",()=>{$("kokoroAudio").pause();if(kokoroSource){try{kokoroSource.stop();}catch(e){}kokoroSource=null;}});
 function cleanNarrationText(raw){
  return String(raw||"")
