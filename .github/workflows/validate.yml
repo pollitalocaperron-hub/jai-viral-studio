@@ -20,6 +20,7 @@ jobs:
           node-version: 20
       - name: Check API modules
         run: |
+          node --check --input-type=module < api/request-guard.js
           node --check --input-type=module < api/generate.js
           node --check --input-type=module < api/narrate.js
           node --check --input-type=module < api/inspect-visual.js

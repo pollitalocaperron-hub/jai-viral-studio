@@ -105,6 +105,15 @@ try {
     assert.equal(parsed.statusCode, 413);
     const accepted = mockResponse();
     assert.equal(enforceRequestBodyLimit({ headers: {}, body: { topic: "Tema breve" } }, accepted, 24000), true);
+    const wrongType = mockResponse();
+    assert.equal(enforceRequestBodyLimit({ headers: { "content-type": "text/plain" }, body: { topic: "Tema" } }, wrongType, 24000), false);
+    assert.equal(wrongType.statusCode, 415);
+    const arrayBody = mockResponse();
+    assert.equal(enforceRequestBodyLimit({ headers: {}, body: [] }, arrayBody, 24000), false);
+    assert.equal(arrayBody.statusCode, 400);
+    const invalidLength = mockResponse();
+    assert.equal(enforceRequestBodyLimit({ headers: { "content-length": "-1" }, body: {} }, invalidLength, 24000), false);
+    assert.equal(invalidLength.statusCode, 400);
   }
 
   process.env.GROQ_API_KEY = "test-groq-key";
