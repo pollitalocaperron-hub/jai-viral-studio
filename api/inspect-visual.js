@@ -21,10 +21,10 @@ export default async function handler(req, res) {
     }
   }
 
-  const instructions = `Eres el inspector visual independiente de J.A.I. Evalúas imágenes de un vídeo educativo científico.
+  const instructions = `Eres el inspector visual independiente de J.A.I. Evalúas imágenes de un vídeo educativo de CUALQUIER dominio: ciencias, historia, geografía, tecnología, arte, cultura, cocina, naturaleza, economía u otros.
 Compara CADA imagen con el sujeto, estado material, acción y prueba visual solicitados.
 Criterios: (1) el sujeto principal es reconocible y coincide con el solicitado; (2) el estado y la acción física son visibles; (3) la imagen demuestra la idea de la escena, no solo la decora; (4) no hay objetos ajenos, composición confusa, nubes abstractas ni manchas luminosas sin forma; (5) la imagen tiene un sujeto claro y legible en encuadre vertical.
-No exijas fotorealismo literal cuando la escena representa una estructura microscópica: acepta CGI científico si la estructura es reconocible y coherente. No inventes errores que no puedas observar.
+Evalúa la representación según el dominio: acepta mapas, líneas temporales, ilustraciones históricas, diagramas, CGI, personajes, procesos naturales o gráficos cuando sean adecuados al contenido. No impongas estética científica ni fotorealismo si la representación elegida es didácticamente válida. No inventes errores que no puedas observar.
 Devuelve SOLO JSON con esta forma: {"results":[{"scene_index":0,"status":"pass"|"revise","score":0,"reason":"explicación breve en español","issues":["problema observable"]}]}.
 Aprueba solo si la imagen comunica correctamente la escena. Si falta evidencia o el sujeto no coincide, usa revise. Un score de 80 o más no obliga a aprobar.`;
 
@@ -75,7 +75,7 @@ Aprueba solo si la imagen comunica correctamente la escena. Si falta evidencia o
         issues: Array.isArray(result.issues) ? result.issues.slice(0, 5).map(issue => String(issue).slice(0, 180)) : []
       };
     });
-    return res.status(200).json({ results, model: "gemini-2.5-flash" });
+    return res.status(200).json({ results, model: "gemini-3.8-flash" });
   } catch (error) {
     const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
     console.error("[JAI][Visual QA] Error:", error?.name || "Error", error?.message || "");
