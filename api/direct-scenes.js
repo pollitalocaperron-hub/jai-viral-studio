@@ -11,8 +11,8 @@ function clean(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 function validateShots(shots, story) {
-  if (!Array.isArray(shots) || shots.length < story.length * 2 || shots.length > 16) {
-    return "El director debe entregar entre 2 y 5 tomas visuales por escena conceptual, con un máximo de 16 tomas.";
+  if (!Array.isArray(shots) || shots.length < story.length * 2 || shots.length > story.length * 5) {
+    return "El director debe entregar entre 2 y 5 tomas visuales por cada escena conceptual.";
   }
   const byScene = new Map();
   for (const [index, shot] of shots.entries()) {
@@ -60,7 +60,7 @@ function validateShots(shots, story) {
   }
   for (let sceneIndex = 0; sceneIndex < story.length; sceneIndex++) {
     const range = parseRange(story[sceneIndex]?.time), list = (byScene.get(sceneIndex) || []).sort((a, b) => a.start - b.start);
-    if (!range || list.length < 2) return "La escena conceptual " + (sceneIndex + 1) + " no tiene suficientes tomas.";
+    if (!range || list.length < 2 || list.length > 5) return "La escena conceptual " + (sceneIndex + 1) + " debe tener entre 2 y 5 tomas.";
     let cursor = range.start;
     for (const shot of list) {
       if (Math.abs(shot.start - cursor) > 0.05) return "Las tomas de la escena " + (sceneIndex + 1) + " tienen huecos o solapamientos.";
@@ -87,7 +87,7 @@ export default async function handler(req, res) {
   const prompt = [
     "Eres el DIRECTOR DE ESCENAS Y SUPERVISOR DE ANIMACIÓN de J.A.I. Convierte el storyboard conceptual en un plan de tomas ejecutable. Devuelve SOLO JSON válido con la propiedad shots.",
     "No generes una imagen final ni describas movimientos de cámara como sustituto de acciones. Cada toma debe mostrar un nuevo estado o acción didáctica.",
-    "Divide cada escena conceptual en 2 a 5 tomas, según la complejidad real. El total debe ser 8 a 16. No uses una cantidad fija por vídeo.",
+    "Divide cada una de las 4 o 5 escenas conceptuales en 2 a 5 tomas, según la complejidad real. El total permitido es de 8 a 25 tomas (máximo 5 por escena). No uses una cantidad fija por vídeo.",
     "Las tomas de cada escena deben cubrir exactamente su intervalo, en orden, sin huecos ni solapamientos. Usa start_seconds y end_seconds numéricos absolutos dentro del vídeo.",
     "Cada toma debe incluir: scene_index (índice base cero), start_seconds, end_seconds, narration_segment (fragmento literal de la narración), subtitle, subject, visual_state, visual_action, visual_prompt_en, continuity_anchor, background_color (#RRGGBB), layers (3–6 objetos independientes con id, description, role, path_d, fill, stroke, stroke_width, pivot_x, pivot_y) y animation_steps (2–4 acciones con target_id, action, from_state, to_state, start_progress, end_progress, from_transform y to_transform).",
     "Los elementos deben ser concretos y separables: no uses 'todo el motor' como una sola capa si necesitas mover pistón, válvula y bujía independientemente. Mantén la misma identidad, geometría, paleta y orientación de objetos repetidos entre tomas.",
