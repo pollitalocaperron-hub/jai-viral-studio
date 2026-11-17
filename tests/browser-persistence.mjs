@@ -204,8 +204,19 @@ try {
     flushJaiAutosave();
     if (jaiAutosavePromise) await jaiAutosavePromise;
     const snapshot = await readJaiRecovery(JAI_AUTOSAVE_KEY);
+    projectRecoveryInProgress = true;
+    $("research").value = "Estado parcial durante recuperación";
+    flushJaiAutosave();
+    const duringRecovery = await readJaiRecovery(JAI_AUTOSAVE_KEY);
+    projectRecoveryInProgress = false;
+    scheduleJaiAutosave();
+    flushJaiAutosave();
+    if (jaiAutosavePromise) await jaiAutosavePromise;
+    const afterRecovery = await readJaiRecovery(JAI_AUTOSAVE_KEY);
     return {
       notes: snapshot?.notes,
+      duringRecoveryNotes: duringRecovery?.notes,
+      afterRecoveryNotes: afterRecovery?.notes,
       savedAt: snapshot?.savedAt,
       approval: snapshot?.audit?.[0] && {
         manual: snapshot.audit[0].manual,
@@ -220,6 +231,10 @@ try {
   });
   assert.equal(latestAutosave.notes, "Edición final que debe prevalecer",
     "Rapid autosave requests must persist the newest edited snapshot, not an older queued revision");
+  assert.equal(latestAutosave.duringRecoveryNotes, "Edición final que debe prevalecer",
+    "An in-flight autosave must not overwrite the last complete snapshot with a partially restored project");
+  assert.equal(latestAutosave.afterRecoveryNotes, "Estado parcial durante recuperación",
+    "Autosave must resume with the complete state once project recovery has finished");
   assert.deepEqual(latestAutosave.approval, {
     manual: true, decision: "approved", reason: "Revisión humana verificada", reviewer: "Operador local"
   }, "Manual visual approval evidence must survive autosave and recovery");
