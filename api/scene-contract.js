@@ -22,7 +22,7 @@ function validateVectorPath(value) {
   const numbers = tokens.filter(token => !/^[A-Za-z]$/.test(token)).map(Number);
   const drawingCommands = commands.filter(command => !/[MmZz]/.test(command));
   return commands.length >= 4 && commands.length <= 32 &&
-    drawingCommands.length >= 3 && numbers.length >= 8 && numbers.length <= 120 &&
+    drawingCommands.length >= 2 && numbers.length >= 8 && numbers.length <= 120 &&
     numbers.every(number => Number.isFinite(number) && Math.abs(number) <= 2000);
 }
 
