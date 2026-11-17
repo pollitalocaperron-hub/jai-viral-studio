@@ -41,8 +41,12 @@ function createResponseBridge() {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const handler = ROUTES.get(url.pathname.replace(/\\/$/, ""));
+    const routePath = url.pathname.endsWith("/") ? url.pathname.slice(0, -1) : url.pathname;
+    const handler = ROUTES.get(routePath);
     if (!handler) return Response.json({ error: "Ruta no encontrada." }, { status: 404 });
+
+    const declaredLength = Number(request.headers.get("content-length") || 0);
+    if (declaredLength > 10 * 1024 * 1024) return Response.json({ error: "La solicitud supera el límite seguro de 10 MB." }, { status: 413 });
 
     let body;
     if (request.method !== "GET" && request.method !== "HEAD" && request.method !== "OPTIONS") {
