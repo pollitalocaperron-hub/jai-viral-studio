@@ -25,6 +25,33 @@ function transformsDiffer(a, b) {
   return ["x", "y", "rotation", "scale", "opacity"].some(key => Math.abs(Number(a[key]) - Number(b[key])) > 0.001);
 }
 
+
+function transformsMatch(a, b) {
+  return ["x", "y", "rotation", "scale", "opacity"].every(key =>
+    Math.abs(Number(a[key]) - Number(b[key])) <= 0.01
+  );
+}
+
+export function validateAnimationContinuity(steps) {
+  const byLayer = new Map();
+  for (const step of steps) {
+    const list = byLayer.get(step.target_id) || [];
+    list.push(step);
+    byLayer.set(step.target_id, list);
+  }
+  for (const [layerId, list] of byLayer) {
+    list.sort((a, b) => Number(a.start_progress) - Number(b.start_progress));
+    for (let index = 1; index < list.length; index++) {
+      const previous = list[index - 1], next = list[index];
+      if (!transformsMatch(previous.to_transform, next.from_transform) ||
+          previous.to_state.trim() !== next.from_state.trim()) {
+        return "La capa " + layerId + " presenta un salto entre acciones: el estado final debe coincidir con el estado inicial siguiente.";
+      }
+    }
+  }
+  return null;
+}
+
 export function validateShots(shots, story) {
   if (!Array.isArray(story) || story.length < 4 || story.length > 5) {
     return "El storyboard debe contener entre 4 y 5 escenas conceptuales.";
@@ -116,6 +143,8 @@ export function validateShots(shots, story) {
     if (!hasActualMotion) {
       return "La toma " + (index + 1) + " no contiene ningún cambio real de transformación entre sus fotogramas.";
     }
+    const continuityError = validateAnimationContinuity(shot.animation_steps);
+    if (continuityError) return "La toma " + (index + 1) + ": " + continuityError;
     const list = byScene.get(sceneIndex) || [];
     list.push({ start, end });
     byScene.set(sceneIndex, list);

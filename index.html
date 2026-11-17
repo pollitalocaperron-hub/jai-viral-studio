@@ -1066,7 +1066,7 @@ function paintVectorShot(ctx,w,h,shot,progress){
  ctx.save();ctx.fillStyle=shot.background_color||"#F2EEE4";ctx.fillRect(0,0,w,h);
  const backdrop=ctx.createLinearGradient(0,0,w,h);backdrop.addColorStop(0,"rgba(255,255,255,.16)");backdrop.addColorStop(1,"rgba(30,45,60,.05)");ctx.fillStyle=backdrop;ctx.fillRect(0,0,w,h);
  ctx.scale(w/720,h/1280);
- for(const layer of layers){
+ layers.forEach((layer,layerIndex)=>{
   let transform={x:0,y:0,rotation:0,scale:1,opacity:1};
   const steps=(Array.isArray(shot.animation_steps)?shot.animation_steps:[]).filter(step=>step.target_id===layer.id).sort((a,b)=>Number(a.start_progress)-Number(b.start_progress));
   if(steps.length){
@@ -1082,8 +1082,8 @@ function paintVectorShot(ctx,w,h,shot,progress){
    if(p<Number(selected.start_progress))transform={...a};
    if(p>Number(selected.end_progress))transform={...b};
   }
-  const path=paths[layers.indexOf(layer)];
-  const pivotX=Number(layer.pivot_x)||360,pivotY=Number(layer.pivot_y)||640;
+  const path=paths[layerIndex];
+  const pivotX=Number.isFinite(Number(layer.pivot_x))?Number(layer.pivot_x):360,pivotY=Number.isFinite(Number(layer.pivot_y))?Number(layer.pivot_y):640;
   ctx.save();ctx.translate(pivotX+transform.x,pivotY+transform.y);ctx.rotate(transform.rotation*Math.PI/180);ctx.scale(transform.scale,transform.scale);ctx.translate(-pivotX,-pivotY);
   ctx.globalAlpha=Math.max(0,Math.min(1,transform.opacity));ctx.lineJoin="round";ctx.lineCap="round";
   ctx.shadowColor="rgba(24,38,54,.16)";ctx.shadowBlur=8;ctx.shadowOffsetY=5;
@@ -1091,7 +1091,7 @@ function paintVectorShot(ctx,w,h,shot,progress){
   ctx.shadowBlur=0;ctx.shadowOffsetY=0;
   if(layer.stroke&&layer.stroke!=="none"&&Number(layer.stroke_width)>0){ctx.strokeStyle=layer.stroke;ctx.lineWidth=Number(layer.stroke_width);ctx.stroke(path);}
   ctx.restore();
- }
+ });
  ctx.restore();return true;
 }
 function vectorShotCanvas(shot,progress=.5){

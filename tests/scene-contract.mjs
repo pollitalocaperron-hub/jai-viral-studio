@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { validateShots } from "../api/scene-contract.js";
+import { validateShots, validateAnimationContinuity } from "../api/scene-contract.js";
 
 const story = Array.from({ length: 4 }, (_, index) => ({ time: "0:" + String(index * 9).padStart(2, "0") + " - 0:" + String(index * 9 + 9).padStart(2, "0") }));
 const transform = (overrides = {}) => ({ x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, ...overrides });
@@ -64,5 +64,20 @@ for (let index = 0; index < 4; index++) {
   tooManyShots.push(extra);
 }
 assert.match(validateShots(tooManyShots, story), /entre 2 y 5 tomas/);
+
+
+import { validateAnimationContinuity } from "../api/scene-contract.js";
+
+const continuous = [
+  { target_id: "arm", start_progress: 0, end_progress: 0.5, from_state: "rest", to_state: "raised", from_transform: transform(), to_transform: transform({ y: -40 }) },
+  { target_id: "arm", start_progress: 0.6, end_progress: 1, from_state: "raised", to_state: "extended", from_transform: transform({ y: -40 }), to_transform: transform({ y: -40, x: 30 }) }
+];
+assert.equal(validateAnimationContinuity(continuous), null, "A pause between actions must preserve the exact pose and state");
+const discontinuous = structuredClone(continuous);
+discontinuous[1].from_transform.x = 18;
+assert.match(validateAnimationContinuity(discontinuous), /salto entre acciones/);
+const stateJump = structuredClone(continuous);
+stateJump[1].from_state = "collapsed";
+assert.match(validateAnimationContinuity(stateJump), /salto entre acciones/);
 
 console.log("PASS: scene director contract rejects single-layer motion, static animation, incomplete states, overlapping actions, broken scene chronology and excessive per-scene shots.");
