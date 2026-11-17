@@ -1104,9 +1104,38 @@ function vectorShotPreview(shot,progress=.5){
  const canvas=vectorShotCanvas(shot,progress);
  return canvas?canvas.toDataURL("image/jpeg",.88):null;
 }
+function validVectorTransform(value){
+ const keys=["x","y","rotation","scale","opacity"];
+ return !!value&&keys.every(key=>typeof value[key]==="number"&&Number.isFinite(value[key]))&&
+  value.x>=-300&&value.x<=300&&value.y>=-300&&value.y<=300&&
+  value.rotation>=-360&&value.rotation<=360&&value.scale>=.2&&value.scale<=3&&
+  value.opacity>=0&&value.opacity<=1;
+}
 function animationRendererReady(){
  if(!Array.isArray(currentShotPlan)||!currentShotPlan.length)return true;
- const validShot=shot=>Array.isArray(shot.layers)&&shot.layers.length>=3&&shot.layers.every(layer=>typeof layer.path_d==="string"&&layer.path_d.length>=10&&!!getVectorPath(layer))&&Array.isArray(shot.animation_steps)&&shot.animation_steps.length>=2&&shot.animation_steps.every(step=>step.from_transform&&step.to_transform);
+ const validShot=shot=>{
+  if(!Array.isArray(shot.layers)||shot.layers.length<3||shot.layers.length>6)return false;
+  const ids=new Set();
+  for(const layer of shot.layers){
+   if(!layer||typeof layer.id!=="string"||ids.has(layer.id)||typeof layer.path_d!=="string"||layer.path_d.length<10||!getVectorPath(layer)||
+    typeof layer.pivot_x!=="number"||!Number.isFinite(layer.pivot_x)||layer.pivot_x<0||layer.pivot_x>720||
+    typeof layer.pivot_y!=="number"||!Number.isFinite(layer.pivot_y)||layer.pivot_y<0||layer.pivot_y>1280||
+    typeof layer.stroke_width!=="number"||!Number.isFinite(layer.stroke_width)||layer.stroke_width<0||layer.stroke_width>24)return false;
+   ids.add(layer.id);
+  }
+  if(!Array.isArray(shot.animation_steps)||shot.animation_steps.length<2||shot.animation_steps.length>4)return false;
+  const targets=new Set();let hasMotion=false;
+  for(const step of shot.animation_steps){
+   if(!step||!ids.has(step.target_id)||typeof step.start_progress!=="number"||typeof step.end_progress!=="number"||
+    !Number.isFinite(step.start_progress)||!Number.isFinite(step.end_progress)||step.start_progress<0||
+    step.end_progress>1||step.end_progress<=step.start_progress||
+    (step.easing!==undefined&&!["linear","ease-in","ease-out","ease-in-out","smoothstep"].includes(step.easing))||
+    !validVectorTransform(step.from_transform)||!validVectorTransform(step.to_transform))return false;
+   targets.add(step.target_id);
+   if(["x","y","rotation","scale","opacity"].some(key=>Math.abs(step.from_transform[key]-step.to_transform[key])>.001))hasMotion=true;
+  }
+  return targets.size>=2&&hasMotion;
+ };
  return currentShotPlan.every(validShot)&&timelineState.items.length===currentShotPlan.length&&timelineState.items.every(item=>item.directedShot&&validShot(item.directedShot));
 }
 const portraitFrameCache=new WeakMap();
