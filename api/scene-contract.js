@@ -160,7 +160,7 @@ export function validateShots(shots, story) {
     if (count < 2 || count > 5) return "La escena conceptual " + (sceneIndex + 1) + " debe contener entre 2 y 5 tomas.";
     let cursor = range.start;
     const orderedShots = list.slice().sort((a, b) => a.start - b.start);
-    const normalizeIdentity = value => clean(value, 260).toLowerCase().replace(/\\s+/g, " ");
+    const normalizeIdentity = value => clean(value, 260).toLowerCase().replace(/\s+/g, " ");
     for (let shotIndex = 0; shotIndex < orderedShots.length; shotIndex++) {
       const current = orderedShots[shotIndex].shot;
       const anchor = normalizeIdentity(current.continuity_anchor);
