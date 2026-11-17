@@ -184,6 +184,13 @@ async function writeJaiRecoveryKey(key,snapshot){
  try{db=await openJaiRecoveryDB();await new Promise((resolve,reject)=>{const tx=db.transaction(JAI_AUTOSAVE_STORE,"readwrite");tx.objectStore(JAI_AUTOSAVE_STORE).put(snapshot,key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Guardado cancelado"));});}
  finally{if(db)db.close();}
 }
+async function prepareJaiRecoveryMedia(snapshot,scenes){
+ if(!snapshot?.data||!Array.isArray(scenes)||!scenes.length)throw Error("La copia no contiene un storyboard válido.");
+ if(!Array.isArray(snapshot.images)||snapshot.images.length>scenes.length)throw Error("La lista de fotogramas no coincide con el storyboard.");
+ const images=await Promise.all(scenes.map(async(_,i)=>{const item=snapshot.images[i];if(!item)return null;if(typeof item.src!=="string"||!item.src.startsWith("data:image/"))throw Error("El fotograma "+(i+1)+" tiene un recurso inválido.");const image=new Image();image.src=item.src;try{if(image.decode)await image.decode();else if(!image.complete)await new Promise((r,j)=>{image.onload=r;image.onerror=()=>j(Error("Imagen no disponible"));});}catch{throw Error("No se pudo validar el fotograma "+(i+1)+". Se conservó el proyecto actual.");}if(!image.naturalWidth||!image.naturalHeight)throw Error("El fotograma "+(i+1)+" está vacío.");return {...item,image};}));
+ const shotPlan=Array.isArray(snapshot.shotPlan)?snapshot.shotPlan:[];if(shotPlan.some(v=>!Number.isInteger(Number(v.scene_index))||Number(v.scene_index)<0||Number(v.scene_index)>=scenes.length))throw Error("El plan de tomas contiene escenas inexistentes.");
+ if(snapshot.timeline!==undefined&&!Array.isArray(snapshot.timeline))throw Error("La línea de tiempo guardada no es válida.");if(snapshot.captions!==undefined&&!Array.isArray(snapshot.captions))throw Error("Los subtítulos guardados no son válidos.");if(snapshot.audio!=null&&!(snapshot.audio instanceof Blob))throw Error("El audio guardado no es válido.");return {images,shotPlan};
+}
 async function restoreJaiProjectRecord(project){
  if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual antes de cambiar de proyecto.";return;}
  if(!project?.data){$("status").textContent="Este registro no contiene un plan completo.";return;}
@@ -195,13 +202,9 @@ async function restoreJaiProjectRecord(project){
   const snapshot=await readJaiRecovery(project.snapshotKey);
   if(!snapshot?.data)throw new Error("No se encontró la copia completa de este proyecto.");
   if(currentPlanData!==stateAtRequest||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="La sesión cambió mientras se recuperaba el proyecto; no se reemplazó el trabajo actual.";return;}
-  loadSavedProject(project,{recovery:true});
-  currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;
-  currentShotPlan=Array.isArray(snapshot.shotPlan)?snapshot.shotPlan:[];
-  if(Array.isArray(snapshot.images)){
-   jaiSceneImages=snapshot.images.map(item=>{if(!item?.src)return null;const image=new Image();image.src=item.src;return {...item,image};});
-   await Promise.all(jaiSceneImages.map(async item=>{if(!item?.image)return;try{if(item.image.decode)await item.image.decode();else if(!item.image.complete)await new Promise((resolve,reject)=>{item.image.onload=resolve;item.image.onerror=()=>reject(new Error("Fotograma no disponible"));});if(!item.image.naturalWidth||!item.image.naturalHeight)throw new Error("Fotograma vacío");}catch(error){const index=jaiSceneImages.indexOf(item);jaiSceneImages[index]=null;console.warn("[JAI] Fotograma guardado no disponible:",error);}}));
-  }
+  const prepared=await prepareJaiRecoveryMedia(snapshot,Array.isArray(snapshot.data.story)?snapshot.data.story:[]);
+  if(currentPlanData!==stateAtRequest||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="La sesión cambió durante la validación; no se reemplazó el trabajo actual.";return;}
+  loadSavedProject(project,{recovery:true});currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;currentShotPlan=prepared.shotPlan;jaiSceneImages=prepared.images;
   visualAuditResults=Array.isArray(snapshot.audit)?snapshot.audit.map((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)?item:null):[];
   const expectedAuditCount=visualAuditUnitCount();if(visualAuditResults.length!==expectedAuditCount)visualAuditResults=Array.from({length:expectedAuditCount},(_,index)=>visualAuditResults[index]||null);
   jaiSceneImages.forEach((item,sceneIndex)=>{if(!item?.image){if(currentShotPlan.length)currentShotPlan.forEach((shot,shotIndex)=>{if(Number(shot.scene_index)===sceneIndex)visualAuditResults[shotIndex]=null;});else visualAuditResults[sceneIndex]=null;}});
@@ -237,29 +240,9 @@ async function restoreJaiRecovery(){
   });
   if(!snapshot?.data||!snapshot.topic){const status=$("autosaveStatus");if(status)status.textContent="No hay una sesión anterior que recuperar.";return;}
   if(currentPlanData||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){const status=$("autosaveStatus");if(status)status.textContent="Hay un proyecto activo; se conservó sin reemplazarlo por la sesión anterior.";return;}
-  loadSavedProject({topic:snapshot.topic,notes:snapshot.notes,plan:snapshot.plan,data:snapshot.data},{recovery:true});
-  currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;
-  currentShotPlan=Array.isArray(snapshot.shotPlan)?snapshot.shotPlan:[];
-  if(Array.isArray(snapshot.images)){
-   jaiSceneImages=snapshot.images.map(item=>{
-    if(!item?.src)return null;
-    const image=new Image();
-    image.src=item.src;
-    return {...item,image};
-   });
-   await Promise.all(jaiSceneImages.map(async item=>{
-    if(!item?.image)return;
-    try{
-     if(item.image.decode)await item.image.decode();
-     else if(!item.image.complete)await new Promise((resolve,reject)=>{item.image.onload=resolve;item.image.onerror=()=>reject(new Error("Fotograma no disponible"));});
-     if(!item.image.naturalWidth||!item.image.naturalHeight)throw new Error("Fotograma vacío");
-    }catch(error){
-     const index=jaiSceneImages.indexOf(item);
-     jaiSceneImages[index]=null;
-     console.warn("[JAI] No se pudo recuperar el fotograma "+(index+1)+":",error);
-    }
-   }));
-  }
+  const prepared=await prepareJaiRecoveryMedia(snapshot,Array.isArray(snapshot.data.story)?snapshot.data.story:[]);
+  if(currentPlanData||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){const status=$("autosaveStatus");if(status)status.textContent="El proyecto cambió durante la validación; se conservó sin reemplazarlo.";return;}
+  loadSavedProject({topic:snapshot.topic,notes:snapshot.notes,plan:snapshot.plan,data:snapshot.data},{recovery:true});currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;currentShotPlan=prepared.shotPlan;jaiSceneImages=prepared.images;
   if(jaiSceneImages.length!==currentScenes.length)jaiSceneImages=Array.from({length:currentScenes.length},(_,index)=>jaiSceneImages[index]||null);
   visualAuditResults=Array.isArray(snapshot.audit)?snapshot.audit.map((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)?item:null):[];
   const expectedAuditCount=visualAuditUnitCount();if(visualAuditResults.length!==expectedAuditCount)visualAuditResults=Array.from({length:expectedAuditCount},(_,index)=>visualAuditResults[index]||null);
@@ -289,7 +272,6 @@ async function restoreJaiRecovery(){
   $("downloadSrt").disabled=!captionCues.length;
   $("generateCaptions").disabled=!kokoroAudioBlob;
   $("inspectVisuals").disabled=!(jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,i)=>jaiSceneImages[i]?.image));
-  await Promise.all(jaiSceneImages.filter(item=>item?.image).map(item=>item.image.decode?item.image.decode().catch(()=>{}):Promise.resolve()));
   renderVisualScenes();
   syncRecoveredPipeline();
   const missingImages=jaiSceneImages.filter(item=>!item?.image).length;
