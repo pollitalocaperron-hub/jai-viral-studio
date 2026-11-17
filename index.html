@@ -1495,7 +1495,7 @@ function getCaptionTimelineRange(cue,total){
  const edit=getAudioEdit(),timing=getAudioTrackTiming(duration);
  const sourceStart=start+subtitleTrackOffset,sourceEnd=end+subtitleTrackOffset;
  return {
-  start:Math.max(0,timing.offset+(sourceStart-edit.trimStart)/timing.rate),
+  start:Math.max(timing.offset,timing.offset+(sourceStart-edit.trimStart)/timing.rate),
   end:Math.min(duration,timing.offset+(sourceEnd-edit.trimStart)/timing.rate)
  };
 }
