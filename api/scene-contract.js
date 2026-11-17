@@ -92,9 +92,9 @@ export function validateShots(shots, story) {
     }
     const sceneRange = sceneRanges[sceneIndex];
     const start = shot.start_seconds, end = shot.end_seconds;
-    if (typeof start !== "number" || typeof end !== "number" || !Number.isFinite(start) || !Number.isFinite(end) || end <= start ||
+    if (typeof start !== "number" || typeof end !== "number" || !Number.isFinite(start) || !Number.isFinite(end) || end - start < 1 || end - start > 6 ||
         start < sceneRange.start - 0.05 || end > sceneRange.end + 0.05) {
-      return "La toma " + (index + 1) + " tiene tiempos inválidos o fuera de su escena conceptual.";
+      return "La toma " + (index + 1) + " debe durar entre 1 y 6 segundos y permanecer dentro de su escena conceptual.";
     }
     const required = ["narration_segment", "subtitle", "subject", "visual_state", "visual_action", "visual_prompt_en", "continuity_anchor"];
     for (const key of required) {

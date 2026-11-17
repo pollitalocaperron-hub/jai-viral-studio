@@ -38,6 +38,10 @@ assert.equal(validateShots(valid, story), null, "A continuous, layered and genui
 
 const invalidSeconds = structuredClone(story); invalidSeconds[0].time = "0:00 - 0:99";
 assert.match(validateShots(valid, invalidSeconds), /intervalo de escena inválido/);
+const tooShortShot = structuredClone(valid); tooShortShot[0].end_seconds = tooShortShot[0].start_seconds + 0.5;
+assert.match(validateShots(tooShortShot, story), /debe durar entre 1 y 6 segundos/);
+const tooLongShot = structuredClone(valid); tooLongShot[0].end_seconds = tooLongShot[0].start_seconds + 6.5;
+assert.match(validateShots(tooLongShot, story), /debe durar entre 1 y 6 segundos/);
 const nullTransform = structuredClone(valid); nullTransform[0].animation_steps[0].from_transform.x = null;
 assert.match(validateShots(nullTransform, story), /transformación\/progresión incorrecta/);
 const stringPivot = structuredClone(valid); stringPivot[0].layers[0].pivot_x = "360";
