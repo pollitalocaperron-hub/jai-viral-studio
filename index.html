@@ -843,8 +843,10 @@ function buildTimeline(){
    usedActions.add(normalizeVisualText(visualAction));
    const sceneRange=sceneRanges.find(range=>range.index===Number(shot.scene_index));
    const sceneDuration=Math.max(.001,sceneRange.end-sceneRange.start);
-   const trimStart=Math.max(0,Math.min(1,(start-sceneRange.start)/sceneDuration));
-   const trimEnd=Math.max(trimStart+.01,Math.min(1,(end-sceneRange.start)/sceneDuration));
+   // Las acciones vectoriales usan progreso normalizado por toma, no por escena conceptual.
+   // Cada toma recorre su animación completa durante su propio intervalo de timeline.
+   const trimStart=0;
+   const trimEnd=1;
    const motionSequence=shot.animation_steps.map(step=>({action:step.action,description:step.target_id+": "+step.from_state+" → "+step.to_state,start_progress:step.start_progress,end_progress:step.end_progress}));
    return {...scene,directedShot:shot,shot_id:shot.shot_id,shot_layers:shot.layers,shotIndex:index,visualIndex:Number(shot.scene_index),sceneIndex:Number(shot.scene_index),
     start_seconds:start,end_seconds:end,time:Math.floor(start/60)+":"+String(start%60).padStart(2,"0")+" - "+Math.floor(end/60)+":"+String(end%60).padStart(2,"0"),
