@@ -924,12 +924,12 @@ function runTimelinePreview(){
   const elapsed=timelineState.previewElapsed+(now-timelineState.previewStartedAt)/1000,total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0),endAt=timelineState.previewEnd??total;
   if(kokoroAudioBlob){const edit=getAudioEdit(),timing=getAudioTrackTiming(total),audio=$("kokoroAudio");if(elapsed>=timing.offset&&audio.paused&&elapsed<endAt){audio.currentTime=Math.min(edit.trimEnd,edit.trimStart+Math.max(0,elapsed-timing.offset)*timing.rate);audio.playbackRate=timing.rate;audio.volume=Math.min(1,edit.gain);audio.play().catch(()=>{});}}
   setTaskProgress("timelineStatus",Math.min(100,Math.round(elapsed/Math.max(.1,total)*100)),"Vista previa · "+Math.min(100,Math.round(elapsed/Math.max(.1,total)*100))+"%");
-  if(elapsed>=endAt){let cursorEnd=0,last=0;for(;last<timelineState.items.length;last++){const d=Math.max(.1,Number(timelineState.items[last].seconds)||0);if(endAt<=cursorEnd+d)break;cursorEnd+=d;}last=Math.min(last,timelineState.items.length-1);const item=timelineState.items[last],p=Math.max(0,Math.min(1,(endAt-cursorEnd)/Math.max(.1,Number(item.seconds)||0)));item.previousVisualIndex=last>0&&Number(timelineState.items[last-1].visualIndex)!==Number(item.visualIndex)?Number(timelineState.items[last-1].visualIndex):null;const a=Math.max(0,Math.min(1,Number(item.trimStart)||0)),b=Math.max(a+.01,Math.min(1,Number.isFinite(Number(item.trimEnd))?Number(item.trimEnd):1));drawVideoScene(item,item.sceneIndex||0,a+p*(b-a),endAt);timelineState.previewElapsed=endAt;timelineState.previewEnd=null;document.querySelectorAll(".media-playhead").forEach(node=>{node.style.left="100%";});stopTimelinePreview(kokoroAudioBlob?"Vista previa terminada. Vídeo, narración y subtítulos sincronizados.":"Vista previa terminada. Genera la narración para escuchar el audio integrado.");return;}
+  if(elapsed>=endAt){let cursorEnd=0,last=0;for(;last<timelineState.items.length;last++){const d=Math.max(.1,Number(timelineState.items[last].seconds)||0);if(endAt<=cursorEnd+d)break;cursorEnd+=d;}last=Math.min(last,timelineState.items.length-1);const item=timelineState.items[last],p=Math.max(0,Math.min(1,(endAt-cursorEnd)/Math.max(.1,Number(item.seconds)||0)));item.previousVisualIndex=last>0&&Number(timelineState.items[last-1].visualIndex)!==Number(item.visualIndex)?Number(timelineState.items[last-1].visualIndex):null;const a=Math.max(0,Math.min(1,Number(item.trimStart)||0)),b=Math.max(a+.01,Math.min(1,Number.isFinite(Number(item.trimEnd))?Number(item.trimEnd):1));const audioTiming=getAudioTrackTiming(total),audioEditState=getAudioEdit(),audioElapsed=kokoroAudioBlob?(endAt<audioTiming.offset?-1:Math.min(kokoroAudioDuration,audioEditState.trimStart+(endAt-audioTiming.offset)*audioTiming.rate)):endAt;drawVideoScene(item,item.sceneIndex||0,a+p*(b-a),audioElapsed,p);timelineState.previewElapsed=endAt;timelineState.previewEnd=null;document.querySelectorAll(".media-playhead").forEach(node=>{node.style.left="100%";});stopTimelinePreview(kokoroAudioBlob?"Vista previa terminada. Vídeo, narración y subtítulos sincronizados.":"Vista previa terminada. Genera la narración para escuchar el audio integrado.");return;}
   let cursor=0,index=0;for(;index<timelineState.items.length;index++){const d=Math.max(.1,Number(timelineState.items[index].seconds)||0);if(elapsed<cursor+d)break;cursor+=d;}
   const item=timelineState.items[index],duration=Math.max(.1,Number(item.seconds)||0),progress=Math.max(0,Math.min(1,(elapsed-cursor)/duration));
   item.previousVisualIndex=index>0&&Number(timelineState.items[index-1].visualIndex)!==Number(item.visualIndex)?Number(timelineState.items[index-1].visualIndex):null;
   const a=Math.max(0,Math.min(1,Number(item.trimStart)||0)),b=Math.max(a+.01,Math.min(1,Number.isFinite(Number(item.trimEnd))?Number(item.trimEnd):1));
-  const audioTiming=getAudioTrackTiming(total),audioEditState=getAudioEdit(),audioElapsed=kokoroAudioBlob?(elapsed<audioTiming.offset?-1:Math.min(kokoroAudioDuration,audioEditState.trimStart+(elapsed-audioTiming.offset)*audioTiming.rate)):elapsed;drawVideoScene(item,item.sceneIndex||0,a+progress*(b-a),audioElapsed);
+  const audioTiming=getAudioTrackTiming(total),audioEditState=getAudioEdit(),audioElapsed=kokoroAudioBlob?(elapsed<audioTiming.offset?-1:Math.min(kokoroAudioDuration,audioEditState.trimStart+(elapsed-audioTiming.offset)*audioTiming.rate)):elapsed;drawVideoScene(item,item.sceneIndex||0,a+progress*(b-a),audioElapsed,progress);
   rows.forEach((row,i)=>{row.style.borderColor=i===index?"#4de0a1":"#263754";row.style.boxShadow=i===index?"0 0 0 1px #4de0a1 inset":"none";});
   $("timelineStatus").textContent="Vista previa · bloque "+(index+1)+" de "+timelineState.items.length+" · "+formatTimelineTime(elapsed)+" / "+formatTimelineTime(total)+(kokoroAudioBlob?" · audio + subtítulos":" · sin audio");
   document.querySelectorAll(".media-playhead").forEach(node=>{node.style.left=(Math.max(0,Math.min(1,elapsed/Math.max(.1,total)))*100)+"%";});
@@ -1151,15 +1151,15 @@ function getPortraitFrame(source){
  ctx.save();ctx.filter="saturate(1.04) contrast(1.025)";ctx.drawImage(source,(720-dw)/2,(1280-dh)/2,dw,dh);ctx.restore();
  portraitFrameCache.set(source,canvas);return canvas;
 }
-function drawVideoScene(item,index,progress,audioElapsed=0){
- const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height,p=Math.max(0,Math.min(1,Number(progress)||0));
+function drawVideoScene(item,index,progress,audioElapsed=0,transitionProgressValue=progress){
+ const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height,p=Math.max(0,Math.min(1,Number(progress)||0)),transitionP=Math.max(0,Math.min(1,Number(transitionProgressValue)||0));
  ctx.clearRect(0,0,w,h);
  const vectorShot=item?.directedShot;
  const hasVector=!!(vectorShot&&Array.isArray(vectorShot.layers)&&vectorShot.layers.length>=3);
  if(hasVector){
   const previous=item?.previousDirectedShot,transition=String(item?.transition||"fade");
   const duration=Math.max(.1,Math.min(1,Number(item?.transitionDuration)||.3));
-  const transitionProgress=Math.max(0,Math.min(1,(p*Math.max(.1,Number(item?.seconds)||3))/duration));
+  const transitionProgress=Math.max(0,Math.min(1,(transitionP*Math.max(.1,Number(item?.seconds)||3))/duration));
   if(previous&&transition!=="cut"&&transitionProgress<1&&paintVectorShot(ctx,w,h,previous,1)){
    ctx.save();
    if(transition==="wipe"){ctx.beginPath();ctx.rect(0,0,w*transitionProgress,h);ctx.clip();}
@@ -1180,7 +1180,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
   ctx.drawImage(img,(w-dw)/2+driftX,(h-dh)/2+driftY,dw,dh);
   const previousIndex=item&&Object.prototype.hasOwnProperty.call(item,"previousVisualIndex")?(Number.isInteger(item.previousVisualIndex)?item.previousVisualIndex:-1):index-1;
   const transition=String(item?.transition||"fade"),transitionDuration=Math.max(.1,Math.min(1,Number(item?.transitionDuration)||.3));
-  const transitionProgress=Math.max(0,Math.min(1,(p*Math.max(.1,Number(item?.seconds)||3))/transitionDuration));
+  const transitionProgress=Math.max(0,Math.min(1,(transitionP*Math.max(.1,Number(item?.seconds)||3))/transitionDuration));
   if(previousIndex>=0&&transition!=="cut"&&transitionProgress<1&&jaiSceneImages[previousIndex]?.image){
    const previous=getPortraitFrame(jaiSceneImages[previousIndex].image);ctx.save();
    if(transition==="wipe"){ctx.beginPath();ctx.rect(0,0,w*(1-transitionProgress),h);ctx.clip();ctx.drawImage(previous,0,0,w,h);}
@@ -1310,7 +1310,7 @@ async function renderVideo(){
    const sceneProgress=trimStart+blockProgress*(trimEnd-trimStart);
    const audioTiming=getAudioTrackTiming(timelineDuration),audioEditState=getAudioEdit();
    const audioElapsed=audioBuffer?(elapsed<audioTiming.offset?-1:audioEditState.trimStart+(elapsed-audioTiming.offset)*audioTiming.rate):elapsed;
-   drawVideoScene(activeItem,sceneIndex,sceneProgress,audioElapsed);
+   drawVideoScene(activeItem,sceneIndex,sceneProgress,audioElapsed,blockProgress);
    $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";setTaskProgress("renderStatus",Math.min(100,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%");setPipelineStage("render",Math.min(99,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.round(elapsed/totalDuration*100)+"%","running");
    if(elapsed>=totalDuration){try{renderRecorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
    animationId=requestAnimationFrame(draw);
