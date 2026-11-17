@@ -168,7 +168,7 @@ try {
       data: project.data,
       retentionMap: project.data.retention_map,
       images: project.data.story.map((scene, sceneIndex) => ({ src: makeFrame(sceneIndex), sceneIndex, shot: sceneIndex, time: scene.time })),
-      audit: project.data.story.map((scene, scene_index) => ({ scene_index, status: "pass", score: 92, explanation: "La imagen corresponde a la escena y explica el concepto.", issues: [] })),
+      audit: project.data.story.map((scene, scene_index) => ({ scene_index, status: "pass", score: null, reason: "Revisión humana verificada", manual: true, decision: "approved", reviewedAt: "2026-11-16T18:00:00.000Z", reviewer: "Operador local", issues: [] })),
       timeline: project.data.story.map((scene, index) => ({ id: "scene-" + (index + 1), sceneIndex: index, scene_index: index, visualIndex: index, time: scene.time, on_screen_text: scene.on_screen_text, seconds: 3, transition: "fade" })),
       audio: makeWav(12, 24000),
       audioDuration: 12,
@@ -196,6 +196,36 @@ try {
     "The script must survive a complete browser-context restart");
   assert.equal(await page.locator("#kokoroAudio").isVisible(), true,
     "The recovered audio track must be available after a complete browser-context restart");
+  const latestAutosave = await page.evaluate(async () => {
+    $("research").value = "Edición intermedia";
+    scheduleJaiAutosave();
+    $("research").value = "Edición final que debe prevalecer";
+    scheduleJaiAutosave();
+    flushJaiAutosave();
+    if (jaiAutosavePromise) await jaiAutosavePromise;
+    const snapshot = await readJaiRecovery(JAI_AUTOSAVE_KEY);
+    return {
+      notes: snapshot?.notes,
+      savedAt: snapshot?.savedAt,
+      approval: snapshot?.audit?.[0] && {
+        manual: snapshot.audit[0].manual,
+        decision: snapshot.audit[0].decision,
+        reason: snapshot.audit[0].reason,
+        reviewer: snapshot.audit[0].reviewer
+      },
+      hasAudio: snapshot?.audio instanceof Blob,
+      imageCount: snapshot?.images?.filter(Boolean).length,
+      timelineCount: snapshot?.timeline?.length
+    };
+  });
+  assert.equal(latestAutosave.notes, "Edición final que debe prevalecer",
+    "Rapid autosave requests must persist the newest edited snapshot, not an older queued revision");
+  assert.deepEqual(latestAutosave.approval, {
+    manual: true, decision: "approved", reason: "Revisión humana verificada", reviewer: "Operador local"
+  }, "Manual visual approval evidence must survive autosave and recovery");
+  assert.equal(latestAutosave.hasAudio, true, "Autosave must preserve the narration Blob");
+  assert.equal(latestAutosave.imageCount, 4, "Autosave must preserve every available visual asset");
+  assert.equal(latestAutosave.timelineCount, 4, "Autosave must preserve the complete timeline");
   assert.deepEqual(restartedPageErrors, [], "Browser restart recovery must not introduce uncaught page errors");
   // Verify subtitle offsets at the rendered-frame level, not only in the editor/SRT metadata.
   const subtitleTiming = await page.evaluate(() => {
