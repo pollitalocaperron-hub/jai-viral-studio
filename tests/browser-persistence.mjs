@@ -311,6 +311,29 @@ try {
   });
   assert.ok(independentTransitionProgressDifference > 1000000,
     "Changing transition progress must change the wipe even when the trimmed animation progress stays fixed");
+  const shotBoundaryContinuity = await page.evaluate(() => {
+    const makeShot = (startY, endY, fromState, toState) => ({
+      layers: [{ id: "subject-main", role: "subject" }],
+      animation_steps: [{
+        target_id: "subject-main", start_progress: 0, end_progress: 1,
+        from_state: fromState, to_state: toState,
+        from_transform: { x: 0, y: startY, rotation: 0, scale: 1, opacity: 1 },
+        to_transform: { x: 0, y: endY, rotation: 0, scale: 1, opacity: 1 }
+      }]
+    });
+    const previous = makeShot(0, -70, "rest", "raised");
+    const matching = makeShot(-70, -140, "raised", "extended");
+    const poseJump = makeShot(0, -140, "rest", "extended");
+    const stateJump = makeShot(-70, -140, "collapsed", "extended");
+    return {
+      acceptsMatchingPose: vectorShotBoundaryReady(previous, matching),
+      rejectsPoseJump: !vectorShotBoundaryReady(previous, poseJump),
+      rejectsStateJump: !vectorShotBoundaryReady(previous, stateJump)
+    };
+  });
+  assert.deepEqual(shotBoundaryContinuity, {
+    acceptsMatchingPose: true, rejectsPoseJump: true, rejectsStateJump: true
+  }, "The browser render gate must reject pose or state discontinuities between adjacent shots");
   const subtitlePixelDifference = await page.evaluate(() => {
     const item = timelineState.items[0];
     const sceneIndex = Number.isInteger(item.sceneIndex) ? item.sceneIndex : 0;

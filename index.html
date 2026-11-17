@@ -1112,6 +1112,24 @@ function validVectorTransform(value){
   value.rotation>=-360&&value.rotation<=360&&value.scale>=.2&&value.scale<=3&&
   value.opacity>=0&&value.opacity<=1;
 }
+
+function vectorLayerPoseAt(shot,layerId,progress){
+ const steps=(Array.isArray(shot?.animation_steps)?shot.animation_steps:[]).filter(step=>step.target_id===layerId).sort((a,b)=>Number(a.start_progress)-Number(b.start_progress));
+ if(!steps.length)return null;
+ const p=Math.max(0,Math.min(1,progress));
+ let selected=steps.find(step=>p>=Number(step.start_progress)&&p<=Number(step.end_progress));
+ if(!selected){const completed=steps.filter(step=>p>Number(step.end_progress));selected=p<Number(steps[0].start_progress)?steps[0]:(completed[completed.length-1]||steps[0]);}
+ return p<Number(selected.start_progress)?{transform:selected.from_transform,state:selected.from_state}:{transform:selected.to_transform,state:selected.to_state};
+}
+function vectorShotBoundaryReady(previousShot,nextShot){
+ const previousSubject=previousShot?.layers?.find(layer=>String(layer.role||"").toLowerCase()==="subject");
+ const nextSubject=nextShot?.layers?.find(layer=>String(layer.role||"").toLowerCase()==="subject");
+ if(!previousSubject||!nextSubject||previousSubject.id!==nextSubject.id)return false;
+ const previousPose=vectorLayerPoseAt(previousShot,previousSubject.id,1),nextPose=vectorLayerPoseAt(nextShot,nextSubject.id,0);
+ if(!previousPose||!nextPose||String(previousPose.state||"").trim().toLowerCase()!==String(nextPose.state||"").trim().toLowerCase())return false;
+ return ["x","y","rotation","scale","opacity"].every(key=>Number.isFinite(previousPose.transform?.[key])&&Number.isFinite(nextPose.transform?.[key])&&Math.abs(previousPose.transform[key]-nextPose.transform[key])<=.01);
+}
+
 function animationRendererReady(){
  if(!Array.isArray(currentShotPlan)||!currentShotPlan.length)return true;
  const validShot=shot=>{
@@ -1137,7 +1155,13 @@ function animationRendererReady(){
   }
   return targets.size>=2&&hasMotion;
  };
- return currentShotPlan.every(validShot)&&timelineState.items.length===currentShotPlan.length&&timelineState.items.every(item=>item.directedShot&&validShot(item.directedShot));
+ const baseReady=currentShotPlan.every(validShot)&&timelineState.items.length===currentShotPlan.length&&timelineState.items.every(item=>item.directedShot&&validShot(item.directedShot));
+ if(!baseReady)return false;
+ for(let index=1;index<timelineState.items.length;index++){
+  const previous=timelineState.items[index-1],current=timelineState.items[index];
+  if(Number(previous.sceneIndex)===Number(current.sceneIndex)&&!vectorShotBoundaryReady(previous.directedShot,current.directedShot))return false;
+ }
+ return true;
 }
 const portraitFrameCache=new WeakMap();
 function getPortraitFrame(source){
