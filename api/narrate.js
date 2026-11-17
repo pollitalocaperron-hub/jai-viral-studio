@@ -56,7 +56,8 @@ async function generateFreeOvhNarration(text, voice) {
   return { ...parseRivaPcm(bytes), provider: "OVHcloud NVIDIA Riva (respaldo gratuito)" };
 }
 
-export default async function handler(req, res) {
+export default async function handler(req, res, env) {
+  const runtimeEnv = env && Object.keys(env).length ? env : (typeof process !== "undefined" ? process.env : {});
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Origen no autorizado." });
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Método no permitido." }); }
@@ -65,11 +66,11 @@ export default async function handler(req, res) {
   if (!new Set(["Kore", "Puck", "Charon"]).has(voice)) return res.status(400).json({ error: "La voz seleccionada no está disponible." });
 
   let geminiFailure = "";
-  if (process.env.GEMINI_API_KEY) {
+  if (runtimeEnv.GEMINI_API_KEY) {
     try {
       const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent", {
         method: "POST",
-        headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
+        headers: { "x-goog-api-key": runtimeEnv.GEMINI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: `Lee exactamente el siguiente guion en español de México. No traduzcas, no resumas y no agregues palabras. Interprétalo como una narración documental cálida, clara y natural, con ritmo dinámico y pausas breves entre ideas. Texto:\n\n${text.trim()}` }] }],
           generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } }

@@ -12,7 +12,7 @@ async function generatePlanHandler(req, res) {
   }
 
   const { topic, notes = "", duration = "45–60 segundos", platform = "Reels", learning_memory = "" } = req.body || {};
-  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
+  if (!runtimeEnv.GROQ_API_KEY && !runtimeEnv.GEMINI_API_KEY) {
     console.error("[JAI] No hay claves de proveedor configuradas.");
     return res.status(500).json({ error: "Falta configurar un proveedor de IA en Vercel.", diagnosticCode: "NO_AI_PROVIDER" });
   }
@@ -97,7 +97,7 @@ async function generatePlanHandler(req, res) {
     let providerUsed = "";
     let groqFailure = "";
 
-    const groqKey = process.env.GROQ_API_KEY;
+    const groqKey = runtimeEnv.GROQ_API_KEY;
     if (groqKey) {
       try {
         const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -143,7 +143,7 @@ async function generatePlanHandler(req, res) {
 
     // Respaldo Gemini: se usa solo si Groq no está disponible.
     if (!output) {
-      const geminiKey = process.env.GEMINI_API_KEY;
+      const geminiKey = runtimeEnv.GEMINI_API_KEY;
       if (!geminiKey) {
         console.error("[JAI] No hay proveedor configurado. Groq:", groqFailure);
         return res.status(500).json({
@@ -420,10 +420,10 @@ Return no other keys and no markdown.`;
             try { repairBody = JSON.parse(repairRaw); } catch {}
             if (!repairResponse.ok) throw new Error("Groq HTTP " + repairResponse.status + ": " + String(repairBody?.error?.message || "").replace(/[\\r\\n\\t]+/g, " ").slice(0, 160));
             repairedText = repairBody.choices?.[0]?.message?.content || "";
-          } else if (repairProvider === "Gemini" && process.env.GEMINI_API_KEY) {
+          } else if (repairProvider === "Gemini" && runtimeEnv.GEMINI_API_KEY) {
             const repairResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
               method: "POST",
-              headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
+              headers: { "x-goog-api-key": runtimeEnv.GEMINI_API_KEY, "Content-Type": "application/json" },
               body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: repairPrompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 5200 } }),
               signal: AbortSignal.timeout(6000)
             });
@@ -557,7 +557,8 @@ Return no other keys and no markdown.`;
 }
 
 
-export default async function handler(req, res) {
+export default async function handler(req, res, env) {
+  const runtimeEnv = env && Object.keys(env).length ? env : (typeof process !== "undefined" ? process.env : {});
   try {
     return await generatePlanHandler(req, res);
   } catch (error) {

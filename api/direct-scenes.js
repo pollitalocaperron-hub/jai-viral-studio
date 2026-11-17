@@ -71,7 +71,8 @@ function validateShots(shots, story) {
   return null;
 }
 
-export default async function handler(req, res) {
+export default async function handler(req, res, env) {
+  const runtimeEnv = env && Object.keys(env).length ? env : (typeof process !== "undefined" ? process.env : {});
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Origen no autorizado." });
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Método no permitido." }); }
@@ -82,7 +83,7 @@ export default async function handler(req, res) {
   if (!Array.isArray(story) || story.length < 4 || story.length > 5 || story.some(scene => !parseRange(scene?.time))) {
     return res.status(400).json({ error: "Se requiere un storyboard válido de 4 o 5 escenas conceptuales." });
   }
-  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) return res.status(503).json({ error: "No hay un proveedor editorial configurado." });
+  if (!runtimeEnv.GROQ_API_KEY && !runtimeEnv.GEMINI_API_KEY) return res.status(503).json({ error: "No hay un proveedor editorial configurado." });
 
   const prompt = [
     "Eres el DIRECTOR DE ESCENAS Y SUPERVISOR DE ANIMACIÓN de J.A.I. Convierte el storyboard conceptual en un plan de tomas ejecutable. Devuelve SOLO JSON válido con la propiedad shots.",
@@ -104,11 +105,11 @@ export default async function handler(req, res) {
   let output = "", provider = "", groqFailure = null, geminiFailure = null;
   // Cascada de proveedores: si Groq agota su cuota gratuita o no responde,
   // se intenta Gemini. No se habilitan planes, compras ni proveedores de pago.
-  if (process.env.GROQ_API_KEY) {
+  if (runtimeEnv.GROQ_API_KEY) {
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: "Bearer " + process.env.GROQ_API_KEY, "Content-Type": "application/json" },
+        headers: { Authorization: "Bearer " + runtimeEnv.GROQ_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ model: "openai/gpt-oss-120b", messages: [{ role: "system", content: "Devuelve exclusivamente JSON válido." }, { role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.35, max_completion_tokens: 7000 }),
         signal: AbortSignal.timeout(18000)
       });
@@ -128,11 +129,11 @@ export default async function handler(req, res) {
       console.warn("[JAI][Scene Director] Groq no disponible; se activa el respaldo gratuito configurado:", groqFailure.message);
     }
   }
-  if (!output && process.env.GEMINI_API_KEY) {
+  if (!output && runtimeEnv.GEMINI_API_KEY) {
     try {
       const requestGemini = () => fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
         method: "POST",
-        headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
+        headers: { "x-goog-api-key": runtimeEnv.GEMINI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.35, maxOutputTokens: 7000 } }),
         signal: AbortSignal.timeout(18000)
       });
@@ -173,11 +174,11 @@ export default async function handler(req, res) {
     catch { return null; }
   };
   let parsed = parseDirectorOutput(output), validationError = parsed ? validateShots(parsed?.shots, story) : "El director no devolvió JSON válido.";
-  if ((!parsed || validationError) && provider.startsWith("Groq") && process.env.GEMINI_API_KEY) {
+  if ((!parsed || validationError) && provider.startsWith("Groq") && runtimeEnv.GEMINI_API_KEY) {
     try {
       const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
         method: "POST",
-        headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
+        headers: { "x-goog-api-key": runtimeEnv.GEMINI_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.25, maxOutputTokens: 7000 } }),
         signal: AbortSignal.timeout(18000)
       });
