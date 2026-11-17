@@ -238,7 +238,7 @@ async function writeJaiRecoveryKey(key,snapshot){
 async function restoreJaiProjectRecord(project){
  if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual antes de cambiar de proyecto.";return;}
  if(!project?.data){$("status").textContent="Este registro no contiene un plan completo.";return;}
- if(!project.snapshotKey){projectRecoveryInProgress=true;try{loadSavedProject(project,{recovery:true});$("status").textContent="Proyecto antiguo restaurado: solo contiene el plan editorial. Los medios deben generarse de nuevo.";}finally{projectRecoveryInProgress=false;}return;}
+ if(!project.snapshotKey){projectRecoveryInProgress=true;try{loadSavedProject(project,{recovery:true});$("status").textContent="Proyecto antiguo restaurado: solo contiene el plan editorial. Los medios deben generarse de nuevo.";}finally{projectRecoveryInProgress=false;}scheduleJaiAutosave();return;}
  projectRecoveryInProgress=true;
  try{
   $("status").textContent="Recuperando proyecto completo y sus medios…";
@@ -1814,7 +1814,7 @@ function loadSavedProject(project,options={}){
  const normalizedRetention=timelineState.items.map(item=>({time:item.time,new_stimulus:item.retentionStimulus,narrative_advance:item.narrativeAdvance||item.visualAction,curiosity:item.curiosity,visual_action:item.visualAction,on_screen_text:item.on_screen_text}));
  renderRetentionMap(normalizedRetention);
  if(currentPlan){currentPlan=currentPlan.replace(readable(data.retention_map),readable(normalizedRetention));}
- $("output").classList.add("show");$("status").textContent="Proyecto restaurado. Puedes revisar el plan, regenerar la voz y crear de nuevo los fotogramas."; $("output").scrollIntoView({behavior:"smooth",block:"start"});scheduleJaiAutosave();
+ $("output").classList.add("show");$("status").textContent="Proyecto restaurado. Puedes revisar el plan, regenerar la voz y crear de nuevo los fotogramas."; $("output").scrollIntoView({behavior:"smooth",block:"start"});if(!options.recovery)scheduleJaiAutosave();
 }
 function renderProjects(){
  const root=$("projects");root.replaceChildren();const projects=getProjects();
