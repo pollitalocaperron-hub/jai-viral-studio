@@ -48,6 +48,40 @@ function transformsMatch(a, b) {
   );
 }
 
+
+function layerPoseAtProgress(steps, layerId, progress) {
+  const list = steps.filter(step => step.target_id === layerId)
+    .sort((a, b) => Number(a.start_progress) - Number(b.start_progress));
+  if (!list.length) return null;
+  const p = Math.max(0, Math.min(1, progress));
+  let selected = list.find(step => p >= Number(step.start_progress) && p <= Number(step.end_progress));
+  if (!selected) {
+    const completed = list.filter(step => p > Number(step.end_progress));
+    selected = p < Number(list[0].start_progress) ? list[0] : (completed[completed.length - 1] || list[0]);
+  }
+  if (p < Number(selected.start_progress)) return { transform: selected.from_transform, state: selected.from_state };
+  if (p > Number(selected.end_progress)) return { transform: selected.to_transform, state: selected.to_state };
+  const span = Math.max(0.001, Number(selected.end_progress) - Number(selected.start_progress));
+  const raw = Math.max(0, Math.min(1, (p - Number(selected.start_progress)) / span));
+  // Boundary checks use the exact endpoint poses, independent of easing.
+  return raw >= 1
+    ? { transform: selected.to_transform, state: selected.to_state }
+    : { transform: selected.from_transform, state: selected.from_state };
+}
+
+function validateShotBoundaryContinuity(previousShot, nextShot, sceneIndex) {
+  const previousSubject = previousShot.layers.find(layer => clean(layer.role, 120).toLowerCase() === "subject");
+  const nextSubject = nextShot.layers.find(layer => clean(layer.role, 120).toLowerCase() === "subject");
+  if (!previousSubject || !nextSubject) return "La escena " + (sceneIndex + 1) + " no conserva su sujeto principal al cambiar de toma.";
+  const previousPose = layerPoseAtProgress(previousShot.animation_steps, previousSubject.id, 1);
+  const nextPose = layerPoseAtProgress(nextShot.animation_steps, nextSubject.id, 0);
+  if (!previousPose || !nextPose || !transformsMatch(previousPose.transform, nextPose.transform) ||
+      clean(previousPose.state, 140).toLowerCase() !== clean(nextPose.state, 140).toLowerCase()) {
+    return "La escena " + (sceneIndex + 1) + " presenta un salto de pose del sujeto entre tomas: la pose final debe coincidir con la pose inicial siguiente.";
+  }
+  return null;
+}
+
 export function validateAnimationContinuity(steps) {
   const byLayer = new Map();
   for (const step of steps) {
@@ -193,6 +227,8 @@ export function validateShots(shots, story) {
             Math.abs(previousSubject.pivot_y - subjectLayer.pivot_y) > 2) {
           return "La escena " + (sceneIndex + 1) + " pierde la identidad, paleta o pivote del sujeto principal entre tomas.";
         }
+        const boundaryError = validateShotBoundaryContinuity(previous, current, sceneIndex);
+        if (boundaryError) return boundaryError;
       }
     }
     for (const shot of list) {

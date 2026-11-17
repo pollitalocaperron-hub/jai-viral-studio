@@ -23,7 +23,7 @@ function makeShots() {
           { id: "detail", description: "Detalle funcional", role: "detail", path_d: "M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z", fill: "#E9D16C", stroke: "#25364A", stroke_width: 7, pivot_x: 360, pivot_y: 550 }
         ],
         animation_steps: [
-          { target_id: "component", action: "move", from_state: "lower", to_state: "upper", start_progress: 0, end_progress: 1, from_transform: transform(), to_transform: transform({ y: -70 }) },
+          { target_id: "component", action: "move", from_state: part === 0 ? "lower" : "upper", to_state: part === 0 ? "upper" : "raised", start_progress: 0, end_progress: 1, from_transform: transform({ y: part === 0 ? 0 : -70 }), to_transform: transform({ y: part === 0 ? -70 : -140 }) },
           { target_id: "housing", action: "hold", from_state: "fixed", to_state: "fixed", start_progress: 0, end_progress: 1, from_transform: transform(), to_transform: transform() },
           { target_id: "detail", action: "reveal", from_state: "hidden", to_state: "visible", start_progress: 0, end_progress: 1, from_transform: transform({ y: 20, scale: 0.85, opacity: 0 }), to_transform: transform() }
         ]
@@ -60,6 +60,10 @@ const changedAnchor = structuredClone(valid); changedAnchor[1].continuity_anchor
 assert.match(validateShots(changedAnchor, story), /ancla de continuidad/);
 const changedSubject = structuredClone(valid); changedSubject[1].layers[0].fill = "#00AA00";
 assert.match(validateShots(changedSubject, story), /identidad, paleta o pivote/);
+const boundaryPoseJump = structuredClone(valid); boundaryPoseJump[1].animation_steps[0].from_transform.y = 0;
+assert.match(validateShots(boundaryPoseJump, story), /salto de pose del sujeto entre tomas/);
+const boundaryStateJump = structuredClone(valid); boundaryStateJump[1].animation_steps[0].from_state = "lower";
+assert.match(validateShots(boundaryStateJump, story), /salto de pose del sujeto entre tomas/);
 const missingSubject = structuredClone(valid); missingSubject[0].layers.forEach(layer => { layer.role = "detail"; });
 assert.match(validateShots(missingSubject, story), /capa principal persistente/);
 
