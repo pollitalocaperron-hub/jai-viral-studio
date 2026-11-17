@@ -148,7 +148,7 @@ export function validateShots(shots, story) {
     const continuityError = validateAnimationContinuity(shot.animation_steps);
     if (continuityError) return "La toma " + (index + 1) + ": " + continuityError;
     const list = byScene.get(sceneIndex) || [];
-    list.push({ start, end });
+    list.push({ start, end, shot });
     byScene.set(sceneIndex, list);
     shotCounts.set(sceneIndex, (shotCounts.get(sceneIndex) || 0) + 1);
   }
@@ -159,6 +159,28 @@ export function validateShots(shots, story) {
     const count = shotCounts.get(sceneIndex) || 0;
     if (count < 2 || count > 5) return "La escena conceptual " + (sceneIndex + 1) + " debe contener entre 2 y 5 tomas.";
     let cursor = range.start;
+    const orderedShots = list.slice().sort((a, b) => a.start - b.start);
+    const normalizeIdentity = value => clean(value, 260).toLowerCase().replace(/\\s+/g, " ");
+    for (let shotIndex = 0; shotIndex < orderedShots.length; shotIndex++) {
+      const current = orderedShots[shotIndex].shot;
+      const anchor = normalizeIdentity(current.continuity_anchor);
+      const subjectLayer = current.layers.find(layer => clean(layer.role, 120).toLowerCase() === "subject");
+      if (!subjectLayer) return "La toma de la escena " + (sceneIndex + 1) + " no identifica una capa principal persistente (role=subject).";
+      if (shotIndex > 0) {
+        const previous = orderedShots[shotIndex - 1].shot;
+        const previousAnchor = normalizeIdentity(previous.continuity_anchor);
+        const previousSubject = previous.layers.find(layer => clean(layer.role, 120).toLowerCase() === "subject");
+        if (anchor !== previousAnchor) return "La escena " + (sceneIndex + 1) + " cambia su ancla de continuidad entre tomas.";
+        if (!previousSubject || clean(previousSubject.id, 60) !== clean(subjectLayer.id, 60) ||
+            normalizeIdentity(previousSubject.description) !== normalizeIdentity(subjectLayer.description) ||
+            clean(previousSubject.fill, 16).toLowerCase() !== clean(subjectLayer.fill, 16).toLowerCase() ||
+            clean(previousSubject.stroke, 16).toLowerCase() !== clean(subjectLayer.stroke, 16).toLowerCase() ||
+            Math.abs(previousSubject.pivot_x - subjectLayer.pivot_x) > 2 ||
+            Math.abs(previousSubject.pivot_y - subjectLayer.pivot_y) > 2) {
+          return "La escena " + (sceneIndex + 1) + " pierde la identidad, paleta o pivote del sujeto principal entre tomas.";
+        }
+      }
+    }
     for (const shot of list) {
       if (Math.abs(shot.start - cursor) > 0.05) return "Las tomas de la escena " + (sceneIndex + 1) + " tienen huecos o solapamientos.";
       cursor = shot.end;

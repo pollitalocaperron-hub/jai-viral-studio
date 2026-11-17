@@ -45,6 +45,13 @@ assert.match(validateShots(stringPivot, story), /punto de pivote fuera del lienz
 const invalidEasing = structuredClone(valid); invalidEasing[0].animation_steps[0].easing = "bounce-untrusted";
 assert.match(validateShots(invalidEasing, story), /transformación\/progresión incorrecta/);
 
+const changedAnchor = structuredClone(valid); changedAnchor[1].continuity_anchor = "Different object identity and palette.";
+assert.match(validateShots(changedAnchor, story), /ancla de continuidad/);
+const changedSubject = structuredClone(valid); changedSubject[1].layers[0].fill = "#00AA00";
+assert.match(validateShots(changedSubject, story), /identidad, paleta o pivote/);
+const missingSubject = structuredClone(valid); missingSubject[0].layers.forEach(layer => { layer.role = "detail"; });
+assert.match(validateShots(missingSubject, story), /capa principal persistente/);
+
 const oneLayerOnly = structuredClone(valid);
 oneLayerOnly[0].animation_steps[2].target_id = "component";
 assert.match(validateShots(oneLayerOnly, story), /dos capas independientes/);
