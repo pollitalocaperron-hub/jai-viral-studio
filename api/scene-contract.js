@@ -65,8 +65,8 @@ export function validateShots(shots, story) {
       return "Las escenas conceptuales deben formar una línea temporal continua y sin solapamientos.";
     }
   }
-  if (!Array.isArray(shots) || shots.length < story.length * 2 || shots.length > 16) {
-    return "El director debe entregar entre 2 y 5 tomas visuales por escena conceptual, con un máximo de 16 tomas.";
+  if (!Array.isArray(shots) || shots.length < story.length * 2 || shots.length > story.length * 5) {
+    return "El director debe entregar entre 2 y 5 tomas visuales por escena conceptual.";
   }
 
   const byScene = new Map();
