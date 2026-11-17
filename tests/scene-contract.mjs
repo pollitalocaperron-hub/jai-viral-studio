@@ -86,8 +86,8 @@ assert.match(validateShots(valid, brokenSceneTimeline), /línea temporal continu
 const tooManyShots = structuredClone(valid);
 for (let index = 0; index < 4; index++) {
   const extra = structuredClone(tooManyShots[0]);
-  extra.start_seconds = index * 0.5;
-  extra.end_seconds = index * 0.5 + 0.4;
+  extra.start_seconds = index;
+  extra.end_seconds = index + 1;
   tooManyShots.push(extra);
 }
 assert.match(validateShots(tooManyShots, story), /entre 2 y 5 tomas/);
