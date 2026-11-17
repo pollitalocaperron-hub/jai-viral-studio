@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "test:browser": "node tests/browser-persistence.mjs",
-    "test:api": "node tests/api-contracts.mjs",
+    "test:api": "node tests/api-contracts.mjs && node tests/scene-contract.mjs",
     "test": "npm run test:api && npm run test:browser && npm run test:e2e",
     "test:e2e": "node tests/end-to-end-production.mjs"
   },
