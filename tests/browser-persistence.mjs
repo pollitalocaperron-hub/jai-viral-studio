@@ -294,6 +294,23 @@ try {
     return difference;
   });
   assert.ok(transitionPixelDifference > 1000000, "The selected wipe transition must visibly composite the previous scene and reveal the next scene");
+  const independentTransitionProgressDifference = await page.evaluate(() => {
+    const item = timelineState.items[1];
+    item.previousVisualIndex = Number(timelineState.items[0].visualIndex);
+    drawVideoScene(item, Number(item.sceneIndex) || 0, 0.6, -1, 0.05);
+    const earlyTransition = renderCtx.getImageData(0, 0, 360, 900).data;
+    drawVideoScene(item, Number(item.sceneIndex) || 0, 0.6, -1, 0.5);
+    const laterTransition = renderCtx.getImageData(0, 0, 360, 900).data;
+    let difference = 0;
+    for (let i = 0; i < earlyTransition.length; i += 4) {
+      difference += Math.abs(earlyTransition[i] - laterTransition[i]) +
+        Math.abs(earlyTransition[i + 1] - laterTransition[i + 1]) +
+        Math.abs(earlyTransition[i + 2] - laterTransition[i + 2]);
+    }
+    return difference;
+  });
+  assert.ok(independentTransitionProgressDifference > 1000000,
+    "Changing transition progress must change the wipe even when the trimmed animation progress stays fixed");
   const subtitlePixelDifference = await page.evaluate(() => {
     const item = timelineState.items[0];
     const sceneIndex = Number.isInteger(item.sceneIndex) ? item.sceneIndex : 0;
