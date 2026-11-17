@@ -110,7 +110,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <div class="scene" style="margin-top:10px"><label>Desfase de subtítulos (s)<input id="subtitleTrackOffset" type="number" min="-5" max="5" step="0.1" value="0"></label><div class="hint">Negativo adelanta los subtítulos; positivo los retrasa. El ajuste también se aplica a la pista y al archivo SRT.</div></div>
  <div id="captionEditor" style="display:grid;gap:9px;margin-top:10px"></div>
 </section>
-<div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de ritmo · microavance cada 3 segundos, sin cortes obligatorios</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Lenguaje visual según el tema</span></div><p class="hint">El director divide cada escena conceptual en 2–5 tomas sincronizadas con la narración. Cada toma se construye con ilustración editorial 2D, objetos vectoriales SVG independientes y acciones de transformación por capa. J.A.I. genera la geometría con modelos de texto y rasteriza/anima las capas localmente en formato vertical 9:16; no llama a un generador externo de imágenes ni consume créditos de imagen. La calidad visual final se valida toma por toma antes de habilitar la exportación.</p><button class="primary" id="makeVisuals" type="button">Generar ilustraciones vectoriales</button><div class="row"><button class="secondary" id="inspectVisuals" type="button" disabled>Auditar tomas con IA</button><button class="secondary" id="approveAllVisuals" type="button" disabled>Aprobar todas manualmente</button></div><div class="hint" id="visualAuditStatus">La inspección compara cada imagen con su enseñanza. Si el servicio no responde, puedes revisar las imágenes y aprobarlas manualmente en conjunto.</div><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div class="row" style="margin-top:10px"><button class="secondary" id="directScenes" type="button" disabled>Diseñar tomas y acciones animables</button></div><div class="hint" id="directScenesStatus">El director descompondrá cada escena conceptual en varias tomas sincronizadas con la narración, identificará capas y describirá acciones concretas antes del render.</div><div id="directScenesOutput" class="visual-grid" style="margin-top:10px"></div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Secuencia de montaje · Vista previa</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza las tomas del storyboard: cambia su duración, reordénalas, elimina las que no necesites, elige transiciones y ajusta qué tramo de las transformaciones vectoriales se reproduce. También puedes desplazar por separado la narración y los subtítulos para corregir la sincronía. El editor controla la animación 2D por capas; todavía no es un editor de metraje de vídeo externo. Los tiempos se recalculan automáticamente. La exportación usa MP4 si tu navegador lo admite o WebM como respaldo.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="mediaTracks" style="display:grid;gap:10px;margin:12px 0"></div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Reproducir secuencia</button><button class="secondary" id="pausePreview" type="button" disabled>Pausar</button><button class="secondary" id="stopPreview" type="button" disabled>Detener</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar y exportar video</button><button class="secondary" id="cancelRender" type="button" hidden>Cancelar render</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. La narración generada se integrará al vídeo. El formato MP4 se usará si tu navegador lo admite; de lo contrario se descargará WebM.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Alertas editoriales</label><div class="result" id="editorialWarnings">No hay alertas adicionales.</div><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
+<div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de ritmo · microavance cada 3 segundos, sin cortes obligatorios</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Lenguaje visual según el tema</span></div><p class="hint">El director divide cada escena conceptual en 2–5 tomas sincronizadas con la narración. Cada toma se construye con ilustración editorial 2D, objetos vectoriales SVG independientes y acciones de transformación por capa. J.A.I. genera la geometría con modelos de texto y rasteriza/anima las capas localmente en formato vertical 9:16; no llama a un generador externo de imágenes ni consume créditos de imagen. La calidad visual final se valida toma por toma antes de habilitar la exportación.</p><button class="primary" id="makeVisuals" type="button">Generar ilustraciones vectoriales</button><div class="row"><button class="secondary" id="inspectVisuals" type="button" disabled>Auditar tomas con IA</button></div><div class="hint" id="visualAuditStatus">La inspección compara cada imagen con su enseñanza. Si el servicio no responde, puedes revisar las imágenes y aprobarlas manualmente en conjunto.</div><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div class="row" style="margin-top:10px"><button class="secondary" id="directScenes" type="button" disabled>Diseñar tomas y acciones animables</button></div><div class="hint" id="directScenesStatus">El director descompondrá cada escena conceptual en varias tomas sincronizadas con la narración, identificará capas y describirá acciones concretas antes del render.</div><div id="directScenesOutput" class="visual-grid" style="margin-top:10px"></div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Secuencia de montaje · Vista previa</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza las tomas del storyboard: cambia su duración, reordénalas, elimina las que no necesites, elige transiciones y ajusta qué tramo de las transformaciones vectoriales se reproduce. También puedes desplazar por separado la narración y los subtítulos para corregir la sincronía. El editor controla la animación 2D por capas; todavía no es un editor de metraje de vídeo externo. Los tiempos se recalculan automáticamente. La exportación usa MP4 si tu navegador lo admite o WebM como respaldo.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="mediaTracks" style="display:grid;gap:10px;margin:12px 0"></div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Reproducir secuencia</button><button class="secondary" id="pausePreview" type="button" disabled>Pausar</button><button class="secondary" id="stopPreview" type="button" disabled>Detener</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar y exportar video</button><button class="secondary" id="cancelRender" type="button" hidden>Cancelar render</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. La narración generada se integrará al vídeo. El formato MP4 se usará si tu navegador lo admite; de lo contrario se descargará WebM.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Alertas editoriales</label><div class="result" id="editorialWarnings">No hay alertas adicionales.</div><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
 <div class="steps"><div class="step"><b>01 · Investigación</b><span>Verificar afirmaciones y fuentes.</span></div><div class="step"><b>02 · Dirección visual</b><span>Objetos, diagramas y movimiento.</span></div><div class="step"><b>03 · Voz</b><span>Narración y sincronización.</span></div><div class="step"><b>04 · Montaje</b><span>Ritmo, subtítulos y sonido.</span></div><div class="step"><b>05 · Revisión</b><span>Exactitud y originalidad.</span></div><div class="step"><b>06 · Exportación</b><span>MP4/WebM vertical 9:16.</span></div></div>
 <div class="row" style="margin-top:14px"><button class="secondary" id="copy">Copiar plan</button><button class="secondary" id="save">Guardar plan</button></div><p class="hint" id="autosaveStatus" role="status">La recuperación automática se activa al generar un plan.</p></section>
 <section class="card"><h3 class="section-title">Proyectos guardados</h3><div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div></section>
@@ -213,7 +213,7 @@ async function restoreJaiProjectRecord(project){
   updateTimelineDurations();syncAudioEditControls();renderCaptionEditor();renderMediaTracks();renderTimeline();
   $("downloadSrt").disabled=!captionCues.length;$("generateCaptions").disabled=!kokoroAudioBlob;
   $("inspectVisuals").disabled=!(jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,i)=>jaiSceneImages[i]?.image));
-  $("approveAllVisuals").disabled=!(jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,i)=>jaiSceneImages[i]?.image));
+  
   renderVisualScenes();syncRecoveredPipeline();
   const missingImages=currentScenes.filter((scene,index)=>!jaiSceneImages[index]?.image).length;
   $("autosaveStatus").textContent="Proyecto completo recuperado · "+new Date(snapshot.savedAt||project.savedAt||Date.now()).toLocaleString("es-MX");
@@ -379,51 +379,15 @@ function visualText(value,fallback="Pendiente de definir"){
  return fallback;
 }
 function renderVisualScenes(){
- const root=$("visualScenes");root.replaceChildren();
- if(!Array.isArray(currentScenes)||!currentScenes.length){$("visualStatus").textContent="Genera primero un plan con storyboard.";return;}
- const productionCheck=validateStoryboardForProduction();
- if(!productionCheck.ok){$("visualStatus").textContent="No hay escenas listas para producción: "+productionCheck.reason;return;}
- if(!timelineState.items.length)buildTimeline();
- currentScenes.forEach((scene,index)=>{
-  const card=document.createElement("article");card.className="visual-card";
-  const generated=jaiSceneImages[index];
-  const firstDirectedShot=currentShotPlan.find(shot=>Number(shot.scene_index)===index);
-  const vectorPreview=firstDirectedShot?vectorShotPreview(firstDirectedShot,.5):null;
-  const subject=visualText(scene.visual_subject||scene.teaching_point||scene.objective,"Escena "+(index+1));
-  const proof=visualText(scene.visual_proof||scene.teaching_point||scene.visual,"Demostración pendiente");
-  if(vectorPreview||(generated&&generated.src)){
-   const img=document.createElement("img");img.src=vectorPreview||generated.src;img.alt=vectorPreview?"Ilustración vectorial J.A.I. con capas independientes: "+subject:"Fotograma educativo: "+subject;img.loading="lazy";img.style.cssText="width:100%;aspect-ratio:9/16;object-fit:cover;object-position:center;display:block;background:#07101e";card.appendChild(img);
-  }else{
-   const placeholder=document.createElement("div");placeholder.style.cssText="aspect-ratio:9/16;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:18px;background:radial-gradient(ellipse at 50% 35%,#173b58,#07101e 72%);color:#eaf7ff;text-align:center";
-   const kicker=document.createElement("span");kicker.style.cssText="font-size:10px;letter-spacing:2px;color:#77e6d1";kicker.textContent="ILUSTRACIÓN VECTORIAL PENDIENTE";
-   const title=document.createElement("strong");title.textContent=visualText(scene.on_screen_text,subject);
-   const desc=document.createElement("small");desc.style.cssText="font-size:11px;line-height:1.5;color:#b5c9dc";desc.textContent=proof;
-   placeholder.append(kicker,title,desc);card.appendChild(placeholder);
-  }
-  const meta=document.createElement("div");meta.className="visual-meta";
-  const heading=document.createElement("b");heading.textContent="ESCENA "+String(index+1).padStart(2,"0")+" · "+visualText(scene.time,"Tiempo por definir");
-  const desc=document.createElement("p");desc.textContent=subject;
-  const proofLine=document.createElement("p");proofLine.className="hint";proofLine.textContent="Demostración: "+proof;
-  meta.append(heading,desc,proofLine);
-  const auditIndices=currentShotPlan.length?currentShotPlan.map((shot,shotIndex)=>Number(shot.scene_index)===index?shotIndex:-1).filter(shotIndex=>shotIndex>=0):[index];
-  const audits=auditIndices.map(shotIndex=>visualAuditResults[shotIndex]).filter(Boolean);
-  const allShotsPassed=auditIndices.length>0&&audits.length===auditIndices.length&&audits.every(item=>item.status==="pass");
-  const audit=audits.find(item=>item.status!=="pass")||audits[0];
-  const verdict=document.createElement("p");verdict.className="hint";
-  verdict.textContent=allShotsPassed?"INSPECCIÓN APROBADA · "+audits.length+"/"+auditIndices.length+" TOMAS":audits.length?"REVISAR TOMAS · "+audits.length+"/"+auditIndices.length+" · "+visualText(audit?.reason,"Revisa las observaciones"):"REVISIÓN PENDIENTE · 0/"+auditIndices.length+" TOMAS";
-  meta.appendChild(verdict);
-  const shotIssues=audits.filter(item=>Array.isArray(item.issues)&&item.issues.length).flatMap(item=>item.issues);
-  if(shotIssues.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+shotIssues.map(x=>visualText(x,"")).join(" · ");meta.appendChild(issues);}
-  const retry=document.createElement("button");retry.type="button";retry.className="secondary";retry.textContent="Rediseñar todas las tomas";retry.addEventListener("click",async()=>{const ok=await designAnimationShots();if(ok)await generateAIVisuals();});meta.appendChild(retry);
-  if(!allShotsPassed){const approve=document.createElement("button");approve.type="button";approve.className="secondary";approve.textContent="Aprobar manualmente";approve.addEventListener("click",()=>approveVisualScene(index));meta.appendChild(approve);}
-  const promptDetails=document.createElement("details");promptDetails.style.cssText="margin-top:8px;font-size:12px;color:#b8c9dc";
-  const promptSummary=document.createElement("summary");promptSummary.textContent="Ver dirección visual usada";
-  const promptText=document.createElement("p");promptText.style.cssText="white-space:pre-wrap;line-height:1.5;overflow-wrap:anywhere";promptText.textContent=visualText(firstDirectedShot?.visual_prompt_en||generated?.prompt||scene.visual_prompt_en,"El plan no entregó un prompt visual específico para esta escena.")+"\n\nCapas vectoriales: "+(firstDirectedShot?.layers||[]).map(layer=>layer.description).join(" · ");
-  promptDetails.append(promptSummary,promptText);meta.appendChild(promptDetails);card.appendChild(meta);root.appendChild(card);
- });
- const ready=jaiSceneImages.filter(Boolean).length;
- $("visualStatus").textContent=ready+" de "+currentScenes.length+" escenas visuales únicas listas. "+(ready<currentScenes.length?"Puedes reanudar sin repetir las imágenes terminadas.":"Todas las escenas están generadas.");
- const approveAll=$("approveAllVisuals");if(approveAll)approveAll.disabled=ready!==currentScenes.length||renderRecording||planningInProgress||visualGenerationRunning||narrationGenerating;
+ const root=$("visualScenes");root.replaceChildren();if(!currentScenes.length){$("visualStatus").textContent="Genera primero un plan con storyboard.";return;}
+ const check=validateStoryboardForProduction();if(!check.ok){$("visualStatus").textContent="No hay escenas listas para producción: "+check.reason;return;}if(!timelineState.items.length)buildTimeline();
+ const entries=currentShotPlan.length?currentShotPlan.map((shot,shotIndex)=>({shot,shotIndex})):currentScenes.map((scene,shotIndex)=>({shot:{scene_index:shotIndex,time:scene.time,layers:[]},shotIndex}));
+ currentScenes.forEach((scene,index)=>{const card=document.createElement("article");card.className="visual-card";const meta=document.createElement("div");meta.className="visual-meta";const subject=visualText(scene.visual_subject||scene.teaching_point||scene.objective,"Escena "+(index+1));const heading=document.createElement("b");heading.textContent="ESCENA "+String(index+1).padStart(2,"0")+" · "+visualText(scene.time,"Tiempo por definir");const desc=document.createElement("p");desc.textContent=subject;meta.append(heading,desc);
+ const shots=entries.filter(e=>Number(e.shot.scene_index)===index);const passed=shots.filter(e=>visualAuditResults[e.shotIndex]?.status==="pass").length;const summary=document.createElement("p");summary.className="hint";summary.textContent="Revisión individual: "+passed+"/"+shots.length+" tomas aprobadas.";meta.appendChild(summary);
+ shots.forEach(({shot,shotIndex},n)=>{const panel=document.createElement("section");panel.style.cssText="display:grid;gap:8px;padding:12px;margin-top:12px;border:1px solid #33445f;border-radius:12px";const label=document.createElement("b");label.textContent="TOMA "+(n+1)+" · "+visualText(shot.time||shot.duration||scene.time,"Tiempo por definir");panel.appendChild(label);const preview=vectorShotPreview(shot,.48);if(preview){const img=document.createElement("img");img.src=preview;img.alt="Vista previa de toma "+(n+1);img.style.cssText="width:100%;max-height:360px;object-fit:contain;aspect-ratio:9/16;background:#07101e";panel.appendChild(img);}else{const p=document.createElement("p");p.className="hint";p.textContent="Vista previa pendiente.";panel.appendChild(p);}
+ const direction=document.createElement("p");direction.className="hint";direction.textContent=visualText(shot.visual_prompt_en||shot.visual_description||shot.action,"Dirección visual pendiente.");panel.appendChild(direction);const audit=visualAuditResults[shotIndex];const state=document.createElement("p");state.className="hint";state.textContent=audit?.status==="pass"?(audit.manual?"Aprobada manualmente":"Inspección IA aprobada"):audit?.status==="revise"?"Requiere corrección: "+visualText(audit.reason,"revisa observaciones"):"Pendiente de revisión";panel.appendChild(state);if(audit?.issues?.length){const issues=document.createElement("p");issues.className="hint";issues.textContent="Observaciones: "+audit.issues.map(v=>visualText(v,"")).join(" · ");panel.appendChild(issues);}
+ const approve=document.createElement("button");approve.type="button";approve.className="secondary";approve.textContent=audit?.status==="pass"?"Toma aprobada":"Aprobar esta toma manualmente";approve.disabled=audit?.status==="pass"||!jaiSceneImages[index]?.image;approve.addEventListener("click",()=>approveVisualShot(shotIndex));panel.appendChild(approve);meta.appendChild(panel);});card.appendChild(meta);root.appendChild(card);});
+ const ready=jaiSceneImages.filter(item=>item?.image).length;$("visualStatus").textContent=ready+" de "+currentScenes.length+" escenas visuales listas. Cada toma se revisa por separado.";
 }
 
 async function designAnimationShots(){
@@ -569,27 +533,10 @@ async function inspectVisuals(){
   button.disabled=!(currentScenes.length&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
  }
 }
-function approveAllVisualScenes(){
- if(!currentScenes.length||jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)){
-  $("visualAuditStatus").textContent="No se puede aprobar: primero deben estar generadas las ilustraciones de todas las escenas.";return;
- }
- const total=visualAuditUnitCount();
- visualAuditResults=Array.from({length:total},(_,index)=>({scene_index:index,status:"pass",score:null,reason:"Aprobada manualmente tras revisar la toma vectorial.",issues:[],manual:true}));
- scheduleJaiAutosave();setPipelineStage("audit",100,"Aprobación manual · "+total+" tomas revisadas","done");
- renderVisualScenes();$("visualAuditStatus").textContent="Las "+total+" tomas quedaron aprobadas manualmente. La exportación puede continuar.";
- updateRenderGate();
-}
-
-$("approveAllVisuals").addEventListener("click",approveAllVisualScenes);
-function approveVisualScene(index){
- if(!Number.isInteger(index)||!currentScenes[index]||!jaiSceneImages[index]?.image)return;
- const unitIndexes=currentShotPlan.length?currentShotPlan.map((shot,shotIndex)=>Number(shot.scene_index)===index?shotIndex:-1).filter(shotIndex=>shotIndex>=0):[index];
- const total=visualAuditUnitCount();
+function approveVisualShot(shotIndex){
+ const total=visualAuditUnitCount(),shot=currentShotPlan[shotIndex],sceneIndex=shot?Number(shot.scene_index):shotIndex;if(!Number.isInteger(shotIndex)||shotIndex<0||shotIndex>=total||!jaiSceneImages[sceneIndex]?.image)return;
  if(visualAuditResults.length!==total)visualAuditResults=Array.from({length:total},(_,i)=>visualAuditResults[i]||null);
- unitIndexes.forEach(shotIndex=>{visualAuditResults[shotIndex]={scene_index:shotIndex,status:"pass",score:null,reason:"Aprobada manualmente tras revisar la toma de esta escena.",issues:[],manual:true};});
- scheduleJaiAutosave();renderVisualScenes();
- $("visualAuditStatus").textContent="Escena "+(index+1)+" aprobada manualmente: "+unitIndexes.length+" toma(s).";
- updateRenderGate();
+ visualAuditResults[shotIndex]={scene_index:shotIndex,status:"pass",score:null,reason:"Aprobada manualmente tras revisar esta toma individual.",issues:[],manual:true,conceptual_scene_index:sceneIndex};scheduleJaiAutosave();renderVisualScenes();$("visualAuditStatus").textContent="Toma "+(shotIndex+1)+" aprobada; las demás siguen pendientes.";updateRenderGate();
 }
 
 $("inspectVisuals").addEventListener("click",inspectVisuals);
@@ -1178,14 +1125,14 @@ async function renderVideo(){
  const mimeCandidates=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
  const mime=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
  if(!mime){setPipelineStage("render",0,"Formato de vídeo no compatible con este navegador","error");$("renderStatus").textContent="Este navegador no admite grabación MP4 ni WebM desde el editor. Prueba Chrome actualizado.";return;}
- renderRecording=true;renderCancelRequested=false;setRenderEditingLock(true);setPipelineStage("render",2,"Preparando lienzo vertical 720 × 1280…","running");$("renderVideo").disabled=true;$("cancelRender").hidden=false;$("cancelRender").disabled=false;$("approveAllVisuals").disabled=true;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
+ renderRecording=true;renderCancelRequested=false;setRenderEditingLock(true);setPipelineStage("render",2,"Preparando lienzo vertical 720 × 1280…","running");$("renderVideo").disabled=true;$("cancelRender").hidden=false;$("cancelRender").disabled=false;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
  let stream=null,audioBuffer=null,audioSource=null,audioStartOffset=0,animationId=null,finished=false;
  const cleanup=()=>{
   if(animationId!==null)cancelAnimationFrame(animationId);
   if(audioSource){try{audioSource.stop();}catch{}}
   if(stream)stream.getTracks().forEach(track=>track.stop());
   renderRecording=false;setRenderEditingLock(false);$("cancelRender").hidden=true;$("cancelRender").disabled=false;
-  $("approveAllVisuals").disabled=!(jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
+  
   const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);
   $("renderVideo").disabled=!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&voiceReady&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image));
  };
@@ -1647,7 +1594,7 @@ function loadSavedProject(project,options={}){
  kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;audioEdit={trimStart:0,trimEnd:0,gain:1};audioTrackOffset=0;subtitleTrackOffset=0;captionCues=[];visualAuditResults=[];
  $("kokoroAudio").pause();$("kokoroAudio").removeAttribute("src");$("kokoroAudio").style.display="none";
  $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("generateCaptions").disabled=true;syncAudioEditControls();
- $("inspectVisuals").disabled=true;$("approveAllVisuals").disabled=true;
+ $("inspectVisuals").disabled=true;
  $("visualAuditStatus").textContent="La revisión de este proyecto está pendiente; sus escenas deben volver a inspeccionarse.";
  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">Proyecto guardado</span><span class="tag">Dirección visual · Medio elegido según el tema</span>';
  $("angle").textContent=readable(data.angle||"Enfoque pendiente.");
