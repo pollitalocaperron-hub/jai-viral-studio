@@ -19,9 +19,9 @@ export default async function handler(req, res) {
   const prompt = [
     "Eres el DIRECTOR DE ESCENAS Y SUPERVISOR DE ANIMACIÓN de J.A.I. Convierte el storyboard conceptual en un plan de tomas ejecutable. Devuelve SOLO JSON válido con la propiedad shots.",
     "No generes una imagen final ni describas movimientos de cámara como sustituto de acciones. Cada toma debe mostrar un nuevo estado o acción didáctica.",
-    "Divide cada escena conceptual en 2 a 5 tomas, según la complejidad real. El total debe ser 8 a 16. No uses una cantidad fija por vídeo.",
+    "Divide cada escena conceptual en 2 a 5 tomas, según la complejidad real. El total debe ser de 2 a 5 tomas por escena (8 a 25 en total). No uses una cantidad fija por vídeo.",
     "Las tomas de cada escena deben cubrir exactamente su intervalo, en orden, sin huecos ni solapamientos. Usa start_seconds y end_seconds numéricos absolutos dentro del vídeo.",
-    "Cada toma debe incluir: scene_index (índice base cero), start_seconds, end_seconds, narration_segment (fragmento literal de la narración), subtitle, subject, visual_state, visual_action, visual_prompt_en, continuity_anchor, background_color (#RRGGBB), layers (3–6 objetos independientes con id, description, role, path_d, fill, stroke, stroke_width, pivot_x, pivot_y) y animation_steps (2–4 acciones con target_id, action, from_state, to_state, start_progress, end_progress, from_transform y to_transform).",
+    "Cada toma debe incluir: scene_index (índice base cero), start_seconds, end_seconds, narration_segment (fragmento literal de la narración), subtitle, subject, visual_state, visual_action, visual_prompt_en, continuity_anchor, background_color (#RRGGBB), layers (3–6 objetos independientes con id, description, role, path_d, fill, stroke, stroke_width, pivot_x, pivot_y) y animation_steps (2–4 acciones con target_id, action, from_state, to_state, start_progress, end_progress, easing (linear, ease-in, ease-out, ease-in-out o smoothstep), from_transform y to_transform).",
     "Los elementos deben ser concretos y separables: no uses 'todo el motor' como una sola capa si necesitas mover pistón, válvula y bujía independientemente. Mantén la misma identidad, geometría, paleta y orientación de objetos repetidos entre tomas.",
     "La ilustración vectorial es la escena de producción: cada objeto debe tener su propio path_d independiente, no agrupes objetos móviles en una sola ruta. Usa coordenadas de un lienzo vertical 720x1280; path_d debe contener SOLO comandos de ruta SVG (M,L,H,V,C,S,Q,T,A,Z) y números, nunca etiquetas XML/SVG ni texto. Ordena las capas de atrás hacia delante. Cada forma debe ser una silueta cerrada y reconocible, con relleno y contorno.",
     "Cada animation_step debe incluir from_transform y to_transform con x, y (desplazamiento en píxeles), rotation (grados), scale (multiplicador) y opacity (0–1). Anima el objeto real descrito por target_id; usa movimientos pequeños y físicamente correctos, no movimiento de cámara ni partículas decorativas. Las capas que no se mueven usan la misma transformación inicial y final.",
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     })),
     animation_steps: shot.animation_steps.map(step => ({
       target_id: clean(step?.target_id, 60), action: clean(step?.action, 180), from_state: clean(step?.from_state, 140), to_state: clean(step?.to_state, 140),
-      start_progress: Number(step.start_progress), end_progress: Number(step.end_progress),
+      start_progress: Number(step.start_progress), end_progress: Number(step.end_progress), easing: ["linear","ease-in","ease-out","ease-in-out","smoothstep"].includes(step.easing) ? step.easing : "ease-in-out",
       from_transform: Object.fromEntries(["x", "y", "rotation", "scale", "opacity"].map(key => [key, Number(step.from_transform[key])])),
       to_transform: Object.fromEntries(["x", "y", "rotation", "scale", "opacity"].map(key => [key, Number(step.to_transform[key])]))
     }))

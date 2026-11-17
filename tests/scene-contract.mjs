@@ -36,6 +36,15 @@ function makeShots() {
 const valid = makeShots();
 assert.equal(validateShots(valid, story), null, "A continuous, layered and genuinely animated plan must pass");
 
+const invalidSeconds = structuredClone(story); invalidSeconds[0].time = "0:00 - 0:99";
+assert.match(validateShots(valid, invalidSeconds), /intervalo de escena inválido/);
+const nullTransform = structuredClone(valid); nullTransform[0].animation_steps[0].from_transform.x = null;
+assert.match(validateShots(nullTransform, story), /transformación\/progresión incorrecta/);
+const stringPivot = structuredClone(valid); stringPivot[0].layers[0].pivot_x = "360";
+assert.match(validateShots(stringPivot, story), /punto de pivote fuera del lienzo/);
+const invalidEasing = structuredClone(valid); invalidEasing[0].animation_steps[0].easing = "bounce-untrusted";
+assert.match(validateShots(invalidEasing, story), /transformación\/progresión incorrecta/);
+
 const oneLayerOnly = structuredClone(valid);
 oneLayerOnly[0].animation_steps[2].target_id = "component";
 assert.match(validateShots(oneLayerOnly, story), /dos capas independientes/);
@@ -80,4 +89,4 @@ const stateJump = structuredClone(continuous);
 stateJump[1].from_state = "collapsed";
 assert.match(validateAnimationContinuity(stateJump), /salto entre acciones/);
 
-console.log("PASS: scene director contract rejects single-layer motion, static animation, incomplete states, overlapping actions, broken scene chronology and excessive per-scene shots.");
+console.log("PASS: scene director contract rejects malformed timing, coerced numeric values, invalid easing, single-layer motion, static animation, incomplete states, overlapping actions, broken chronology and excessive per-scene shots.");

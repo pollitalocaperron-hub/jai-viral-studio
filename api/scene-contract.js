@@ -2,6 +2,8 @@ export function parseSceneRange(value) {
   const match = String(value || "").replace(/[–—]/g, "-").match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
   if (!match) return null;
   const toSeconds = part => Number(part.split(":")[0]) * 60 + Number(part.split(":")[1]);
+  const parts = [match[1], match[2]].map(part => Number(part.split(":")[1]));
+  if (parts.some(seconds => seconds > 59)) return null;
   const start = toSeconds(match[1]), end = toSeconds(match[2]);
   return end > start ? { start, end } : null;
 }
@@ -13,7 +15,7 @@ function clean(value, max = 500) {
 function validTransform(value) {
   if (!value || typeof value !== "object") return false;
   const keys = ["x", "y", "rotation", "scale", "opacity"];
-  if (!keys.every(key => Number.isFinite(Number(value[key])))) return false;
+  if (!keys.every(key => typeof value[key] === "number" && Number.isFinite(value[key]))) return false;
   return Number(value.x) >= -300 && Number(value.x) <= 300 &&
     Number(value.y) >= -300 && Number(value.y) <= 300 &&
     Number(value.rotation) >= -360 && Number(value.rotation) <= 360 &&
@@ -70,13 +72,13 @@ export function validateShots(shots, story) {
   const byScene = new Map();
   const shotCounts = new Map();
   for (const [index, shot] of shots.entries()) {
-    const sceneIndex = Number(shot?.scene_index);
+    const sceneIndex = shot?.scene_index;
     if (!Number.isInteger(sceneIndex) || sceneIndex < 0 || sceneIndex >= story.length) {
       return "La toma " + (index + 1) + " no está vinculada a una escena válida.";
     }
     const sceneRange = sceneRanges[sceneIndex];
-    const start = Number(shot.start_seconds), end = Number(shot.end_seconds);
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start ||
+    const start = shot.start_seconds, end = shot.end_seconds;
+    if (typeof start !== "number" || typeof end !== "number" || !Number.isFinite(start) || !Number.isFinite(end) || end <= start ||
         start < sceneRange.start - 0.05 || end > sceneRange.end + 0.05) {
       return "La toma " + (index + 1) + " tiene tiempos inválidos o fuera de su escena conceptual.";
     }
@@ -98,7 +100,7 @@ export function validateShots(shots, story) {
     for (const [layerIndex, layer] of shot.layers.entries()) {
       const id = clean(layer?.id, 60), path = typeof layer?.path_d === "string" ? layer.path_d.trim() : "";
       const fill = clean(layer?.fill, 16), stroke = clean(layer?.stroke, 16);
-      const strokeWidth = Number(layer?.stroke_width), pivotX = Number(layer?.pivot_x), pivotY = Number(layer?.pivot_y);
+      const strokeWidth = layer?.stroke_width, pivotX = layer?.pivot_x, pivotY = layer?.pivot_y;
       if (!/^[a-zA-Z0-9_-]{1,60}$/.test(id) || layerIds.has(id) ||
           !clean(layer?.description, 260) || !clean(layer?.role, 120)) {
         return "La capa " + (layerIndex + 1) + " de la toma " + (index + 1) + " tiene un identificador duplicado o datos incompletos.";
@@ -108,9 +110,9 @@ export function validateShots(shots, story) {
       }
       if (!/^#[0-9a-fA-F]{6}$/.test(fill) && fill !== "none") return "La capa " + id + " tiene un relleno no válido.";
       if (!/^#[0-9a-fA-F]{6}$/.test(stroke) && stroke !== "none") return "La capa " + id + " tiene un contorno no válido.";
-      if (!Number.isFinite(strokeWidth) || strokeWidth < 0 || strokeWidth > 24 ||
-          !Number.isFinite(pivotX) || pivotX < 0 || pivotX > 720 ||
-          !Number.isFinite(pivotY) || pivotY < 0 || pivotY > 1280) {
+      if (typeof strokeWidth !== "number" || !Number.isFinite(strokeWidth) || strokeWidth < 0 || strokeWidth > 24 ||
+          typeof pivotX !== "number" || !Number.isFinite(pivotX) || pivotX < 0 || pivotX > 720 ||
+          typeof pivotY !== "number" || !Number.isFinite(pivotY) || pivotY < 0 || pivotY > 1280) {
         return "La capa " + id + " tiene grosor o punto de pivote fuera del lienzo.";
       }
       layerIds.add(id);
@@ -122,9 +124,9 @@ export function validateShots(shots, story) {
     let hasActualMotion = false;
     for (const [stepIndex, step] of shot.animation_steps.entries()) {
       const target = clean(step?.target_id, 60), action = clean(step?.action, 180);
-      const from = Number(step?.start_progress), to = Number(step?.end_progress);
-      if (!layerIds.has(target) || !action || !clean(step?.from_state, 140) || !clean(step?.to_state, 140) ||
-          !Number.isFinite(from) || !Number.isFinite(to) || from < 0 || to > 1 || to <= from ||
+      const from = step?.start_progress, to = step?.end_progress;
+      if (!layerIds.has(target) || !action || (step?.easing !== undefined && !["linear","ease-in","ease-out","ease-in-out","smoothstep"].includes(step.easing)) || !clean(step?.from_state, 140) || !clean(step?.to_state, 140) ||
+          typeof from !== "number" || typeof to !== "number" || !Number.isFinite(from) || !Number.isFinite(to) || from < 0 || to > 1 || to <= from ||
           !validTransform(step?.from_transform) || !validTransform(step?.to_transform)) {
         return "La acción " + (stepIndex + 1) + " de la toma " + (index + 1) + " no apunta a una capa válida o tiene una transformación/progresión incorrecta.";
       }

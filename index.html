@@ -1058,6 +1058,7 @@ function getVectorPath(layer){
  try{path=new Path2D(layer.path_d);vectorPathCache.set(layer,path);return path;}catch{return null;}
 }
 function interpolateNumber(a,b,t){return Number(a)+(Number(b)-Number(a))*t;}
+function easeAnimationProgress(value,mode){const t=Math.max(0,Math.min(1,Number(value)||0));switch(mode){case "linear":return t;case "ease-in":return t*t;case "ease-out":return 1-(1-t)*(1-t);case "smoothstep":return t*t*(3-2*t);case "ease-in-out":default:return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}}
 function paintVectorShot(ctx,w,h,shot,progress){
  const layers=shot?.layers;
  if(!Array.isArray(layers)||layers.length<3||!layers.every(layer=>typeof layer.path_d==="string"&&layer.path_d.length>=10))return false;
@@ -1077,7 +1078,7 @@ function paintVectorShot(ctx,w,h,shot,progress){
    }
    const a=selected.from_transform||transform,b=selected.to_transform||a;
    const raw=Math.max(0,Math.min(1,(p-Number(selected.start_progress))/Math.max(.001,Number(selected.end_progress)-Number(selected.start_progress))));
-   const t=raw*raw*(3-2*raw);
+   const t=easeAnimationProgress(raw,selected.easing||"ease-in-out");
    transform={x:interpolateNumber(a.x,b.x,t),y:interpolateNumber(a.y,b.y,t),rotation:interpolateNumber(a.rotation,b.rotation,t),scale:interpolateNumber(a.scale,b.scale,t),opacity:interpolateNumber(a.opacity,b.opacity,t)};
    if(p<Number(selected.start_progress))transform={...a};
    if(p>Number(selected.end_progress))transform={...b};
