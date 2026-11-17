@@ -697,7 +697,7 @@ function renderMediaTracks(){
  addTrack("VÍDEO",videoClips,total?total+" s · "+timelineState.items.length+" bloques visuales":"Prepara la línea de tiempo");
  const audioTiming=getAudioTrackTiming(total),audioClips=audioDuration?[{start:audioTiming.offset,end:Math.min(total,audioTiming.offset+audioTiming.activeDuration),label:"NARRACIÓN · "+Math.round(audioEditState.gain*100)+"%",title:"Narración recortada · inicio "+audioTiming.offset.toFixed(1)+" s",kind:"audio"}]:[];
  addTrack("AUDIO",audioClips,audioDuration?"Gemini WAV · "+audioDuration.toFixed(1)+" s · "+(total&&Math.abs(audioDuration-total)>.15?"se ajusta a la duración visual":"duración alineada"):"Genera la narración para añadir la pista de audio");
- const subtitleClips=captionCues.map((cue,index)=>({start:Math.max(0,(Number(cue.start)||0)+subtitleTrackOffset),end:Math.min(total,Math.max(0,(Number(cue.end)||0)+subtitleTrackOffset)),label:"S"+(index+1),title:String(cue.text||"Subtítulo")+" · "+Number(cue.start||0).toFixed(1)+"–"+Number(cue.end||0).toFixed(1)+" s",kind:"subtitle"})).filter(clip=>clip.end>clip.start&&clip.start<total);
+ const subtitleClips=captionCues.map((cue,index)=>{const range=getCaptionTimelineRange(cue,total);return {...range,label:"S"+(index+1),title:String(cue.text||"Subtítulo")+" · "+Number(cue.start||0).toFixed(1)+"–"+Number(cue.end||0).toFixed(1)+" s",kind:"subtitle"};}).filter(clip=>clip.end>clip.start&&clip.start<total);
  addTrack("SUBTÍTULOS",subtitleClips,subtitleClips.length?subtitleClips.length+" cues editables · tiempos estimados y ajustables":"Los subtítulos aparecerán al generar la narración");
 }
 function renderTimeline(){
@@ -1488,6 +1488,17 @@ function getAudioTrackTiming(total){
  const requestedRate=edit.duration/Math.max(.1,duration-offset),rate=Math.max(.75,Math.min(1.35,requestedRate));
  return {offset,activeDuration:edit.duration/rate,rate,requestedRate,rateAdjusted:Math.abs(rate-requestedRate)>.001,withinRateRange:requestedRate>=.75&&requestedRate<=1.35};
 }
+function getCaptionTimelineRange(cue,total){
+ const start=Number(cue?.start),end=Number(cue?.end),duration=Math.max(.1,Number(total)||.1);
+ if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return {start:0,end:0};
+ if(!kokoroAudioBlob||!(kokoroAudioDuration>0))return {start:Math.max(0,start+subtitleTrackOffset),end:Math.min(duration,end+subtitleTrackOffset)};
+ const edit=getAudioEdit(),timing=getAudioTrackTiming(duration);
+ const sourceStart=start+subtitleTrackOffset,sourceEnd=end+subtitleTrackOffset;
+ return {
+  start:Math.max(0,timing.offset+(sourceStart-edit.trimStart)/timing.rate),
+  end:Math.min(duration,timing.offset+(sourceEnd-edit.trimStart)/timing.rate)
+ };
+}
 function getAudioEdit(){
  const start=Math.max(0,Math.min(Math.max(0,kokoroAudioDuration-.1),Number(audioEdit.trimStart)||0));
  const rawEnd=Number(audioEdit.trimEnd),end=Math.max(start+.1,Math.min(kokoroAudioDuration,rawEnd>0?rawEnd:kokoroAudioDuration));
@@ -1582,7 +1593,7 @@ function parseSubtitleFile(raw){
 }
 $("downloadSrt").addEventListener("click",()=>{
  const stamp=value=>{const ms=Math.max(0,Math.round(value*1000)),hours=Math.floor(ms/3600000),minutes=Math.floor(ms%3600000/60000),seconds=Math.floor(ms%60000/1000),millis=ms%1000;return String(hours).padStart(2,"0")+":"+String(minutes).padStart(2,"0")+":"+String(seconds).padStart(2,"0")+","+String(millis).padStart(3,"0");};
- const body=captionCues.slice().sort((a,b)=>a.start-b.start).map((cue,index)=>(index+1)+"\n"+stamp(Math.max(0,cue.start+subtitleTrackOffset))+" --> "+stamp(Math.max(0,cue.end+subtitleTrackOffset))+"\n"+cue.text).join("\n\n");
+ const total=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);\n const body=captionCues.slice().sort((a,b)=>a.start-b.start).map(cue=>({cue,range:getCaptionTimelineRange(cue,total)})).filter(entry=>entry.range.end>entry.range.start).map((entry,index)=>(index+1)+"\n"+stamp(entry.range.start)+" --> "+stamp(entry.range.end)+"\n"+entry.cue.text).join("\n\n");
  const url=URL.createObjectURL(new Blob([body],{type:"text/plain;charset=utf-8"})),link=document.createElement("a");link.href=url;link.download="jai-subtitulos-editados.srt";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 $("generateCaptions").addEventListener("click",()=>{

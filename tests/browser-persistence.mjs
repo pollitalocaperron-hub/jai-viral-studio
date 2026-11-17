@@ -278,6 +278,21 @@ try {
   await page.locator("#subtitleTrackOffset").fill("0.5");
   await page.locator("#subtitleTrackOffset").dispatchEvent("change");
   assert.equal(await page.locator("#subtitleTrackOffset").inputValue(), "0.5", "Subtitle offset must remain editable after recovery");
+  const mappedSubtitleRange = await page.evaluate(() => {
+    const total = timelineState.items.reduce((sum, item) => sum + Math.max(.1, Number(item.seconds) || 0), 0);
+    const range = getCaptionTimelineRange({ start: 5, end: 6 }, total);
+    const edit = getAudioEdit();
+    const timing = getAudioTrackTiming(total);
+    return {
+      range,
+      expectedStart: timing.offset + (5 + subtitleTrackOffset - edit.trimStart) / timing.rate,
+      expectedEnd: timing.offset + (6 + subtitleTrackOffset - edit.trimStart) / timing.rate
+    };
+  });
+  assert.ok(Math.abs(mappedSubtitleRange.range.start - mappedSubtitleRange.expectedStart) < 0.001,
+    "Subtitle track start must account for audio trim-in, offset and playback rate");
+  assert.ok(Math.abs(mappedSubtitleRange.range.end - mappedSubtitleRange.expectedEnd) < 0.001,
+    "Subtitle track end must account for audio trim-in, offset and playback rate");
   const transitionPixelDifference = await page.evaluate(() => {
     const previous = timelineState.items[0];
     const item = timelineState.items[1];
