@@ -1119,7 +1119,9 @@ function vectorLayerPoseAt(shot,layerId,progress){
  const p=Math.max(0,Math.min(1,progress));
  let selected=steps.find(step=>p>=Number(step.start_progress)&&p<=Number(step.end_progress));
  if(!selected){const completed=steps.filter(step=>p>Number(step.end_progress));selected=p<Number(steps[0].start_progress)?steps[0]:(completed[completed.length-1]||steps[0]);}
- return p<Number(selected.start_progress)?{transform:selected.from_transform,state:selected.from_state}:{transform:selected.to_transform,state:selected.to_state};
+ if(p<=Number(selected.start_progress))return {transform:selected.from_transform,state:selected.from_state};
+ if(p>=Number(selected.end_progress))return {transform:selected.to_transform,state:selected.to_state};
+ return null;
 }
 function vectorShotBoundaryReady(previousShot,nextShot){
  const previousSubject=previousShot?.layers?.find(layer=>String(layer.role||"").toLowerCase()==="subject");
