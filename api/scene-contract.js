@@ -14,9 +14,9 @@ function clean(value, max = 500) {
 
 function validateVectorPath(value) {
   if (typeof value !== "string" || value.length < 10 || value.length > 1600) return false;
-  const tokenPattern = /[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\\d*\\.\\d+)/g;
+  const tokenPattern = /[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\d*\.?\d+)/g;
   const tokens = value.match(tokenPattern) || [];
-  const residue = value.replace(tokenPattern, "").replace(/[\\s,]/g, "");
+  const residue = value.replace(tokenPattern, "").replace(/[\s,]/g, "");
   if (residue || tokens[0]?.toUpperCase() !== "M" || tokens[tokens.length - 1]?.toUpperCase() !== "Z") return false;
   const commands = tokens.filter(token => /^[A-Za-z]$/.test(token));
   const numbers = tokens.filter(token => !/^[A-Za-z]$/.test(token)).map(Number);
