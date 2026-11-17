@@ -12,6 +12,20 @@ function clean(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+function validateVectorPath(value) {
+  if (typeof value !== "string" || value.length < 10 || value.length > 1600) return false;
+  const tokenPattern = /[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\\d*\\.\\d+)/g;
+  const tokens = value.match(tokenPattern) || [];
+  const residue = value.replace(tokenPattern, "").replace(/[\\s,]/g, "");
+  if (residue || tokens[0]?.toUpperCase() !== "M" || tokens[tokens.length - 1]?.toUpperCase() !== "Z") return false;
+  const commands = tokens.filter(token => /^[A-Za-z]$/.test(token));
+  const numbers = tokens.filter(token => !/^[A-Za-z]$/.test(token)).map(Number);
+  const drawingCommands = commands.filter(command => !/[MmZz]/.test(command));
+  return commands.length >= 4 && commands.length <= 32 &&
+    drawingCommands.length >= 3 && numbers.length >= 8 && numbers.length <= 120 &&
+    numbers.every(number => Number.isFinite(number) && Math.abs(number) <= 2000);
+}
+
 function validTransform(value) {
   if (!value || typeof value !== "object") return false;
   const keys = ["x", "y", "rotation", "scale", "opacity"];
@@ -105,7 +119,7 @@ export function validateShots(shots, story) {
           !clean(layer?.description, 260) || !clean(layer?.role, 120)) {
         return "La capa " + (layerIndex + 1) + " de la toma " + (index + 1) + " tiene un identificador duplicado o datos incompletos.";
       }
-      if (path.length < 10 || path.length > 1600 || !/^[MmLlHhVvCcSsQqTtAaZz0-9.,+\-\s]+$/.test(path) || !/[Zz]/.test(path)) {
+      if (!validateVectorPath(path)) {
         return "La capa " + id + " de la toma " + (index + 1) + " no contiene una ruta vectorial segura y cerrada.";
       }
       if (!/^#[0-9a-fA-F]{6}$/.test(fill) && fill !== "none") return "La capa " + id + " tiene un relleno no válido.";

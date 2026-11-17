@@ -42,6 +42,13 @@ const nullTransform = structuredClone(valid); nullTransform[0].animation_steps[0
 assert.match(validateShots(nullTransform, story), /transformación\/progresión incorrecta/);
 const stringPivot = structuredClone(valid); stringPivot[0].layers[0].pivot_x = "360";
 assert.match(validateShots(stringPivot, story), /punto de pivote fuera del lienzo/);
+
+const pathOutOfBounds = structuredClone(valid); pathOutOfBounds[0].layers[0].path_d = "M 240 420 L 260 360 L 460 360 L 480 420 L 480 760 L 460 820 L 260 2820 L 240 760 Z";
+assert.match(validateShots(pathOutOfBounds, story), /ruta vectorial segura y cerrada/);
+const pathTooComplex = structuredClone(valid); pathTooComplex[0].layers[0].path_d = "M " + Array.from({length:70},(_,i)=>(240+i)+" "+(420+i)).join(" L ") + " Z";
+assert.match(validateShots(pathTooComplex, story), /ruta vectorial segura y cerrada/);
+const pathMalformed = structuredClone(valid); pathMalformed[0].layers[0].path_d = "M 240 420 L 260 360 L 460 nope Z";
+assert.match(validateShots(pathMalformed, story), /ruta vectorial segura y cerrada/);
 const invalidEasing = structuredClone(valid); invalidEasing[0].animation_steps[0].easing = "bounce-untrusted";
 assert.match(validateShots(invalidEasing, story), /transformación\/progresión incorrecta/);
 
