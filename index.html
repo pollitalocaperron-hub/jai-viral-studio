@@ -842,7 +842,6 @@ function buildTimeline(){
    const actionKey=normalizeVisualText(rawAction),visualAction=!rawAction||usedActions.has(actionKey)?fallbackVisualAction(visualMode,scene,index):rawAction;
    usedActions.add(normalizeVisualText(visualAction));
    const sceneRange=sceneRanges.find(range=>range.index===Number(shot.scene_index));
-   const sceneDuration=Math.max(.001,sceneRange.end-sceneRange.start);
    // Las acciones vectoriales usan progreso normalizado por toma, no por escena conceptual.
    // Cada toma recorre su animación completa durante su propio intervalo de timeline.
    const trimStart=0;
