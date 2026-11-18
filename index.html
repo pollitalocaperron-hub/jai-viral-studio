@@ -963,13 +963,55 @@ function getVectorPath(layer){
  try{path=new Path2D(layer.path_d);vectorPathCache.set(layer,path);return path;}catch{return null;}
 }
 function interpolateNumber(a,b,t){return Number(a)+(Number(b)-Number(a))*t;}
+function paintReferenceBackdrop(ctx,w,h,shot){
+ const profile=String(shot?.style_profile_id||"paper-craft-explainer");
+ const base=shot?.background_color||"#F2EEE4";
+ ctx.save();
+ if(profile==="cinematic-cartoon-story"){
+  const sky=ctx.createLinearGradient(0,0,0,h);sky.addColorStop(0,"#101A3A");sky.addColorStop(.68,base);sky.addColorStop(1,"#211B2B");
+  ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
+  const glow=ctx.createRadialGradient(w*.76,h*.25,12,w*.76,h*.25,w*.58);glow.addColorStop(0,"rgba(255,190,91,.24)");glow.addColorStop(1,"rgba(255,190,91,0)");
+  ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
+  const ground=ctx.createLinearGradient(0,h*.78,0,h);ground.addColorStop(0,"rgba(11,17,36,0)");ground.addColorStop(1,"rgba(7,10,22,.42)");ctx.fillStyle=ground;ctx.fillRect(0,h*.78,w,h*.22);
+ }else if(profile==="paper-craft-explainer"){
+  const paper=ctx.createLinearGradient(0,0,0,h);paper.addColorStop(0,base);paper.addColorStop(.76,base);paper.addColorStop(1,"#D8C09B");
+  ctx.fillStyle=paper;ctx.fillRect(0,0,w,h);
+  const desk=ctx.createLinearGradient(0,h*.76,0,h);desk.addColorStop(0,"#C69B69");desk.addColorStop(.12,"#D8B98C");desk.addColorStop(1,"#9B7049");
+  ctx.fillStyle=desk;ctx.fillRect(0,h*.76,w,h*.24);
+  ctx.strokeStyle="rgba(91,58,31,.16)";ctx.lineWidth=2;
+  for(let y=h*.785;y<h;y+=24){ctx.beginPath();ctx.moveTo(0,y);ctx.bezierCurveTo(w*.3,y-5,w*.68,y+5,w,y-2);ctx.stroke();}
+  ctx.fillStyle="rgba(255,250,229,.12)";ctx.fillRect(0,0,w,h*.035);
+ }else if(profile==="retro-mascot-ui"){
+  const dark=ctx.createLinearGradient(0,0,0,h);dark.addColorStop(0,"#17151B");dark.addColorStop(.62,"#30231F");dark.addColorStop(1,"#4A3024");
+  ctx.fillStyle=dark;ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle="rgba(201,151,91,.12)";ctx.lineWidth=7;
+  for(let y=34;y<h*.68;y+=44){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+  const shelf=ctx.createLinearGradient(0,h*.78,0,h);shelf.addColorStop(0,"#5B3A2A");shelf.addColorStop(.18,"#A16A43");shelf.addColorStop(1,"#38231D");
+  ctx.fillStyle=shelf;ctx.fillRect(0,h*.78,w,h*.22);
+  ctx.fillStyle="rgba(255,191,91,.09)";ctx.fillRect(0,h*.78,w,7);
+ }else if(profile==="cinematic-desk-tech"){
+  const room=ctx.createRadialGradient(w*.55,h*.42,30,w*.55,h*.42,w*.8);room.addColorStop(0,"#454238");room.addColorStop(.45,"#242725");room.addColorStop(1,"#101516");
+  ctx.fillStyle=room;ctx.fillRect(0,0,w,h);
+  const desk=ctx.createLinearGradient(0,h*.73,0,h);desk.addColorStop(0,"#4A382B");desk.addColorStop(.18,"#76553C");desk.addColorStop(1,"#241F1C");
+  ctx.fillStyle=desk;ctx.fillRect(0,h*.73,w,h*.27);
+  ctx.strokeStyle="rgba(213,167,113,.14)";ctx.lineWidth=2;
+  for(let y=h*.76;y<h;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y+3);ctx.stroke();}
+  const green=ctx.createRadialGradient(w*.52,h*.43,5,w*.52,h*.43,w*.45);green.addColorStop(0,"rgba(91,255,172,.12)");green.addColorStop(1,"rgba(91,255,172,0)");
+  ctx.fillStyle=green;ctx.fillRect(0,0,w,h);
+ }else{
+  ctx.fillStyle=base;ctx.fillRect(0,0,w,h);
+ }
+ const vignette=ctx.createRadialGradient(w*.5,h*.48,h*.18,w*.5,h*.48,h*.78);
+ vignette.addColorStop(0,"rgba(0,0,0,0)");vignette.addColorStop(1,"rgba(0,0,0,.16)");
+ ctx.fillStyle=vignette;ctx.fillRect(0,0,w,h);
+ ctx.restore();
+}
 function paintVectorShot(ctx,w,h,shot,progress){
  const layers=shot?.layers;
  if(!Array.isArray(layers)||layers.length<3||!layers.every(layer=>typeof layer.path_d==="string"&&layer.path_d.length>=10))return false;
  const paths=layers.map(getVectorPath);if(paths.some(path=>!path))return false;
  const p=Math.max(0,Math.min(1,Number(progress)||0));
- ctx.save();ctx.fillStyle=shot.background_color||"#F2EEE4";ctx.fillRect(0,0,w,h);
- const backdrop=ctx.createLinearGradient(0,0,w,h);backdrop.addColorStop(0,"rgba(255,255,255,.16)");backdrop.addColorStop(1,"rgba(30,45,60,.05)");ctx.fillStyle=backdrop;ctx.fillRect(0,0,w,h);
+ ctx.save();paintReferenceBackdrop(ctx,w,h,shot);
  ctx.scale(w/720,h/1280);
  for(const layer of layers){
   let transform={x:0,y:0,rotation:0,scale:1,opacity:1};
