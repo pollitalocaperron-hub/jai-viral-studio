@@ -97,6 +97,7 @@ export default async function handler(req, res) {
     "La ilustración vectorial es la escena de producción: cada objeto debe tener su propio path_d independiente, no agrupes objetos móviles en una sola ruta. Usa coordenadas de un lienzo vertical 720x1280; path_d debe contener SOLO comandos de ruta SVG (M,L,H,V,C,S,Q,T,A,Z) y números, nunca etiquetas XML/SVG ni texto. Ordena las capas de atrás hacia delante. Cada forma debe ser una silueta cerrada y reconocible, con relleno y contorno.",
     "Cada animation_step debe incluir from_transform y to_transform con x, y (desplazamiento en píxeles), rotation (grados), scale (multiplicador) y opacity (0–1). Anima el objeto real descrito por target_id; usa movimientos pequeños y físicamente correctos, no movimiento de cámara ni partículas decorativas. Las capas que no se mueven usan la misma transformación inicial y final.",
     "PERFIL AUDIOVISUAL DE REFERENCIA: " + styleProfile.label + ". " + styleProfile.prompt + " Paleta: " + styleProfile.palette + " Gramática de movimiento y montaje: " + styleProfile.motion,
+    "No reproduzcas la interfaz de Instagram/TikTok que aparece alrededor de los clips de referencia: barras de estado, botones de me gusta, comentarios, perfiles, navegación ni marcas de agua. Son elementos de captura, no parte del diseño del vídeo.",
     "No pongas texto dentro de las imágenes. Los subtítulos y etiquetas se añadirán en edición.",
     "Storyboard: " + JSON.stringify(story),
     "Narración: " + script,
