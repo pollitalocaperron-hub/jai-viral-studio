@@ -477,6 +477,19 @@ try {
     assert.ok(calls.every(url => /openalex|api\.groq\.com|generativelanguage\.googleapis\.com/.test(url)));
   }
 
+  // Four frames over the aggregate encoded-size ceiling must be rejected before Gemini is called.
+  {
+    let providerCalls = 0;
+    globalThis.fetch = async () => { providerCalls++; throw new Error("Provider must not be called for oversized frame batches"); };
+    const res = mockResponse();
+    await inspectVisualHandler({
+      method: "POST",
+      body: { images: Array.from({ length: 4 }, () => ({ image_base64: "A".repeat(280000) })) }
+    }, res);
+    assert.equal(res.statusCode, 413);
+    assert.equal(providerCalls, 0);
+  }
+
   // Visual inspection rejects more than four frames before contacting Gemini.
   {
     let providerCalls = 0;

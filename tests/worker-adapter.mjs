@@ -65,6 +65,17 @@ const tooLarge = await handleRequest(new Request("https://jai-api.example/api/in
 assert.equal(tooLarge.status, 413);
 assert.equal((await tooLarge.json()).diagnosticCode, "REQUEST_TOO_LARGE");
 
+const streamedLargeBody = JSON.stringify({ images: [{ image_base64: "B".repeat(1_400_000) }] });
+const streamedTooLarge = await handleRequest(new Request("https://jai-api.example/api/inspect-visual", {
+  method: "POST", headers, body: streamedLargeBody
+}), env);
+assert.equal(streamedTooLarge.status, 413, "The streaming byte counter must reject oversized bodies even without Content-Length.");
+
+const missingClientIp = await handleRequest(new Request("https://jai-api.example/api/generate", {
+  method: "POST", headers: { Origin: ALLOWED_ORIGIN, "Content-Type": "application/json" }, body: "{}"
+}), env);
+assert.equal(missingClientIp.status, 503, "Requests without Cloudflare's trusted client IP must fail closed.");
+
 const repeated = [];
 for (let i = 0; i < 6; i++) {
   repeated.push(await handleRequest(new Request("https://jai-api.example/api/generate", { method: "POST", headers, body: "{}" }), env));
