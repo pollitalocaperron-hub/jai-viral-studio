@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   for (const [index, item] of images.entries()) {
     if (!item || typeof item.image_base64 !== "string" || item.image_base64.length > 300000 ||
         !/^[A-Za-z0-9+/]+={0,2}$/.test(item.image_base64)) {
-      return res.status(400).json({ error: "El fotograma " + (index + 1) + " no tiene una imagen JPEG válida o supera 300 KB o no contiene JPEG válido." });
+      return res.status(400).json({ error: "El fotograma " + (index + 1) + " no es una imagen JPEG base64 válida o supera 300 KB." });
     }
   }
 

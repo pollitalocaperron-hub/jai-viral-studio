@@ -95,7 +95,7 @@ for (let i = 0; i < 6; i++) {
 }
 const denied = await (await guard.fetch(new Request("https://abuse-guard.internal/check", {
   method: "POST", headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ route: "/api/generate", limit: 6, windowMs: 600000 })
+  body: JSON.stringify({ route: "/api/generate", clientIp: "203.0.113.20", limit: 6, windowMs: 600000, globalLimitPerMinute: 7 })
 }))).json();
 assert.equal(denied.allowed, false, "The Durable Object SQL counter must reject request seven in the same client window.");
 const secondIpFirst = await (await guard.fetch(new Request("https://abuse-guard.internal/check", {

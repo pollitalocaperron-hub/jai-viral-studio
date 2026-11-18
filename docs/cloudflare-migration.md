@@ -8,7 +8,7 @@ Cloudflare Workers Free is a candidate, not a proven production fit: the documen
 
 ## CPU containment for visual inspection
 
-- Browser inspection renders each audit frame to 480 × 854 JPEG at quality 0.64.
+- Browser inspection renders each audit frame to 448 × 796 JPEG, starts at quality 0.58 and falls back to 0.42/0.30 when needed, with a 250 KB hard cap per frame.
 - Requests are batched in groups of four, rather than eight.
 - The Worker streams and counts request bytes before parsing JSON, cancels oversized streams, and caps inspection requests at 1,280 KiB. Other JSON routes are capped at 2 MiB.
 - The inspection handler accepts at most four images and 1,100,000 base64 characters per request.
@@ -44,7 +44,7 @@ Existing API contract tests stub `fetch` and fake provider responses. The new Wo
 2. Add `GROQ_API_KEY` and `GEMINI_API_KEY` as encrypted secrets only.
 3. Verify Durable Object migration and bindings.
 4. Run Node adapter tests, then Wrangler/Miniflare runtime tests.
-5. Measure actual CPU for four 480 × 854 frames, maximum 1,100,000 base64 characters, and 20-shot direction payloads. If 10 ms is exceeded, do not activate the Free Worker; move image preprocessing client-side further or select a runtime with a sufficient free CPU budget.
+5. Measure actual CPU for four 448 × 796 frames, maximum 1,100,000 base64 characters, and 20-shot direction payloads. If 10 ms is exceeded, do not activate the Free Worker; move image preprocessing client-side further or select a runtime with a sufficient free CPU budget.
 6. Test Groq/Gemini compatibility with mocks only. Real provider quality tests require separate explicit approval because they consume quota.
 7. Deploy and switch only after explicit authorization; preserve Vercel as immediate rollback.
 
