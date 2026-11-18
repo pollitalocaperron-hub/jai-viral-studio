@@ -155,6 +155,19 @@ try {
   assert.ok((await page.locator("#timelineTracks").innerText()).includes("SHOT-01"), "Directed shot IDs must be carried into the editable timeline");
   assert.equal(counters.images, 0, "The vector illustration pipeline must not call external image-generation APIs or consume image credits");
   assert.equal(await page.locator("#visualScenes img").count(), 4, "All AI-generated vector illustrations must be rasterized and displayed");
+  await page.locator("#exportCharacterLayers").click();
+  const pngCount=await page.locator('#characterLayerExports a[data-png-validated="true"]').count();
+  assert.equal(pngCount,24,"The PNG exporter must create a validated transparent file for every unique vector part.");
+  const pngAudit=await page.locator('#characterLayerExports a[data-png-validated="true"]').evaluateAll(async links=>Promise.all(links.map(async link=>{
+    const image=new Image();image.src=link.href;await image.decode();
+    const canvas=document.createElement("canvas");canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+    const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(image,0,0);
+    const data=context.getImageData(0,0,canvas.width,canvas.height).data;let opaque=0,transparent=0;
+    for(let i=3;i<data.length;i+=4){if(data[i]>0)opaque++;else transparent++;}
+    return {type:link.href.slice(5,link.href.indexOf(";")),width:image.naturalWidth,height:image.naturalHeight,opaque,transparent};
+  })));
+  assert.ok(pngAudit.every(item=>item.type==="image/png"&&item.width===720&&item.height===1280&&item.opaque>0&&item.transparent>0),"Every PNG must decode at 720×1280 with visible pixels and preserved alpha.");
+  assert.equal(await page.evaluate(()=>collectJaiSoundEvents(timelineState.items).length),8,"The directed timeline must schedule one sound effect per narration event.");
 
   await page.locator("#generateNarration").click();
   await page.waitForFunction(() => (document.querySelector("#kokoroStatus")?.textContent || "").includes("Narración lista"), null, { timeout: 20000 });
