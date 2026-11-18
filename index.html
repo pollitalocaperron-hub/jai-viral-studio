@@ -1666,7 +1666,7 @@ function loadSavedProject(project,options={}){
  $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("generateCaptions").disabled=true;syncAudioEditControls();
  $("inspectVisuals").disabled=true;
  $("visualAuditStatus").textContent="La revisión de este proyecto está pendiente; sus escenas deben volver a inspeccionarse.";
- $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">Proyecto guardado</span><span class="tag">Dirección visual · Medio elegido según el tema</span>';
+ $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">Proyecto guardado</span><span class="tag">Perfil audiovisual · '+escapeHtml(visualStyleProfileLabel(currentVisualStyleProfileId))+'</span>';
  $("angle").textContent=readable(data.angle||"Enfoque pendiente.");
  $("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");
  renderResearchSources(data.research_sources);
