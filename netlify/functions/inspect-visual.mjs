@@ -57,7 +57,7 @@ export default async function handler(request) {
   if (!geminiKey) return Response.json({ error: "El inspector no tiene configurada la clave de Gemini." }, { status: 503 });
 
   const contentType = request.headers.get("Content-Type") || "";
-  if (!/^application\\/json(?:\\s*;|$)/i.test(contentType)) {
+  if (!/^application\/json(?:\s*;|$)/i.test(contentType)) {
     return Response.json({ error: "El inspector solo acepta application/json." }, { status: 415 });
   }
   const declaredLength = Number(request.headers.get("Content-Length") || 0);
