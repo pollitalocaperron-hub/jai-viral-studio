@@ -175,6 +175,7 @@ try {
         groqCalls++;
         const payload = JSON.parse(options.body || "{}");
         const userPrompt = payload.messages?.[1]?.content || "";
+        if (!userPrompt.includes("Repair ONLY the storyboard")) assert.match(userPrompt, /BIBLIA DE TEMPORADA[\s\S]*Episodio 2/);
         if (userPrompt.includes("Repair ONLY the storyboard")) {
           return response({
             choices: [{
@@ -194,7 +195,7 @@ try {
     const res = mockResponse();
     await generateHandler({
       method: "POST",
-      body: { topic: "Un proceso que requiere reparar el storyboard", duration: "30–45 segundos", platform: "Reels" }
+      body: { topic: "Un proceso que requiere reparar el storyboard", duration: "30–45 segundos", platform: "Reels", format_mode: "serie-viral", series_bible: { season_number: 1, episode_count: 10, episode_number: 1, next_episode: 2, world_state: "El misterio ya fue descubierto." } }
     }, res);
     assert.equal(res.statusCode, 200);
     assert.equal(groqCalls, 2, "The incomplete storyboard must trigger exactly one bounded repair request");
