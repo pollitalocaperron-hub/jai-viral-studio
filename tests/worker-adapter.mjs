@@ -76,9 +76,12 @@ assert.equal(tooLarge.status, 413);
 assert.equal((await tooLarge.json()).diagnosticCode, "REQUEST_TOO_LARGE");
 
 const streamedLargeBody = JSON.stringify({ images: [{ image_base64: "B".repeat(1_400_000) }] });
+const savedFetchForStreamLimit = globalThis.fetch;
+globalThis.fetch = async (_url, init) => { await new Response(init.body).arrayBuffer(); return Response.json({}); };
 const streamedTooLarge = await handleRequest(new Request("https://jai-api.example/api/inspect-visual", {
   method: "POST", headers, body: streamedLargeBody
 }), env);
+globalThis.fetch = savedFetchForStreamLimit;
 assert.equal(streamedTooLarge.status, 413, "The streaming byte counter must reject oversized bodies even without Content-Length.");
 
 const missingClientIp = await handleRequest(new Request("https://jai-api.example/api/generate", {

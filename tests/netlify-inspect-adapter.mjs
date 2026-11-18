@@ -35,11 +35,11 @@ globalThis.fetch = async (providerUrl, init) => {
   assert.equal(init.headers["x-goog-api-key"], "mock-gemini-key-no-network");
   return Response.json({
     candidates: [{
-      content: { parts: [{ text: JSON.stringify([{
+      content: { parts: [{ text: JSON.stringify({ results: [{
         scene_index: 0, status: "pass", score: 92,
         reason: "La composición respeta el perfil y la acción se entiende claramente.",
         issues: []
-      }]) }] }
+      }] }) }] }
     }]
   });
 };
