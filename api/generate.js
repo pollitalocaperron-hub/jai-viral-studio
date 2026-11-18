@@ -11,7 +11,7 @@ async function generatePlanHandler(req, res) {
     return res.status(405).json({ error: "Método no permitido." });
   }
 
-  const { topic, notes = "", duration = "45–60 segundos", platform = "Reels", format_mode = "educativo", cta_goal = "follow", cta_custom = "", learning_memory = "" } = req.body || {};
+  const { topic, notes = "", duration = "45–60 segundos", platform = "Reels", format_mode = "educativo", cta_goal = "follow", cta_custom = "", learning_memory = "", series_bible = null } = req.body || {};
   if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
     console.error("[JAI] No hay claves de proveedor configuradas.");
     return res.status(500).json({ error: "Falta configurar un proveedor de IA en Vercel.", diagnosticCode: "NO_AI_PROVIDER" });
@@ -22,6 +22,7 @@ async function generatePlanHandler(req, res) {
 
   const safeNotes = typeof notes === "string" ? notes.slice(0, 5000) : "";
   const safeLearningMemory = typeof learning_memory === "string" ? learning_memory.slice(0, 2400) : "";
+  const safeSeriesBible = series_bible && typeof series_bible === "object" && !Array.isArray(series_bible) ? JSON.stringify(series_bible).slice(0, 9000) : "";
   const safeFormatMode = format_mode === "serie-viral" ? "serie-viral" : "educativo";
   const allowedCtas = new Set(["follow", "share", "comment", "save", "custom"]);
   const safeCtaGoal = allowedCtas.has(cta_goal) ? cta_goal : "follow";
@@ -51,6 +52,7 @@ async function generatePlanHandler(req, res) {
   const researchContext = researchSources.length ? researchSources.map(s => "[" + s.id + "] " + s.title + " (" + (s.year || "año no indicado") + "; tipo: " + (s.type || "no indicado") + "; publicación: " + (s.source_name || "no indicada") + "). Autores: " + (s.authors || "no disponibles") + ". DOI/URL: " + (s.url || "no disponible") + ". Resumen: " + (s.abstract || "sin resumen recuperado")).join("\n") : "No se recuperaron fuentes académicas. No afirmes que la investigación fue verificada."
   const prompt = [
     "Eres el equipo editorial y director de producción de J.A.I. Crea un video vertical 9:16. Devuelve SOLO JSON válido.",
+    "BIBLIA DE TEMPORADA (continuidad obligatoria; no reinicies personajes, relaciones, hechos ni misterios): " + (safeSeriesBible || "Temporada nueva; crea episodio 1 y establece canon inicial.") + ". Selecciona el episodio siguiente indicado por la biblia y respeta su arco. Devuelve episode_number, episode_summary, episode_events (array), character_updates (array), relationship_updates (array), world_state y open_threads.",
     "MODO DE PRODUCCIÓN: " + safeFormatMode + ". Si es serie-viral, crea una historia serializable: gancho desde el primer segundo, conflicto o misterio concreto, progresión narrativa y revelaciones. Cada bloque de retención de máximo 3 segundos debe aportar un avance real y un estímulo nuevo (acción, encuadre, objeto, reacción, detalle, dato o giro); no repitas planos ni uses movimiento decorativo. Abre preguntas y resuélvelas progresivamente. Termina con recompensa o suspenso honesto y una llamada a la acción breve integrada con esta intención: " + ctaInstruction + ". Devuelve series_bridge (1–2 frases que conecten con un siguiente episodio) y call_to_action (frase final exacta). No sacrifiques veracidad por viralidad. Si es educativo, conserva el enfoque didáctico y añade la CTA al cierre.",
     "",
     "ALCANCE MULTIDISCIPLINARIO:",
