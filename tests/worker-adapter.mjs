@@ -10,13 +10,16 @@ const namespace = {
   get(id) {
     return { async fetch(_url, init) {
       const input = JSON.parse(init.body);
-      const key = id + ":" + input.route;
-      const now = Date.now(), start = Math.floor(now / input.windowMs) * input.windowMs;
-      const current = buckets.get(key);
-      const count = current?.start === start ? current.count + 1 : 1;
-      buckets.set(key, { start, count });
-      const allowed = count <= input.limit;
-      return Response.json({ allowed, remaining: Math.max(0, input.limit - count), retryAfterMs: allowed ? 0 : start + input.windowMs - now });
+      const now = Date.now(), clientStart = Math.floor(now / input.windowMs) * input.windowMs, globalStart = Math.floor(now / 60000) * 60000;
+      const clientKey = id + ":" + input.route + ":ip:" + input.clientIp;
+      const globalKey = id + ":" + input.route + ":global";
+      const clientCurrent = buckets.get(clientKey), clientCount = clientCurrent?.start === clientStart ? clientCurrent.count + 1 : 1;
+      buckets.set(clientKey, { start: clientStart, count: clientCount });
+      if (clientCount > input.limit) return Response.json({ allowed: false, scope: "client", remaining: 0, retryAfterMs: clientStart + input.windowMs - now });
+      const globalCurrent = buckets.get(globalKey), globalCount = globalCurrent?.start === globalStart ? globalCurrent.count + 1 : 1;
+      buckets.set(globalKey, { start: globalStart, count: globalCount });
+      const allowed = globalCount <= input.globalLimitPerMinute;
+      return Response.json({ allowed, scope: allowed ? "ok" : "global", remaining: Math.max(0, Math.min(input.limit - clientCount, input.globalLimitPerMinute - globalCount)), retryAfterMs: allowed ? 0 : globalStart + 60000 - now });
     } };
   }
 };
@@ -86,7 +89,7 @@ const guard = new AbuseGuard({ storage: { sql: { exec(statement, ...args) {
 for (let i = 0; i < 6; i++) {
   const result = await (await guard.fetch(new Request("https://abuse-guard.internal/check", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ route: "/api/generate", limit: 6, windowMs: 600000 })
+    body: JSON.stringify({ route: "/api/generate", clientIp: "203.0.113.20", limit: 6, windowMs: 600000, globalLimitPerMinute: 7 })
   }))).json();
   assert.equal(result.allowed, true);
 }
@@ -94,7 +97,18 @@ const denied = await (await guard.fetch(new Request("https://abuse-guard.interna
   method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ route: "/api/generate", limit: 6, windowMs: 600000 })
 }))).json();
-assert.equal(denied.allowed, false, "The Durable Object SQL counter must reject request seven in the same window.");
+assert.equal(denied.allowed, false, "The Durable Object SQL counter must reject request seven in the same client window.");
+const secondIpFirst = await (await guard.fetch(new Request("https://abuse-guard.internal/check", {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ route: "/api/generate", clientIp: "203.0.113.21", limit: 6, windowMs: 600000, globalLimitPerMinute: 7 })
+}))).json();
+assert.equal(secondIpFirst.allowed, true, "A second client may use the remaining shared route capacity.");
+const secondIpOverGlobal = await (await guard.fetch(new Request("https://abuse-guard.internal/check", {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ route: "/api/generate", clientIp: "203.0.113.21", limit: 6, windowMs: 600000, globalLimitPerMinute: 7 })
+}))).json();
+assert.equal(secondIpOverGlobal.allowed, false);
+assert.equal(secondIpOverGlobal.scope, "global", "The shared route-wide ceiling must apply across different client IPs.");
 
 if (previousGroqKey === undefined) delete process.env.GROQ_API_KEY;
 else process.env.GROQ_API_KEY = previousGroqKey;

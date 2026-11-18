@@ -4,14 +4,14 @@ import inspectVisualHandler from "./api/inspect-visual.js";
 import directScenesHandler from "./api/direct-scenes.js";
 
 const ROUTES = new Map([
-  ["/api/generate", { handler: generateHandler, limit: 6 }],
-  ["/api/generate.js", { handler: generateHandler, limit: 6 }],
-  ["/api/narrate", { handler: narrateHandler, limit: 8 }],
-  ["/api/narrate.js", { handler: narrateHandler, limit: 8 }],
-  ["/api/inspect-visual", { handler: inspectVisualHandler, limit: 20 }],
-  ["/api/inspect-visual.js", { handler: inspectVisualHandler, limit: 20 }],
-  ["/api/direct-scenes", { handler: directScenesHandler, limit: 8 }],
-  ["/api/direct-scenes.js", { handler: directScenesHandler, limit: 8 }]
+  ["/api/generate", { handler: generateHandler, limit: 6, globalLimit: 60 }],
+  ["/api/generate.js", { handler: generateHandler, limit: 6, globalLimit: 60 }],
+  ["/api/narrate", { handler: narrateHandler, limit: 8, globalLimit: 60 }],
+  ["/api/narrate.js", { handler: narrateHandler, limit: 8, globalLimit: 60 }],
+  ["/api/inspect-visual", { handler: inspectVisualHandler, limit: 20, globalLimit: 120 }],
+  ["/api/inspect-visual.js", { handler: inspectVisualHandler, limit: 20, globalLimit: 120 }],
+  ["/api/direct-scenes", { handler: directScenesHandler, limit: 8, globalLimit: 60 }],
+  ["/api/direct-scenes.js", { handler: directScenesHandler, limit: 8, globalLimit: 60 }]
 ]);
 
 const GENERAL_BODY_BYTES = 2 * 1024 * 1024;
@@ -91,18 +91,18 @@ function createVercelResponse() {
   return res;
 }
 
-async function enforceSharedLimit(request, env, route, limit) {
+async function enforceSharedLimit(request, env, route, limit, globalLimit) {
   const clientIp = request.headers.get("CF-Connecting-IP");
   if (!clientIp || !env.ABUSE_GUARD) {
     return jsonError(request, env, 503, "La protección compartida del backend no está disponible; la solicitud se rechazó de forma segura.", "ABUSE_GUARD_UNAVAILABLE");
   }
   try {
-    const id = env.ABUSE_GUARD.idFromName(clientIp);
+    const id = env.ABUSE_GUARD.idFromName(route);
     const stub = env.ABUSE_GUARD.get(id);
     const result = await stub.fetch("https://abuse-guard.internal/check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ route, limit, windowMs: RATE_WINDOW_MS })
+      body: JSON.stringify({ route, clientIp, limit, windowMs: RATE_WINDOW_MS, globalLimitPerMinute: globalLimit })
     });
     if (!result.ok) throw new Error("rate limiter returned " + result.status);
     const decision = await result.json();
@@ -143,7 +143,7 @@ export async function handleRequest(request, env = {}) {
   }
 
   // Reject abusive traffic before buffering or parsing user-controlled bodies.
-  const blocked = await enforceSharedLimit(request, env, url.pathname.replace(/\.js$/, ""), route.limit);
+  const blocked = await enforceSharedLimit(request, env, url.pathname.replace(/\.js$/, ""), route.limit, route.globalLimit);
   if (blocked) return blocked;
 
   const maxBytes = url.pathname.includes("inspect-visual") ? INSPECTION_BODY_BYTES : GENERAL_BODY_BYTES;
@@ -183,7 +183,7 @@ export class AbuseGuard {
   constructor(ctx) {
     this.ctx = ctx;
     this.sql = ctx.storage.sql;
-    this.sql.exec("CREATE TABLE IF NOT EXISTS rate_windows (route TEXT PRIMARY KEY, window_start INTEGER NOT NULL, request_count INTEGER NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS rate_windows (bucket TEXT PRIMARY KEY, window_start INTEGER NOT NULL, request_count INTEGER NOT NULL)");
   }
 
   async fetch(request) {
@@ -193,25 +193,38 @@ export class AbuseGuard {
     let input;
     try { input = await request.json(); } catch { return Response.json({ error: "invalid request" }, { status: 400 }); }
     const route = String(input?.route || "");
+    const clientIp = String(input?.clientIp || "");
     const limit = Number(input?.limit);
     const windowMs = Number(input?.windowMs);
+    const globalLimit = Number(input?.globalLimitPerMinute);
     if (!["/api/generate", "/api/narrate", "/api/inspect-visual", "/api/direct-scenes"].includes(route) ||
+        !clientIp || clientIp.length > 80 ||
         !Number.isInteger(limit) || limit < 1 || limit > 30 ||
-        !Number.isInteger(windowMs) || windowMs < 60000 || windowMs > 3600000) {
+        !Number.isInteger(windowMs) || windowMs < 60000 || windowMs > 3600000 ||
+        !Number.isInteger(globalLimit) || globalLimit < 1 || globalLimit > 300) {
       return Response.json({ error: "invalid limiter policy" }, { status: 400 });
     }
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(clientIp));
+    const clientHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
     const now = Date.now();
-    const windowStart = Math.floor(now / windowMs) * windowMs;
-    const rows = this.sql.exec(
-      "INSERT INTO rate_windows (route, window_start, request_count) VALUES (?, ?, 1) " +
-      "ON CONFLICT(route) DO UPDATE SET " +
+    const clientWindowStart = Math.floor(now / windowMs) * windowMs;
+    const globalWindowStart = Math.floor(now / 60000) * 60000;
+    const increment = (bucket, windowStart) => this.sql.exec(
+      "INSERT INTO rate_windows (bucket, window_start, request_count) VALUES (?, ?, 1) " +
+      "ON CONFLICT(bucket) DO UPDATE SET " +
       "request_count = CASE WHEN rate_windows.window_start = excluded.window_start THEN rate_windows.request_count + 1 ELSE 1 END, " +
       "window_start = excluded.window_start RETURNING request_count",
-      route, windowStart
+      bucket, windowStart
     ).toArray();
-    const count = Number(rows[0]?.request_count || 0);
-    const allowed = count <= limit;
-    return Response.json({ allowed, retryAfterMs: allowed ? 0 : Math.max(0, windowStart + windowMs - now), remaining: Math.max(0, limit - count) });
+    const clientCount = Number(increment(route + ":ip:" + clientHash, clientWindowStart)[0]?.request_count || 0);
+    if (clientCount > limit) {
+      return Response.json({ allowed: false, scope: "client", retryAfterMs: Math.max(0, clientWindowStart + windowMs - now), remaining: 0 });
+    }
+    const globalCount = Number(increment(route + ":global", globalWindowStart)[0]?.request_count || 0);
+    if (globalCount > globalLimit) {
+      return Response.json({ allowed: false, scope: "global", retryAfterMs: Math.max(0, globalWindowStart + 60000 - now), remaining: 0 });
+    }
+    return Response.json({ allowed: true, scope: "ok", retryAfterMs: 0, remaining: Math.min(limit - clientCount, globalLimit - globalCount) });
   }
 }
 

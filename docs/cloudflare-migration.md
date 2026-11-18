@@ -16,7 +16,7 @@ Cloudflare Workers Free is a candidate, not a proven production fit: the documen
 
 ## Shared abuse protection
 
-A SQLite-backed Durable Object is allocated per Cloudflare client IP. All Worker isolates and edge locations for that IP resolve to the same object; its SQL upsert atomically increments a fixed-window counter. The IP is used only as the object name and is not written to the SQL table.
+A SQLite-backed Durable Object is allocated per API route, so all client IPs, Worker isolates and edge locations share the same route counter. It hashes the Cloudflare-provided client IP with SHA-256 and stores only the hash, never the raw IP. Atomic SQL upserts maintain both per-client and route-wide fixed-window counters.
 
 Fixed-window limits per IP:
 - Generate: 6 requests / 10 minutes.
@@ -24,7 +24,7 @@ Fixed-window limits per IP:
 - Scene direction: 8 / 10 minutes.
 - Visual inspection: 20 / 10 minutes (up to 80 frames at four per request).
 
-The Worker rejects POST requests if the Durable Object binding or client IP is missing, or the guard cannot be reached. This is fail-closed. CORS is retained but is not treated as authentication. IP-based quotas are not identity-based and can be evaded by distributed clients; a future signed session / account identity would be stronger. Shared DO requests themselves have free-tier quotas and must be monitored.
+The Worker rejects POST requests if the Durable Object binding or client IP is missing, or the guard cannot be reached. This is fail-closed. CORS is retained but is not treated as authentication. IP-based quotas are not identity-based and can be evaded by distributed clients; the shared route-wide ceiling contains aggregate bursts, while a future signed session / account identity would provide stronger per-user fairness. Shared DO requests themselves have free-tier quotas and must be monitored.
 
 ## Provider compatibility tests
 
