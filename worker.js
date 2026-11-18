@@ -1,6 +1,5 @@
 import generateHandler from "./api/generate.js";
 import narrateHandler from "./api/narrate.js";
-import inspectVisualHandler from "./api/inspect-visual.js";
 import directScenesHandler from "./api/direct-scenes.js";
 
 const ROUTES = new Map([
@@ -8,8 +7,8 @@ const ROUTES = new Map([
   ["/api/generate.js", { handler: generateHandler, limit: 6, globalLimit: 60 }],
   ["/api/narrate", { handler: narrateHandler, limit: 8, globalLimit: 60 }],
   ["/api/narrate.js", { handler: narrateHandler, limit: 8, globalLimit: 60 }],
-  ["/api/inspect-visual", { handler: inspectVisualHandler, limit: 20, globalLimit: 120 }],
-  ["/api/inspect-visual.js", { handler: inspectVisualHandler, limit: 20, globalLimit: 120 }],
+  ["/api/inspect-visual", { proxy: "netlify", limit: 20, globalLimit: 120, globalMonthlyLimit: 600 }],
+  ["/api/inspect-visual.js", { proxy: "netlify", limit: 20, globalLimit: 120, globalMonthlyLimit: 600 }],
   ["/api/direct-scenes", { handler: directScenesHandler, limit: 8, globalLimit: 60 }],
   ["/api/direct-scenes.js", { handler: directScenesHandler, limit: 8, globalLimit: 60 }]
 ]);
@@ -91,7 +90,7 @@ function createVercelResponse() {
   return res;
 }
 
-async function enforceSharedLimit(request, env, route, limit, globalLimit) {
+async function enforceSharedLimit(request, env, route, limit, globalLimit, globalMonthlyLimit = 0) {
   const clientIp = request.headers.get("CF-Connecting-IP");
   if (!clientIp || !env.ABUSE_GUARD) {
     return jsonError(request, env, 503, "La protección compartida del backend no está disponible; la solicitud se rechazó de forma segura.", "ABUSE_GUARD_UNAVAILABLE");
@@ -102,7 +101,7 @@ async function enforceSharedLimit(request, env, route, limit, globalLimit) {
     const result = await stub.fetch("https://abuse-guard.internal/check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ route, clientIp, limit, windowMs: RATE_WINDOW_MS, globalLimitPerMinute: globalLimit })
+      body: JSON.stringify({ route, clientIp, limit, windowMs: RATE_WINDOW_MS, globalLimitPerMinute: globalLimit, globalLimitPerMonth: globalMonthlyLimit })
     });
     if (!result.ok) throw new Error("rate limiter returned " + result.status);
     const decision = await result.json();
@@ -110,12 +109,66 @@ async function enforceSharedLimit(request, env, route, limit, globalLimit) {
       const headers = corsHeaders(request, env);
       headers.set("Content-Type", "application/json; charset=utf-8");
       headers.set("Retry-After", String(Math.max(1, Math.ceil(decision.retryAfterMs / 1000))));
-      return new Response(JSON.stringify({ error: "Se alcanzó el límite temporal de solicitudes para esta operación. Espera y vuelve a intentarlo.", diagnosticCode: "RATE_LIMITED", retryAfterMs: decision.retryAfterMs }), { status: 429, headers });
+      const message = decision.scope === "monthly"
+        ? "Se alcanzó el límite mensual de inspecciones configurado para proteger el plan gratuito. Se restablecerá al iniciar el próximo mes."
+        : "Se alcanzó el límite temporal de solicitudes para esta operación. Espera y vuelve a intentarlo.";
+      return new Response(JSON.stringify({ error: message, diagnosticCode: decision.scope === "monthly" ? "MONTHLY_INSPECTION_LIMIT" : "RATE_LIMITED", scope: decision.scope, retryAfterMs: decision.retryAfterMs }), { status: 429, headers });
     }
     return null;
   } catch (error) {
     console.error("[JAI][Abuse guard] unavailable:", error?.message || "unknown");
     return jsonError(request, env, 503, "No se pudo verificar el límite compartido; la solicitud se rechazó de forma segura.", "ABUSE_GUARD_UNAVAILABLE");
+  }
+}
+
+async function proxyNetlifyInspection(request, env, maxBytes) {
+  const target = String(env.NETLIFY_INSPECT_URL || "");
+  const secret = String(env.NETLIFY_INSPECT_SECRET || "");
+  if (!target || secret.length < 32) {
+    return jsonError(request, env, 503, "El servicio privado de inspección no está configurado; la solicitud se rechazó de forma segura.", "INSPECTOR_PROXY_UNAVAILABLE");
+  }
+  let targetUrl;
+  try {
+    targetUrl = new URL(target);
+    if (targetUrl.protocol !== "https:" || targetUrl.username || targetUrl.password) throw new Error("invalid upstream");
+  } catch {
+    return jsonError(request, env, 503, "La dirección privada del inspector no es válida.", "INSPECTOR_PROXY_UNAVAILABLE");
+  }
+  let total = 0, exceededLimit = false;
+  const boundedBody = request.body ? request.body.pipeThrough(new TransformStream({
+    transform(chunk, controller) {
+      total += chunk.byteLength;
+      if (total > maxBytes) {
+        exceededLimit = true;
+        controller.error(new Error("JAI_INSPECTION_BODY_LIMIT"));
+        return;
+      }
+      controller.enqueue(chunk);
+    }
+  })) : undefined;
+  try {
+    const upstream = await fetch(targetUrl.toString(), {
+      method: "POST",
+      redirect: "manual",
+      headers: {
+        "Content-Type": request.headers.get("Content-Type") || "application/json",
+        "x-jai-proxy-secret": secret
+      },
+      body: boundedBody
+    });
+    if (upstream.status >= 300 && upstream.status < 400) {
+      return jsonError(request, env, 502, "El servicio privado de inspección respondió con una redirección no permitida.", "INSPECTOR_PROXY_REDIRECT");
+    }
+    const headers = corsHeaders(request, env);
+    const contentType = upstream.headers.get("Content-Type");
+    const retryAfter = upstream.headers.get("Retry-After");
+    if (contentType) headers.set("Content-Type", contentType);
+    if (retryAfter) headers.set("Retry-After", retryAfter);
+    return new Response(upstream.body, { status: upstream.status, headers });
+  } catch (error) {
+    if (exceededLimit) return jsonError(request, env, 413, "La auditoría supera el límite seguro de tamaño.", "REQUEST_TOO_LARGE");
+    console.error("[JAI][Inspector proxy] upstream unavailable:", error?.name || "Error");
+    return jsonError(request, env, 502, "No se pudo conectar con el inspector privado.", "INSPECTOR_PROXY_FAILED");
   }
 }
 
@@ -143,12 +196,13 @@ export async function handleRequest(request, env = {}) {
   }
 
   // Reject abusive traffic before buffering or parsing user-controlled bodies.
-  const blocked = await enforceSharedLimit(request, env, url.pathname.replace(/\.js$/, ""), route.limit, route.globalLimit);
+  const blocked = await enforceSharedLimit(request, env, url.pathname.replace(/\.js$/, ""), route.limit, route.globalLimit, route.globalMonthlyLimit || 0);
   if (blocked) return blocked;
 
   const maxBytes = url.pathname.includes("inspect-visual") ? INSPECTION_BODY_BYTES : GENERAL_BODY_BYTES;
   const declaredLength = Number(request.headers.get("Content-Length") || 0);
   if (declaredLength > maxBytes) return jsonError(request, env, 413, "La solicitud supera el límite seguro de tamaño.", "REQUEST_TOO_LARGE");
+  if (route.proxy === "netlify") return proxyNetlifyInspection(request, env, maxBytes);
 
   let body;
   try { body = await readBoundedJson(request, maxBytes); }
@@ -175,9 +229,9 @@ export async function handleRequest(request, env = {}) {
 }
 
 /**
- * A single Durable Object per Cloudflare client IP serializes rate-limit
- * increments across Worker isolates and edge locations. Only route counters
- * are persisted; the IP itself is never written to storage.
+ * One SQLite-backed Durable Object per API route shares counters across all
+ * client IPs, Worker isolates and edge locations. Client IPs are hashed before
+ * storage; the raw IP is never persisted.
  */
 export class AbuseGuard {
   constructor(ctx) {
@@ -197,11 +251,13 @@ export class AbuseGuard {
     const limit = Number(input?.limit);
     const windowMs = Number(input?.windowMs);
     const globalLimit = Number(input?.globalLimitPerMinute);
+    const monthlyLimit = Number(input?.globalLimitPerMonth || 0);
     if (!["/api/generate", "/api/narrate", "/api/inspect-visual", "/api/direct-scenes"].includes(route) ||
         !clientIp || clientIp.length > 80 ||
         !Number.isInteger(limit) || limit < 1 || limit > 30 ||
         !Number.isInteger(windowMs) || windowMs < 60000 || windowMs > 3600000 ||
-        !Number.isInteger(globalLimit) || globalLimit < 1 || globalLimit > 300) {
+        !Number.isInteger(globalLimit) || globalLimit < 1 || globalLimit > 300 ||
+        !Number.isInteger(monthlyLimit) || monthlyLimit < 0 || monthlyLimit > 10000) {
       return Response.json({ error: "invalid limiter policy" }, { status: 400 });
     }
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(clientIp));
@@ -224,7 +280,17 @@ export class AbuseGuard {
     if (globalCount > globalLimit) {
       return Response.json({ allowed: false, scope: "global", retryAfterMs: Math.max(0, globalWindowStart + 60000 - now), remaining: 0 });
     }
-    return Response.json({ allowed: true, scope: "ok", retryAfterMs: 0, remaining: Math.min(limit - clientCount, globalLimit - globalCount) });
+    let monthlyCount = 0, monthlyRetryAfterMs = 0;
+    if (monthlyLimit > 0) {
+      const date = new Date(now);
+      const monthStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+      monthlyCount = Number(increment(route + ":month", monthStart)[0]?.request_count || 0);
+      monthlyRetryAfterMs = Math.max(0, Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1) - now);
+      if (monthlyCount > monthlyLimit) {
+        return Response.json({ allowed: false, scope: "monthly", retryAfterMs: monthlyRetryAfterMs, remaining: 0 });
+      }
+    }
+    return Response.json({ allowed: true, scope: "ok", retryAfterMs: 0, remaining: Math.min(limit - clientCount, globalLimit - globalCount, monthlyLimit > 0 ? monthlyLimit - monthlyCount : Infinity) });
   }
 }
 

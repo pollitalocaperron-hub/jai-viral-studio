@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Método no permitido." });
   }
 
-  const key = process.env.GEMINI_API_KEY;
+  const key = req.apiKeys?.gemini || process.env.GEMINI_API_KEY;
   if (!key) return res.status(503).json({ error: "El inspector necesita GEMINI_API_KEY; no se configuró ningún proveedor adicional." });
 
   const images = req.body?.images;
