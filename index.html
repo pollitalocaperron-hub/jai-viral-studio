@@ -402,7 +402,7 @@ async function designAnimationShots(){
   if(!validShots)throw new Error("Una o más rutas vectoriales no se pueden dibujar o sus acciones no apuntan a objetos reales. Rediseña el plan; no se exportará una escena incompleta.");
   currentVisualStyleProfileId=data.style_profile_id||"paper-craft-explainer";
   if(currentPlanData)currentPlanData.visual_style_profile_id=currentVisualStyleProfileId;
-  currentShotPlan=data.shots;currentCharacterBible=Array.isArray(data.character_bible)?data.character_bible:[];currentReusableRigs=Array.isArray(data.reusable_rigs)?data.reusable_rigs:[];$("exportCharacterLayers").disabled=false;$("characterLayerExports").textContent="Piezas vectoriales listas para separar en PNG.";
+  currentShotPlan=data.shots;currentCharacterBible=Array.isArray(data.character_bible)?data.character_bible:[];currentReusableRigs=Array.isArray(data.reusable_rigs)?data.reusable_rigs:[];if(currentSeriesBible&&currentCharacterBible.length){currentSeriesBible.characters=currentCharacterBible.slice(0,30);scheduleJaiAutosave();}$("exportCharacterLayers").disabled=false;$("characterLayerExports").textContent="Piezas vectoriales listas para separar en PNG.";
   // A new direction invalidates previous previews and approvals; never reuse an audit from an older shot plan.
   jaiSceneImages=Array.from({length:currentScenes.length},()=>null);
   visualAuditResults=Array.from({length:currentShotPlan.length||currentScenes.length},()=>null);
@@ -1324,14 +1324,16 @@ function prepareSeriesBible(topic){
  if($("contentMode").value!=="serie-viral")return null;
  const count=Number($("seriesLength").value)===20?20:10,same=currentSeriesBible&&currentSeriesBible.topic_key===topic.trim().toLowerCase();
  if(!same)currentSeriesBible={schema_version:1,topic_key:topic.trim().toLowerCase(),series_title:topic.trim().slice(0,120),season_number:1,episode_count:count,episode_number:0,episodes:[],characters:[],relationships:[],world_state:"Inicio de temporada",open_threads:[]};
- currentSeriesBible.episode_count=count;currentSeriesBible.next_episode=Math.min((Number(currentSeriesBible.episode_number)||0)+1,count);updateSeriesProgress();
+ if(Number(currentSeriesBible.episode_number||0)===0)currentSeriesBible.episode_count=count;
+ if(Number(currentSeriesBible.episode_number||0)>=(Number(currentSeriesBible.episode_count)||10)){currentSeriesBible.season_number=(Number(currentSeriesBible.season_number)||1)+1;currentSeriesBible.episode_number=0;currentSeriesBible.episodes=currentSeriesBible.episodes||[];}
+ currentSeriesBible.next_episode=Math.min((Number(currentSeriesBible.episode_number)||0)+1,currentSeriesBible.episode_count||10);updateSeriesProgress();
  return JSON.parse(JSON.stringify(currentSeriesBible));
 }
 function commitSeriesEpisode(plan){
  if(!currentSeriesBible||$("contentMode").value!=="serie-viral"||!plan)return;
  const number=Math.min((Number(currentSeriesBible.episode_number)||0)+1,currentSeriesBible.episode_count||10);
  currentSeriesBible.episode_number=number;
- currentSeriesBible.episodes=[...(currentSeriesBible.episodes||[]),{episode_number:number,title:String(plan.hook||plan.angle||("Episodio "+number)).slice(0,140),summary:String(plan.episode_summary||plan.script||"").slice(0,900),events:Array.isArray(plan.episode_events)?plan.episode_events.slice(0,12):[],bridge:String(plan.series_bridge||"").slice(0,300),created_at:Date.now()}].slice(-20);
+ currentSeriesBible.episodes=[...(currentSeriesBible.episodes||[]),{episode_number:number,season_number:currentSeriesBible.season_number||1,title:String(plan.hook||plan.angle||("Episodio "+number)).slice(0,140),summary:String(plan.episode_summary||plan.script||"").slice(0,900),events:Array.isArray(plan.episode_events)?plan.episode_events.slice(0,12):[],bridge:String(plan.series_bridge||"").slice(0,300),created_at:Date.now()}].slice(-20);
  if(Array.isArray(plan.character_updates))currentSeriesBible.characters=plan.character_updates.slice(0,30);
  if(Array.isArray(plan.relationship_updates))currentSeriesBible.relationships=plan.relationship_updates.slice(0,30);
  if(plan.world_state)currentSeriesBible.world_state=String(plan.world_state).slice(0,1200);
