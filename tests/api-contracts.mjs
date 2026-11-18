@@ -4,6 +4,7 @@ import generateHandler from "../api/generate.js";
 import narrateHandler from "../api/narrate.js";
 import inspectVisualHandler from "../api/inspect-visual.js";
 import directScenesHandler from "../api/direct-scenes.js";
+import { resolveVisualStyleProfile } from "../api/visual-style-profiles.js";
 
 // Guard the worst-case provider + retry + repair path against Vercel's 60s function limit.
 const generationSource = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
@@ -482,6 +483,32 @@ try {
     globalThis.fetch = async () => { providerCalls++; throw new Error("Provider must not be called for invalid frame count"); };
     const res = mockResponse();
     await inspectVisualHandler({ method: "POST", body: { images: Array.from({ length: 5 }, () => ({ image_base64: "AQID" })) } }, res);
+    assert.equal(res.statusCode, 400);
+    assert.equal(providerCalls, 0);
+  }
+
+
+  // Reference-derived style profiles are selected deterministically and remain overridable by a valid stored profile.
+  {
+    assert.equal(resolveVisualStyleProfile("", "Relato de un misterio histórico", "").id, "cinematic-cartoon-story");
+    assert.equal(resolveVisualStyleProfile("", "Cómo configurar OBS para transmitir en vivo", "").id, "cinematic-desk-tech");
+    assert.equal(resolveVisualStyleProfile("", "Los 5 mejores plugins gratuitos", "").id, "paper-craft-explainer");
+    assert.equal(resolveVisualStyleProfile("", "Cómo usar una app de inteligencia artificial", "").id, "retro-mascot-ui");
+    assert.equal(resolveVisualStyleProfile("cinematic-desk-tech", "Lista de plugins", "").id, "cinematic-desk-tech");
+  }
+
+  // Mixed visual profiles in one audit batch are rejected before the Gemini provider is contacted.
+  {
+    let providerCalls = 0;
+    globalThis.fetch = async () => { providerCalls++; throw new Error("Provider must not be called for mixed styles"); };
+    const res = mockResponse();
+    await inspectVisualHandler({
+      method: "POST",
+      body: { images: [
+        { image_base64: "AQID", style_profile_id: "paper-craft-explainer" },
+        { image_base64: "BAUG", style_profile_id: "cinematic-cartoon-story" }
+      ] }
+    }, res);
     assert.equal(res.statusCode, 400);
     assert.equal(providerCalls, 0);
   }
