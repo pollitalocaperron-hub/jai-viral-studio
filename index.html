@@ -347,6 +347,14 @@ function renderStory(value){
 
 let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,currentShotPlan=[],currentVisualStyleProfileId="";
 let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
+function visualStyleProfileLabel(id){
+ return ({
+  "cinematic-cartoon-story":"Narrativa animada cinematográfica",
+  "paper-craft-explainer":"Infografía de papel y collage",
+  "retro-mascot-ui":"Mascota retro y panel digital",
+  "cinematic-desk-tech":"Demostración tecnológica de escritorio"
+ })[id]||"Selección automática";
+}
 function visualAuditUnitCount(){return currentShotPlan.length||currentScenes.length;}
 function visualAuditPassed(){const count=visualAuditUnitCount();return count>0&&visualAuditResults.length===count&&visualAuditResults.every((item,index)=>item&&item.scene_index===index&&item.status==="pass");}
 function visualText(value,fallback="Pendiente de definir"){
@@ -1350,7 +1358,7 @@ async function makePlan(){
   $("downloadNarration").hidden=true;$("captionEditor").replaceChildren();$("downloadSrt").disabled=true;$("generateCaptions").disabled=true;
   $("captionStatus").textContent="Nuevo guion: genera la narración y J.A.I. preparará sus subtítulos automáticamente.";
   showClarification(data);
-  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Perfil audiovisual · Automático</span>';
+  $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Perfil audiovisual · '+escapeHtml(visualStyleProfileLabel(currentVisualStyleProfileId))+'</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];currentShotPlan=[];$("directScenes").disabled=!currentScenes.length;$("directScenesOutput").replaceChildren();$("directScenesStatus").textContent="Plan nuevo: diseña ahora las tomas y acciones animables.";jaiSceneImages=[];visualAuditResults=[];$("inspectVisuals").disabled=true;$("visualAuditStatus").textContent="La inspección visual independiente estará disponible cuando todas las escenas tengan imagen.";$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma educativo por escena, con la representación apropiada al tema.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
   setPipelineStage("plan",100,data.clarification_required?"Aclaración necesaria":"Plan editorial y storyboard listos",data.clarification_required?"warning":"done");rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan=[
