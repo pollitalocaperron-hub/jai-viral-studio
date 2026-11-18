@@ -486,11 +486,15 @@ async function inspectVisuals(){
     const canvas=document.createElement("canvas");canvas.width=448;canvas.height=796;
     const ctx=canvas.getContext("2d");const scale=Math.min(canvas.width/source.width,canvas.height/source.height);
     ctx.drawImage(source,(canvas.width-source.width*scale)/2,(canvas.height-source.height*scale)/2,source.width*scale,source.height*scale);
+    let imageBase64=canvas.toDataURL("image/jpeg",0.58).split(",")[1];
+    if(imageBase64.length>250000)imageBase64=canvas.toDataURL("image/jpeg",0.42).split(",")[1];
+    if(imageBase64.length>250000)imageBase64=canvas.toDataURL("image/jpeg",0.30).split(",")[1];
+    if(imageBase64.length>250000)throw new Error("La toma "+(offset+localIndex+1)+" sigue superando 250 KB después de comprimirla; se detuvo la auditoría para proteger el límite gratuito del backend.");
     return {scene_index:localIndex,subject:visualText(shot?.subject||scene.visual_subject||scene.visual||scene.objective,"").slice(0,220),
      state:visualText(shot?.visual_state||scene.visual_state,"").slice(0,220),
      action:visualText(shot?.visual_action||scene.visual_action||scene.animation,"").slice(0,220),
      proof:visualText(shot?.visual_action||scene.visual_proof||scene.teaching_point,"").slice(0,220),
-     image_base64:canvas.toDataURL("image/jpeg",0.58).split(",")[1],style_profile_id:currentVisualStyleProfileId};
+     image_base64:imageBase64,style_profile_id:currentVisualStyleProfileId};
    });
    const response=await fetch(jaiApiUrl("/api/inspect-visual"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images,style_profile_id:currentVisualStyleProfileId,topic:currentTopic,script:currentPlanData?.script||""}),signal:AbortSignal.timeout(45000)});
    const data=await readJsonResponse(response,"Inspector visual");
