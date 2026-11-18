@@ -22,13 +22,23 @@ Fixed-window limits per IP:
 - Generate: 6 requests / 10 minutes.
 - Narration: 8 / 10 minutes.
 - Scene direction: 8 / 10 minutes.
-- Visual inspection: 20 / 10 minutes (up to 80 frames at four per request).
+- Visual inspection: 20 / 10 minutes (up to 80 frames at four per request).\n\nRoute-wide burst ceilings shared across all IPs:\n- Generate, narration, and scene direction: 60 requests / minute per route.\n- Visual inspection: 120 requests / minute.
 
 The Worker rejects POST requests if the Durable Object binding or client IP is missing, or the guard cannot be reached. This is fail-closed. CORS is retained but is not treated as authentication. IP-based quotas are not identity-based and can be evaded by distributed clients; the shared route-wide ceiling contains aggregate bursts, while a future signed session / account identity would provide stronger per-user fairness. Shared DO requests themselves have free-tier quotas and must be monitored.
 
+## Reference-derived audiovisual direction
+
+The visual director now resolves one of four profiles from the topic/script and returns the selected profile ID. The same profile is sent to visual QA and saved with the project:
+- `cinematic-cartoon-story`: expressive animated-cartoon storytelling, dark indigo / amber lighting, character reactions and prop-driven narrative (reference 15811).
+- `paper-craft-explainer`: layered paper/collage, kraft tabletop, torn labels, chapter colors and playful cutout mascot (reference 15973).
+- `retro-mascot-ui`: recurring retro mascot, charcoal/wood backdrop, amber UI panels and progress indicators (reference 15968).
+- `cinematic-desk-tech`: workstation, monitor evidence, dark room, green action highlights and red/white alert chips (reference 15972).
+
+The browser renderer now paints a profile-specific backdrop and the director/inspector share the same profile. The current renderer is still a layered 2.5D vector system; it does not yet reproduce full 3D character animation, photographic depth of field, or physical paper texture. The profiles are faithful direction guides adapted to the available renderer, not a claim of pixel-identical replication.
+
 ## Provider compatibility tests
 
-Existing API contract tests stub `fetch` and fake provider responses. The new Worker tests make no Groq or Gemini requests. A provider compatibility matrix should cover Groq success, Groq 429 with Gemini fallback, Gemini success, Gemini 429, malformed JSON, timeout, and TTS audio response parsing. These are contract simulations, not proof of live provider availability or model quality. Never run live calls automatically.
+API contract tests stub `fetch` and fake provider responses, including Groq success, Groq 429 followed by Gemini, both providers quota-limited, scene-director fallback/validation, Gemini TTS PCM parsing and TTS quota exhaustion. Worker tests make no Groq or Gemini requests. These are contract simulations, not proof of live provider availability or model quality. Never run live calls automatically.
 
 ## Reversal strategy
 
