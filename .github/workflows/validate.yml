@@ -24,6 +24,9 @@ jobs:
           node --check --input-type=module < api/narrate.js
           node --check --input-type=module < api/inspect-visual.js
           node --check --input-type=module < api/direct-scenes.js
+          node --check --input-type=module < api/visual-style-profiles.js
+          node --check --input-type=module < worker.js
+          node --check tests/worker-adapter.mjs
       - name: Check inline browser scripts
         run: |
           node --input-type=module <<'NODE'
@@ -49,6 +52,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Test API contracts
         run: npm run test:api
+      - name: Test Cloudflare Worker adapter and shared limiter
+        run: npm run test:worker
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Test IndexedDB persistence in Chromium
