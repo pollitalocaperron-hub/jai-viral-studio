@@ -169,6 +169,12 @@ try {
   })));
   assert.ok(pngAudit.every(item=>item.type==="image/png"&&item.width===720&&item.height===1280&&item.opaque>0&&item.transparent>0),"Every PNG must decode at 720×1280 with visible pixels and preserved alpha.");
   assert.equal(await page.evaluate(()=>collectJaiSoundEvents(timelineState.items).length),8,"The directed timeline must schedule one sound effect per narration event.");
+  const soundOffsetAudit=await page.evaluate(()=>{
+    const base=collectJaiSoundEvents(timelineState.items),shifted=collectJaiSoundEvents(timelineState.items,1.25);
+    return {base:base[0]?.at,shifted:shifted[0]?.at,count:shifted.length};
+  });
+  assert.equal(soundOffsetAudit.count,8,"Every directed narration event must retain its sound cue after track alignment.");
+  assert.ok(Math.abs(soundOffsetAudit.shifted-soundOffsetAudit.base-1.25)<0.001,"Sound cues must follow the user-adjustable narration track offset.");
 
   await page.locator("#generateNarration").click();
   await page.waitForFunction(() => (document.querySelector("#kokoroStatus")?.textContent || "").includes("Narración lista"), null, { timeout: 20000 });
