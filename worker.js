@@ -160,10 +160,8 @@ export async function handleRequest(request, env = {}) {
   if (typeof process === "undefined" || !process.env) {
     return jsonError(request, env, 500, "El runtime no habilitó la compatibilidad Node.js.", "NODE_COMPAT_REQUIRED");
   }
-  for (const key of ["GROQ_API_KEY", "GEMINI_API_KEY"]) {
-    if (typeof env[key] === "string" && env[key]) process.env[key] = env[key];
-    else delete process.env[key];
-  }
+  // nodejs_compat_populate_process_env exposes encrypted Worker secrets to the legacy handlers.
+  // Do not mutate process.env per request: it is isolate-global and must remain deployment-scoped.
 
   const req = { method: request.method, headers: Object.fromEntries(request.headers.entries()), body };
   const res = createVercelResponse();

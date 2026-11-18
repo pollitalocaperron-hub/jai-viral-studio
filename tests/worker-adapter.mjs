@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { AbuseGuard, handleRequest } from "../worker.js";
 
 const ALLOWED_ORIGIN = "https://pollitalocaperron-hub.github.io";
+const previousGroqKey = process.env.GROQ_API_KEY;
+process.env.GROQ_API_KEY = "mock-only-no-provider-call";
 const buckets = new Map();
 const namespace = {
   idFromName(name) { return name; },
@@ -94,4 +96,6 @@ const denied = await (await guard.fetch(new Request("https://abuse-guard.interna
 }))).json();
 assert.equal(denied.allowed, false, "The Durable Object SQL counter must reject request seven in the same window.");
 
+if (previousGroqKey === undefined) delete process.env.GROQ_API_KEY;
+else process.env.GROQ_API_KEY = previousGroqKey;
 console.log("PASS: bounded streaming JSON, Durable Object rate-limit contract, fail-closed guard, CORS, routing and method checks.");
