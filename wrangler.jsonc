@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jai-viral-studio-api",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "vars": {
+    "ALLOWED_ORIGIN": "https://pollitalocaperron-hub.github.io"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
