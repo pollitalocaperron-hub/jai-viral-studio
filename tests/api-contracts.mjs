@@ -175,7 +175,7 @@ try {
         groqCalls++;
         const payload = JSON.parse(options.body || "{}");
         const userPrompt = payload.messages?.[1]?.content || "";
-        if (!userPrompt.includes("Repair ONLY the storyboard")) assert.match(userPrompt, /BIBLIA DE TEMPORADA[\s\S]*Episodio 2/);
+        if (!userPrompt.includes("Repair ONLY the storyboard")) assert.match(userPrompt, /BIBLIA DE TEMPORADA[\s\S]*"next_episode":2[\s\S]*El misterio ya fue descubierto/);
         if (userPrompt.includes("Repair ONLY the storyboard")) {
           return response({
             choices: [{
