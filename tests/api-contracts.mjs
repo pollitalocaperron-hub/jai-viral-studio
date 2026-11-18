@@ -8,6 +8,10 @@ import { resolveVisualStyleProfile } from "../api/visual-style-profiles.js";
 
 // Guard the worst-case provider + retry + repair path against Vercel's 60s function limit.
 const generationSource = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
+const frontendSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+assert.match(frontendSource, /const transformChain=\[\.\.\.chain,layer\]/, "Character rendering must apply parent-bone transforms before the child part.");
+assert.match(frontendSource, /exportedParts\.has\(reusableKey\)/, "PNG export must deduplicate recurring character parts across shots.");
+assert.match(frontendSource, /canvas\.toDataURL\("image\/png"\)/, "Character layer export must encode transparent canvas output as PNG.");
 const generationTimeouts = [...generationSource.matchAll(/AbortSignal\.timeout\((\d+)\)/g)].map(match => Number(match[1]));
 assert.deepEqual(generationTimeouts, [2500, 12000, 12000, 6000, 6000], "Generation provider and repair timeouts must remain explicitly bounded.");
 const worstCaseGenerationMs = 2500 + 12000 + (12000 * 2) + 1000 + (6000 * 2);
