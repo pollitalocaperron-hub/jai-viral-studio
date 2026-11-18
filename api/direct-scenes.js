@@ -11,6 +11,47 @@ function parseRange(value) {
 function clean(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
+const RIG_PARENT = {
+  head: "torso", hair: "head", eyes: "head", mouth: "head", face: "head",
+  upper_arm: "torso", arm_upper: "torso", forearm: "upper_arm", lower_arm: "upper_arm", hand: "forearm",
+  upper_leg: "torso", thigh: "torso", lower_leg: "upper_leg", shin: "upper_leg", foot: "lower_leg"
+};
+function inferBoneParent(partId, characterId, layerIds) {
+  const part = String(partId || "").toLowerCase().replace(/[ -]/g, "_");
+  const candidate = RIG_PARENT[part];
+  if (candidate && layerIds.has(characterId + ":" + candidate)) return candidate;
+  return null;
+}
+function buildReusableRigs(shots) {
+  const characters = new Map();
+  for (const shot of shots) for (const layer of shot.layers || []) {
+    if (!layer.character_id || !layer.part_id) continue;
+    const key = String(layer.character_id);
+    if (!characters.has(key)) characters.set(key, new Map());
+    const parts = characters.get(key), part = String(layer.part_id).slice(0, 80);
+    if (!parts.has(part)) parts.set(part, { bone_id: part, part_id: part, description: layer.description, pivot_x: layer.pivot_x, pivot_y: layer.pivot_y, source_layer_id: layer.id, source_shot_id: shot.shot_id });
+  }
+  return [...characters.entries()].map(([character_id, parts]) => {
+    const ids = new Set([...parts.keys()].map(part => character_id + ":" + part.toLowerCase().replace(/[ -]/g, "_")));
+    return { rig_id: "rig-" + character_id, character_id, coordinate_space: "720x1280", reusable: true,
+      bones: [...parts.values()].map(bone => ({ ...bone, parent_bone_id: inferBoneParent(bone.part_id, character_id, ids) })) };
+  });
+}
+function buildNarrationSync(shot) {
+  const duration = Math.max(0, Number(shot.end_seconds) - Number(shot.start_seconds));
+  return (shot.animation_steps || []).map((step, index) => {
+    const start = Number(shot.start_seconds) + duration * Number(step.start_progress);
+    const end = Number(shot.start_seconds) + duration * Number(step.end_progress);
+    const action = String(step.action || "").toLowerCase();
+    const sound = /reveal|appear|show/.test(action) ? "soft_reveal" : /impact|hit|drop|slam/.test(action) ? "impact" :
+      /move|turn|rotate|walk|gesture|wave/.test(action) ? "movement_whoosh" : "subtle_transition";
+    return { event_id: shot.shot_id + "-sync-" + (index + 1), target_id: step.target_id,
+      narration_segment: shot.narration_segment, subtitle: shot.subtitle, action: step.action,
+      start_seconds: Number(start.toFixed(3)), end_seconds: Number(end.toFixed(3)),
+      sound_cue: sound, camera_change: index === 0 ? "shot_entry" : "hold_or_reframe",
+      from_transform: step.from_transform, to_transform: step.to_transform };
+  });
+}
 function validateShots(shots, story) {
   if (!Array.isArray(shots) || shots.length < story.length * 2 || shots.length > story.length * 5) {
     return "El director debe entregar entre 2 y 5 tomas visuales por cada escena conceptual.";
@@ -235,6 +276,9 @@ export default async function handler(req, res) {
       to_transform: Object.fromEntries(["x", "y", "rotation", "scale", "opacity"].map(key => [key, Number(step.to_transform[key])]))
     }))
   }));
-  const characterBible = Array.isArray(parsed.character_bible) ? parsed.character_bible.slice(0, 20).map((item, index) => ({ character_id: clean(item?.character_id, 80) || "character-" + (index + 1), name: clean(item?.name, 100), silhouette: clean(item?.silhouette, 240), proportions: clean(item?.proportions, 240), facial_features: clean(item?.facial_features, 300), hairstyle: clean(item?.hairstyle, 160), wardrobe: clean(item?.wardrobe, 240), accessories: clean(item?.accessories, 240), palette: Array.isArray(item?.palette) ? item.palette.slice(0, 8).filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) : [], personality: clean(item?.personality, 240), voice: clean(item?.voice, 160), signature_gestures: clean(item?.signature_gestures, 240) })) : [];
-  return res.status(200).json({ shots: normalized, character_bible: characterBible, shot_count: normalized.length, conceptual_scene_count: story.length, provider, style_profile_id: styleProfile.id, style_profile_label: styleProfile.label, animation_plan_validated: true, animation_ready: true });
+  normalized.forEach(shot => { shot.narration_sync = buildNarrationSync(shot); });
+  const reusableRigs = buildReusableRigs(normalized);
+  return res.status(200).json({ shots: normalized, character_bible: characterBible, reusable_rigs: reusableRigs,
+    narration_sync_validated: normalized.every(shot => shot.narration_sync.every(event => event.start_seconds >= shot.start_seconds && event.end_seconds <= shot.end_seconds)),
+    shot_count: normalized.length, conceptual_scene_count: story.length, provider, style_profile_id: styleProfile.id, style_profile_label: styleProfile.label, animation_plan_validated: true, animation_ready: true });
 }
