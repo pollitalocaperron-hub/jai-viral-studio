@@ -9,6 +9,20 @@ const secret = process.env.JAI_INTERNAL_PROXY_SECRET;
 const url = "https://netlify.test/internal/jai/inspect-visual";
 const originalFetch = globalThis.fetch;
 let providerCalls = 0;
+globalThis.fetch = async (providerUrl, init) => {
+  providerCalls++;
+  assert.match(String(providerUrl), /generativelanguage\.googleapis\.com/);
+  assert.equal(init.headers["x-goog-api-key"], "mock-gemini-key-no-network");
+  return Response.json({
+    candidates: [{
+      content: { parts: [{ text: JSON.stringify({ results: [{
+        scene_index: 0, status: "pass", score: 92,
+        reason: "La composición respeta el perfil y la acción se entiende claramente.",
+        issues: []
+      }] }) }] }
+    }]
+  });
+};
 
 const unauthorized = await inspectVisualFunction(new Request(url, {
   method: "POST", headers: { "x-jai-proxy-secret": "wrong-secret" }, body: "{}"
@@ -29,20 +43,6 @@ const oversized = await inspectVisualFunction(new Request(url, {
 assert.equal(oversized.status, 413);
 assert.equal(providerCalls, 0);
 
-globalThis.fetch = async (providerUrl, init) => {
-  providerCalls++;
-  assert.match(String(providerUrl), /generativelanguage\.googleapis\.com/);
-  assert.equal(init.headers["x-goog-api-key"], "mock-gemini-key-no-network");
-  return Response.json({
-    candidates: [{
-      content: { parts: [{ text: JSON.stringify({ results: [{
-        scene_index: 0, status: "pass", score: 92,
-        reason: "La composición respeta el perfil y la acción se entiende claramente.",
-        issues: []
-      }] }) }] }
-    }]
-  });
-};
 const valid = await inspectVisualFunction(new Request(url, {
   method: "POST",
   headers: { "x-jai-proxy-secret": secret, "Content-Type": "application/json" },
