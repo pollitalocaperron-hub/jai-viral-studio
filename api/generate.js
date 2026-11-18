@@ -11,7 +11,7 @@ async function generatePlanHandler(req, res) {
     return res.status(405).json({ error: "Método no permitido." });
   }
 
-  const { topic, notes = "", duration = "45–60 segundos", platform = "Reels", learning_memory = "" } = req.body || {};
+  const { topic, notes = "", duration = "45–60 segundos", platform = "Reels", format_mode = "educativo", cta_goal = "follow", cta_custom = "", learning_memory = "" } = req.body || {};
   if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
     console.error("[JAI] No hay claves de proveedor configuradas.");
     return res.status(500).json({ error: "Falta configurar un proveedor de IA en Vercel.", diagnosticCode: "NO_AI_PROVIDER" });
@@ -22,6 +22,11 @@ async function generatePlanHandler(req, res) {
 
   const safeNotes = typeof notes === "string" ? notes.slice(0, 5000) : "";
   const safeLearningMemory = typeof learning_memory === "string" ? learning_memory.slice(0, 2400) : "";
+  const safeFormatMode = format_mode === "serie-viral" ? "serie-viral" : "educativo";
+  const allowedCtas = new Set(["follow", "share", "comment", "save", "custom"]);
+  const safeCtaGoal = allowedCtas.has(cta_goal) ? cta_goal : "follow";
+  const safeCtaCustom = typeof cta_custom === "string" ? cta_custom.trim().slice(0, 120) : "";
+  const ctaInstruction = safeCtaGoal === "share" ? "Comparte este video" : safeCtaGoal === "comment" ? "Comenta tu opinión" : safeCtaGoal === "save" ? "Guarda este video" : safeCtaGoal === "custom" ? (safeCtaCustom || "Síguenos para la siguiente parte") : "Síguenos para la siguiente parte";
   // Investigación académica abierta mediante OpenAlex; no requiere clave ni tarjeta.
   async function fetchResearchSources(query) {
     try {
@@ -45,7 +50,8 @@ async function generatePlanHandler(req, res) {
   const researchSources = await fetchResearchSources(researchQuery);
   const researchContext = researchSources.length ? researchSources.map(s => "[" + s.id + "] " + s.title + " (" + (s.year || "año no indicado") + "; tipo: " + (s.type || "no indicado") + "; publicación: " + (s.source_name || "no indicada") + "). Autores: " + (s.authors || "no disponibles") + ". DOI/URL: " + (s.url || "no disponible") + ". Resumen: " + (s.abstract || "sin resumen recuperado")).join("\n") : "No se recuperaron fuentes académicas. No afirmes que la investigación fue verificada."
   const prompt = [
-    "Eres el equipo editorial científico y director de producción de J.A.I. Crea un plan educativo vertical 9:16. Devuelve SOLO JSON válido.",
+    "Eres el equipo editorial y director de producción de J.A.I. Crea un video vertical 9:16. Devuelve SOLO JSON válido.",
+    "MODO DE PRODUCCIÓN: " + safeFormatMode + ". Si es serie-viral, crea una historia serializable: gancho desde el primer segundo, conflicto o misterio concreto, progresión narrativa y revelaciones. Cada bloque de retención de máximo 3 segundos debe aportar un avance real y un estímulo nuevo (acción, encuadre, objeto, reacción, detalle, dato o giro); no repitas planos ni uses movimiento decorativo. Abre preguntas y resuélvelas progresivamente. Termina con recompensa o suspenso honesto y una llamada a la acción breve integrada con esta intención: " + ctaInstruction + ". Devuelve series_bridge (1–2 frases que conecten con un siguiente episodio) y call_to_action (frase final exacta). No sacrifiques veracidad por viralidad. Si es educativo, conserva el enfoque didáctico y añade la CTA al cierre.",
     "",
     "ALCANCE MULTIDISCIPLINARIO:",
     "Antes de escribir, identifica internamente el dominio y subdominio del tema (ciencia, salud, historia, geografía, tecnología, ingeniería, industria, economía, matemáticas, naturaleza, cultura, arte u otro). No limites la aplicación a una lista cerrada: admite cualquier área del conocimiento.",
@@ -80,12 +86,15 @@ async function generatePlanHandler(req, res) {
     "- story: exactamente 4 escenas conceptuales (5 solo si es imprescindible), intervalos explícitos consecutivos desde 0:00 hasta el final. Cada escena incluye time, objective, teaching_point, visual_proof, visual, animation, on_screen_text, transition, visual_subject, visual_state, visual_action, visual_composition, visual_environment, visual_prompt_en, visual_medium, animation_type, motion_sequence (array de 2–4 acciones ordenadas con timing o fase), y continuity_anchor. Ningún campo vacío.",
     "- Los campos de dirección visual deben ser específicos del tema, no frases genéricas. visual_medium y animation_type identifican explícitamente la representación y técnica adecuadas (por ejemplo, diagrama 2D que se construye por etapas, mapa histórico que cambia, tipografía cinética para una idea abstracta, gráfico de datos animado, ilustración editorial con capas, secuencia fotográfica compuesta, moléculas reaccionando en simulación o CGI 3D cuando sea necesario). motion_sequence debe describir 2–4 cambios consecutivos que se puedan ver, con dirección/orden y qué elemento cambia; no basta decir zoom o movimiento de cámara. continuity_anchor fija color, forma, escala, vestuario, orientación, geografía o componentes que deben conservarse cuando corresponda. visual_prompt_en: 35–80 palabras en inglés, describe el fotograma inicial más útil de una escena animable, sujeto reconocible y entorno pertinente. No fuerces anatomía, partículas, flechas, personajes ni estética científica si el tema no los requiere. Sin texto generado dentro de la imagen.",
     "- retention_map: bloques consecutivos de máximo 3 s que cubran exactamente la duración del storyboard. Cada bloque incluye time, new_stimulus, narrative_advance, curiosity, visual_action, on_screen_text (2–6 palabras). Cada bloque avanza la enseñanza y coincide con la narración.",
+    "- En serie-viral, cada bloque de retención debe elevar el interés respecto al anterior mediante un cambio narrativo o visual concreto. Devuelve series_bridge y call_to_action como strings; la CTA debe corresponder a la intención seleccionada y sonar natural.",
     "- verification: afirmaciones que requieren comprobación y evidencia faltante. quality_check: precisión, cobertura, originalidad y pregunta de recuperación.",
     "- No devuelvas storyboard ni mapa incompletos. No inventes escenas para rellenar.",
     "",
     "TEMA: " + topic.trim(),
     "DURACIÓN: " + duration,
     "PLATAFORMA: " + platform,
+    "MODO: " + safeFormatMode,
+    "OBJETIVO DE INTERACCIÓN: " + ctaInstruction,
     "NOTAS DEL USUARIO: " + safeNotes,
     "MEMORIA EDITORIAL (solo diversidad creativa; nunca evidencia): " + (safeLearningMemory || "Sin historial")
   ].join("\n");
