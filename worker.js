@@ -277,6 +277,11 @@ export class AbuseGuard {
       return Response.json({ allowed: false, scope: "client", retryAfterMs: Math.max(0, clientWindowStart + windowMs - now), remaining: 0 });
     }
     const globalCount = Number(increment(route + ":global", globalWindowStart)[0]?.request_count || 0);
+    // Bound SQLite growth from rotating client hashes and old fixed windows.
+    // Keep the current and previous monthly buckets for reset/diagnostics.
+    if (globalCount % 100 === 0) {
+      this.sql.exec("DELETE FROM rate_windows WHERE window_start < ?", now - 62 * 24 * 60 * 60 * 1000);
+    }
     if (globalCount > globalLimit) {
       return Response.json({ allowed: false, scope: "global", retryAfterMs: Math.max(0, globalWindowStart + 60000 - now), remaining: 0 });
     }
