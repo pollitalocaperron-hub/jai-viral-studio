@@ -8,7 +8,13 @@
   "vars": {
     "ALLOWED_ORIGIN": "https://pollitalocaperron-hub.github.io"
   },
-  "observability": {
-    "enabled": true
-  }
+  "durable_objects": {
+    "bindings": [
+      { "name": "ABUSE_GUARD", "class_name": "AbuseGuard" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1-abuse-guard", "new_sqlite_classes": ["AbuseGuard"] }
+  ],
+  "observability": { "enabled": true }
 }

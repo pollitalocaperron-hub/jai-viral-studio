@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { handleRequest } from "../worker.js";
+import { AbuseGuard, handleRequest } from "../worker.js";
 
 const env = { ALLOWED_ORIGIN: "https://pollitalocaperron-hub.github.io" };
 

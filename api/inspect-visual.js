@@ -15,16 +15,16 @@ export default async function handler(req, res) {
   if (!key) return res.status(503).json({ error: "El inspector necesita GEMINI_API_KEY; no se configuró ningún proveedor adicional." });
 
   const images = req.body?.images;
-  if (!Array.isArray(images) || images.length < 1 || images.length > 8) {
-    return res.status(400).json({ error: "Envía entre 1 y 8 fotogramas para inspección." });
+  if (!Array.isArray(images) || images.length < 1 || images.length > 4) {
+    return res.status(400).json({ error: "Envía entre 1 y 4 fotogramas para inspección." });
   }
   const totalImageChars = images.reduce((sum, item) => sum + (typeof item?.image_base64 === "string" ? item.image_base64.length : 0), 0);
-  if (totalImageChars > 3500000) return res.status(413).json({ error: "Las imágenes superan el tamaño seguro de inspección. Reduce la cantidad o resolución de fotogramas." });
+  if (totalImageChars > 1100000) return res.status(413).json({ error: "Las imágenes superan 1.1 MB de datos codificados. Reduce la resolución o divide la auditoría en lotes." });
 
   for (const [index, item] of images.entries()) {
-    if (!item || typeof item.image_base64 !== "string" || item.image_base64.length > 950000 ||
+    if (!item || typeof item.image_base64 !== "string" || item.image_base64.length > 300000 ||
         !/^[A-Za-z0-9+/]+={0,2}$/.test(item.image_base64)) {
-      return res.status(400).json({ error: "El fotograma " + (index + 1) + " no tiene una imagen JPEG válida o supera el tamaño permitido." });
+      return res.status(400).json({ error: "El fotograma " + (index + 1) + " no tiene una imagen JPEG válida o supera 300 KB o no contiene JPEG válido." });
     }
   }
 

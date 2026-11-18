@@ -1,38 +1,53 @@
-# J.A.I. backend migration candidate: Cloudflare Workers
+# Cloudflare backend candidate — J.A.I. Viral Studio
 
-## Decision
+## Architecture and current decision
 
-Cloudflare Workers is the preferred zero-cost backend candidate. GitHub Pages remains the static frontend. The existing four Vercel-style handlers are retained and invoked through `worker.js`, an adapter that supplies the small subset of the Vercel request/response interface they use.
+GitHub Pages remains the frontend. `worker.js` adapts the four existing Vercel-style API handlers. The Worker is deliberately not wired into the frontend and is not deployed. Vercel remains the live rollback target.
 
-Deno Deploy is not a suitable long-term target because its official documentation says the service will be sunset in April 2027. Netlify Functions is a viable Node-oriented fallback, but its current Free plan is credit-limited (300 credits/month); Cloudflare offers a clearer free request allowance for this API.
+Cloudflare Workers Free is a candidate, not a proven production fit: the documented allowance is 10 ms CPU per HTTP invocation. Network waiting is excluded, but JSON parsing, validation, and base64 handling count as CPU.
 
-## Current adapter scope
+## CPU containment for visual inspection
 
-- Routes: `/api/generate`, `/api/narrate`, `/api/inspect-visual`, `/api/direct-scenes`.
-- Health endpoint: `/healthz`.
-- Existing Groq and Gemini secrets are read from Worker bindings through Node.js compatibility.
-- JSON request bodies are capped at 4 MiB before reaching the handlers.
-- The existing CORS policy remains restricted to the GitHub Pages origin.
-- No provider calls are made by adapter tests.
+- Browser inspection renders each audit frame to 480 × 854 JPEG at quality 0.64.
+- Requests are batched in groups of four, rather than eight.
+- The Worker streams and counts request bytes before parsing JSON, cancels oversized streams, and caps inspection requests at 1,280 KiB. Other JSON routes are capped at 2 MiB.
+- The inspection handler accepts at most four images and 1,100,000 base64 characters per request.
+- This reduces peak parsing work and allocation; it does not prove the 10 ms limit is met. The final gate remains a Cloudflare runtime CPU measurement with worst-case images and plans.
 
-## Important free-tier gate
+## Shared abuse protection
 
-Workers Free currently documents 100,000 requests/day, 128 MB memory, 50 external subrequests/request, and 10 ms CPU/request. Network waiting is not CPU time, but parsing large JSON/base64 image payloads and validating detailed scene plans can exceed 10 ms. The visual-inspection endpoint and largest storyboard payloads therefore require local runtime benchmarking before choosing Free as the production tier. Do not claim the free tier is production-ready until those tests pass.
+A SQLite-backed Durable Object is allocated per Cloudflare client IP. All Worker isolates and edge locations for that IP resolve to the same object; its SQL upsert atomically increments a fixed-window counter. The IP is used only as the object name and is not written to the SQL table.
 
-## Not yet done
+Fixed-window limits per IP:
+- Generate: 6 requests / 10 minutes.
+- Narration: 8 / 10 minutes.
+- Scene direction: 8 / 10 minutes.
+- Visual inspection: 20 / 10 minutes (up to 80 frames at four per request).
 
-- No Worker has been deployed.
-- No Cloudflare account, zone, domain, paid plan, or billing method has been created or changed.
-- No API secrets have been copied to Cloudflare.
-- The frontend still targets the existing Vercel backend.
-- No branch ref has been updated; this is a reviewable, unreferenced Git commit candidate only.
+The Worker rejects POST requests if the Durable Object binding or client IP is missing, or the guard cannot be reached. This is fail-closed. CORS is retained but is not treated as authentication. IP-based quotas are not identity-based and can be evaded by distributed clients; a future signed session / account identity would be stronger. Shared DO requests themselves have free-tier quotas and must be monitored.
 
-## Activation checklist
+## Provider compatibility tests
 
-1. Create the Worker in a user-controlled Cloudflare account on the Free plan.
-2. Add `GROQ_API_KEY` and `GEMINI_API_KEY` as encrypted Worker secrets; never place them in `vars`, source files, or Git history.
-3. Run adapter tests and Cloudflare local-runtime tests, including worst-case visual-inspection payloads and 8–25 shot plans.
-4. Verify actual CPU time, memory, response formats, CORS, timeouts, and provider fallback behavior without making billable provider calls.
-5. Add shared abuse protection; CORS is not authentication and is not a rate limiter.
-6. Only after the user explicitly authorizes activation, deploy the Worker, test its health endpoint, and then change the frontend API base URL in a separate controlled change.
-7. Keep the Vercel backend unchanged as rollback until the new backend passes end-to-end verification.
+Existing API contract tests stub `fetch` and fake provider responses. The new Worker tests make no Groq or Gemini requests. A provider compatibility matrix should cover Groq success, Groq 429 with Gemini fallback, Gemini success, Gemini 429, malformed JSON, timeout, and TTS audio response parsing. These are contract simulations, not proof of live provider availability or model quality. Never run live calls automatically.
+
+## Reversal strategy
+
+- Keep Vercel URL and deployment untouched.
+- Do not change the frontend API base URL until a Worker is deployed and its health, CORS, provider contracts, CPU, and browser E2E checks pass.
+- Backend switching is one isolated frontend configuration change; rollback is restoring the Vercel API base URL.
+- Never delete Vercel or its secrets during migration.
+- No branch ref update, deployment, account creation, billing action, or provider call is performed by this candidate.
+
+## Activation gates
+
+1. User-owned Cloudflare Free account and Worker namespace.
+2. Add `GROQ_API_KEY` and `GEMINI_API_KEY` as encrypted secrets only.
+3. Verify Durable Object migration and bindings.
+4. Run Node adapter tests, then Wrangler/Miniflare runtime tests.
+5. Measure actual CPU for four 480 × 854 frames, maximum 1,100,000 base64 characters, and 20-shot direction payloads. If 10 ms is exceeded, do not activate the Free Worker; move image preprocessing client-side further or select a runtime with a sufficient free CPU budget.
+6. Test Groq/Gemini compatibility with mocks only. Real provider quality tests require separate explicit approval because they consume quota.
+7. Deploy and switch only after explicit authorization; preserve Vercel as immediate rollback.
+
+## Status
+
+Prepared source only. The tests in this candidate have not been executed in a real Cloudflare runtime. Nothing is deployed or active.

@@ -4,17 +4,19 @@ import inspectVisualHandler from "./api/inspect-visual.js";
 import directScenesHandler from "./api/direct-scenes.js";
 
 const ROUTES = new Map([
-  ["/api/generate", generateHandler],
-  ["/api/generate.js", generateHandler],
-  ["/api/narrate", narrateHandler],
-  ["/api/narrate.js", narrateHandler],
-  ["/api/inspect-visual", inspectVisualHandler],
-  ["/api/inspect-visual.js", inspectVisualHandler],
-  ["/api/direct-scenes", directScenesHandler],
-  ["/api/direct-scenes.js", directScenesHandler]
+  ["/api/generate", { handler: generateHandler, limit: 6 }],
+  ["/api/generate.js", { handler: generateHandler, limit: 6 }],
+  ["/api/narrate", { handler: narrateHandler, limit: 8 }],
+  ["/api/narrate.js", { handler: narrateHandler, limit: 8 }],
+  ["/api/inspect-visual", { handler: inspectVisualHandler, limit: 20 }],
+  ["/api/inspect-visual.js", { handler: inspectVisualHandler, limit: 20 }],
+  ["/api/direct-scenes", { handler: directScenesHandler, limit: 8 }],
+  ["/api/direct-scenes.js", { handler: directScenesHandler, limit: 8 }]
 ]);
 
-const MAX_JSON_BODY_BYTES = 4 * 1024 * 1024;
+const GENERAL_BODY_BYTES = 2 * 1024 * 1024;
+const INSPECTION_BODY_BYTES = 1280 * 1024;
+const RATE_WINDOW_MS = 10 * 60 * 1000;
 
 function corsHeaders(request, env) {
   const headers = new Headers({ "Vary": "Origin" });
@@ -29,15 +31,46 @@ function corsHeaders(request, env) {
   return headers;
 }
 
-function jsonError(request, env, status, message, diagnosticCode) {
+function jsonError(request, env, status, message, diagnosticCode, extra = {}) {
   const headers = corsHeaders(request, env);
   headers.set("Content-Type", "application/json; charset=utf-8");
-  return new Response(JSON.stringify({ error: message, ...(diagnosticCode ? { diagnosticCode } : {}) }), { status, headers });
+  return new Response(JSON.stringify({ error: message, ...(diagnosticCode ? { diagnosticCode } : {}), ...extra }), { status, headers });
+}
+
+async function readBoundedJson(request, maxBytes) {
+  if (!request.body) return {};
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let total = 0, raw = "";
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel("request body limit exceeded").catch(() => {});
+        const error = new Error("REQUEST_TOO_LARGE");
+        error.code = "REQUEST_TOO_LARGE";
+        throw error;
+      }
+      raw += decoder.decode(value, { stream: true });
+    }
+    raw += decoder.decode();
+  } finally {
+    reader.releaseLock();
+  }
+  if (!raw) return {};
+  try { return JSON.parse(raw); }
+  catch {
+    const error = new Error("INVALID_JSON");
+    error.code = "INVALID_JSON";
+    throw error;
+  }
 }
 
 function createVercelResponse() {
   let statusCode = 200;
-  let responseHeaders = new Headers();
+  const responseHeaders = new Headers();
   let response = null;
   const res = {
     get statusCode() { return statusCode; },
@@ -58,17 +91,72 @@ function createVercelResponse() {
   return res;
 }
 
+async function enforceSharedLimit(request, env, route, limit) {
+  const clientIp = request.headers.get("CF-Connecting-IP");
+  if (!clientIp || !env.ABUSE_GUARD) {
+    return jsonError(request, env, 503, "La protección compartida del backend no está disponible; la solicitud se rechazó de forma segura.", "ABUSE_GUARD_UNAVAILABLE");
+  }
+  try {
+    const id = env.ABUSE_GUARD.idFromName(clientIp);
+    const stub = env.ABUSE_GUARD.get(id);
+    const result = await stub.fetch("https://abuse-guard.internal/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ route, limit, windowMs: RATE_WINDOW_MS })
+    });
+    if (!result.ok) throw new Error("rate limiter returned " + result.status);
+    const decision = await result.json();
+    if (!decision.allowed) {
+      const headers = corsHeaders(request, env);
+      headers.set("Content-Type", "application/json; charset=utf-8");
+      headers.set("Retry-After", String(Math.max(1, Math.ceil(decision.retryAfterMs / 1000))));
+      return new Response(JSON.stringify({ error: "Se alcanzó el límite temporal de solicitudes para esta operación. Espera y vuelve a intentarlo.", diagnosticCode: "RATE_LIMITED", retryAfterMs: decision.retryAfterMs }), { status: 429, headers });
+    }
+    return null;
+  } catch (error) {
+    console.error("[JAI][Abuse guard] unavailable:", error?.message || "unknown");
+    return jsonError(request, env, 503, "No se pudo verificar el límite compartido; la solicitud se rechazó de forma segura.", "ABUSE_GUARD_UNAVAILABLE");
+  }
+}
+
 export async function handleRequest(request, env = {}) {
   const url = new URL(request.url);
   if (url.pathname === "/healthz" && request.method === "GET") {
     return Response.json({ status: "ok", service: "jai-viral-studio-api" }, { headers: corsHeaders(request, env) });
   }
 
-  const handler = ROUTES.get(url.pathname);
-  if (!handler) return jsonError(request, env, 404, "Ruta no encontrada.", "ROUTE_NOT_FOUND");
+  const route = ROUTES.get(url.pathname);
+  if (!route) return jsonError(request, env, 404, "Ruta no encontrada.", "ROUTE_NOT_FOUND");
 
-  // These secrets are deployment-wide constants, not request-specific data.
-  // Node.js compatibility is enabled by wrangler.jsonc for existing Vercel handlers.
+  const origin = request.headers.get("Origin") || "";
+  const allowedOrigin = env.ALLOWED_ORIGIN || "https://pollitalocaperron-hub.github.io";
+  if (origin && origin !== allowedOrigin) return jsonError(request, env, 403, "Origen no autorizado.", "ORIGIN_NOT_ALLOWED");
+  if (request.method === "OPTIONS") {
+    const headers = corsHeaders(request, env);
+    headers.set("Content-Length", "0");
+    return new Response(null, { status: 204, headers });
+  }
+  if (request.method !== "POST") {
+    const response = jsonError(request, env, 405, "Método no permitido.", "METHOD_NOT_ALLOWED");
+    response.headers.set("Allow", "POST, OPTIONS");
+    return response;
+  }
+
+  // Reject abusive traffic before buffering or parsing user-controlled bodies.
+  const blocked = await enforceSharedLimit(request, env, url.pathname.replace(/\.js$/, ""), route.limit);
+  if (blocked) return blocked;
+
+  const maxBytes = url.pathname.includes("inspect-visual") ? INSPECTION_BODY_BYTES : GENERAL_BODY_BYTES;
+  const declaredLength = Number(request.headers.get("Content-Length") || 0);
+  if (declaredLength > maxBytes) return jsonError(request, env, 413, "La solicitud supera el límite seguro de tamaño.", "REQUEST_TOO_LARGE");
+
+  let body;
+  try { body = await readBoundedJson(request, maxBytes); }
+  catch (error) {
+    if (error?.code === "REQUEST_TOO_LARGE") return jsonError(request, env, 413, "La solicitud supera el límite seguro de tamaño.", "REQUEST_TOO_LARGE");
+    return jsonError(request, env, 400, "El cuerpo debe ser JSON válido.", "INVALID_JSON");
+  }
+
   if (typeof process === "undefined" || !process.env) {
     return jsonError(request, env, 500, "El runtime no habilitó la compatibilidad Node.js.", "NODE_COMPAT_REQUIRED");
   }
@@ -77,35 +165,55 @@ export async function handleRequest(request, env = {}) {
     else delete process.env[key];
   }
 
-  let body;
-  if (request.method !== "OPTIONS" && request.method !== "GET" && request.method !== "HEAD") {
-    const declaredLength = Number(request.headers.get("Content-Length") || 0);
-    if (declaredLength > MAX_JSON_BODY_BYTES) {
-      return jsonError(request, env, 413, "La solicitud supera el límite seguro de 4 MiB.", "REQUEST_TOO_LARGE");
-    }
-    let raw;
-    try { raw = await request.text(); }
-    catch { return jsonError(request, env, 400, "No se pudo leer el cuerpo de la solicitud.", "INVALID_REQUEST_BODY"); }
-    if (new TextEncoder().encode(raw).byteLength > MAX_JSON_BODY_BYTES) {
-      return jsonError(request, env, 413, "La solicitud supera el límite seguro de 4 MiB.", "REQUEST_TOO_LARGE");
-    }
-    try { body = raw ? JSON.parse(raw) : {}; }
-    catch { return jsonError(request, env, 400, "El cuerpo debe ser JSON válido.", "INVALID_JSON"); }
-  }
-
-  const req = {
-    method: request.method,
-    headers: Object.fromEntries(request.headers.entries()),
-    body
-  };
+  const req = { method: request.method, headers: Object.fromEntries(request.headers.entries()), body };
   const res = createVercelResponse();
-
   try {
-    await handler(req, res);
+    await route.handler(req, res);
     return res.response || new Response(null, { status: res.statusCode });
   } catch (error) {
     console.error("[JAI][Worker adapter]", error?.name || "Error", error?.message || "Unhandled API error");
     return jsonError(request, env, 500, "Error interno del backend. No se expusieron detalles sensibles.", "WORKER_ADAPTER_ERROR");
+  }
+}
+
+/**
+ * A single Durable Object per Cloudflare client IP serializes rate-limit
+ * increments across Worker isolates and edge locations. Only route counters
+ * are persisted; the IP itself is never written to storage.
+ */
+export class AbuseGuard {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.sql = ctx.storage.sql;
+    this.sql.exec("CREATE TABLE IF NOT EXISTS rate_windows (route TEXT PRIMARY KEY, window_start INTEGER NOT NULL, request_count INTEGER NOT NULL)");
+  }
+
+  async fetch(request) {
+    if (request.method !== "POST" || new URL(request.url).pathname !== "/check") {
+      return Response.json({ error: "not found" }, { status: 404 });
+    }
+    let input;
+    try { input = await request.json(); } catch { return Response.json({ error: "invalid request" }, { status: 400 }); }
+    const route = String(input?.route || "");
+    const limit = Number(input?.limit);
+    const windowMs = Number(input?.windowMs);
+    if (!["/api/generate", "/api/narrate", "/api/inspect-visual", "/api/direct-scenes"].includes(route) ||
+        !Number.isInteger(limit) || limit < 1 || limit > 30 ||
+        !Number.isInteger(windowMs) || windowMs < 60000 || windowMs > 3600000) {
+      return Response.json({ error: "invalid limiter policy" }, { status: 400 });
+    }
+    const now = Date.now();
+    const windowStart = Math.floor(now / windowMs) * windowMs;
+    const rows = this.sql.exec(
+      "INSERT INTO rate_windows (route, window_start, request_count) VALUES (?, ?, 1) " +
+      "ON CONFLICT(route) DO UPDATE SET " +
+      "request_count = CASE WHEN rate_windows.window_start = excluded.window_start THEN rate_windows.request_count + 1 ELSE 1 END, " +
+      "window_start = excluded.window_start RETURNING request_count",
+      route, windowStart
+    ).toArray();
+    const count = Number(rows[0]?.request_count || 0);
+    const allowed = count <= limit;
+    return Response.json({ allowed, retryAfterMs: allowed ? 0 : Math.max(0, windowStart + windowMs - now), remaining: Math.max(0, limit - count) });
   }
 }
 

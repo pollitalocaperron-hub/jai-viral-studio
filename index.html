@@ -472,23 +472,23 @@ async function inspectVisuals(){
  const auditUnits=currentShotPlan.length?currentShotPlan.map((shot,index)=>({shot,sceneIndex:Number(shot.scene_index),auditIndex:index})):currentScenes.map((scene,index)=>({shot:null,sceneIndex:index,auditIndex:index}));
  const total=auditUnits.length,button=$("inspectVisuals");visualAuditResults=Array.from({length:total},()=>null);
  setPipelineStage("audit",0,"Comparando todas las tomas con la enseñanza…","running");button.disabled=true;$("makeVisuals").disabled=true;$("renderVideo").disabled=true;
- $("visualAuditStatus").textContent="Gemini está inspeccionando "+total+" tomas vectoriales. Se revisará cada objeto y cada acción, no solo una imagen por escena.";
+ $("visualAuditStatus").textContent="Gemini inspeccionará "+total+" tomas en lotes de cuatro fotogramas comprimidos para reducir el trabajo del backend. Se revisará cada objeto y cada acción, no solo una imagen por escena.";
  setTaskProgress("visualAuditStatus",0,"Inspección visual · 0/"+total+" tomas","indeterminate");
  try{
-  for(let offset=0;offset<total;offset+=8){
-   const batch=auditUnits.slice(offset,offset+8);
+  for(let offset=0;offset<total;offset+=4){
+   const batch=auditUnits.slice(offset,offset+4);
    const images=batch.map((unit,localIndex)=>{
     const scene=currentScenes[unit.sceneIndex],shot=unit.shot;
     const source=shot?vectorShotCanvas(shot,.5):jaiSceneImages[unit.sceneIndex].image;
     if(!source)throw new Error("No se pudo rasterizar la toma "+(offset+localIndex+1)+" para inspección.");
-    const canvas=document.createElement("canvas");canvas.width=640;canvas.height=1138;
+    const canvas=document.createElement("canvas");canvas.width=448;canvas.height=796;
     const ctx=canvas.getContext("2d");const scale=Math.min(canvas.width/source.width,canvas.height/source.height);
     ctx.drawImage(source,(canvas.width-source.width*scale)/2,(canvas.height-source.height*scale)/2,source.width*scale,source.height*scale);
     return {scene_index:localIndex,subject:visualText(shot?.subject||scene.visual_subject||scene.visual||scene.objective,"").slice(0,220),
      state:visualText(shot?.visual_state||scene.visual_state,"").slice(0,220),
      action:visualText(shot?.visual_action||scene.visual_action||scene.animation,"").slice(0,220),
      proof:visualText(shot?.visual_action||scene.visual_proof||scene.teaching_point,"").slice(0,220),
-     image_base64:canvas.toDataURL("image/jpeg",0.76).split(",")[1]};
+     image_base64:canvas.toDataURL("image/jpeg",0.58).split(",")[1]};
    });
    const response=await fetch(jaiApiUrl("/api/inspect-visual"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images}),signal:AbortSignal.timeout(45000)});
    const data=await readJsonResponse(response,"Inspector visual");

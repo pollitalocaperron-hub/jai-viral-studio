@@ -435,6 +435,57 @@ try {
     assert.equal(res.statusCode, 502);
   }
 
+
+  // Groq 429 must activate only the configured Gemini fallback; all provider calls are mocked.
+  {
+    const plan = makeValidPlan(), calls = [];
+    globalThis.fetch = async (url) => {
+      calls.push(String(url));
+      if (String(url).includes("api.openalex.org")) return response({ results: [] });
+      if (String(url).includes("api.groq.com")) return response({ error: { message: "mock Groq quota" } }, 429);
+      if (String(url).includes("generativelanguage.googleapis.com")) return response({
+        candidates: [{ content: { parts: [{ text: JSON.stringify(plan) }] }, finishReason: "stop" }]
+      });
+      throw new Error("Unexpected provider in mocked fallback test: " + url);
+    };
+    const res = mockResponse();
+    await generateHandler({ method: "POST", body: { topic: "Prueba de compatibilidad Groq Gemini", duration: "30–45 segundos", platform: "Reels" } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.match(res.body.provider, /Gemini/);
+    assert.equal(calls.filter(url => url.includes("api.groq.com")).length, 1);
+    assert.equal(calls.filter(url => url.includes("generativelanguage.googleapis.com")).length, 1);
+    assert.ok(calls.every(url => /openalex|api\.groq\.com|generativelanguage\.googleapis\.com/.test(url)));
+  }
+
+  // If both mocked providers are quota-limited, the API returns a bounded failure without a third provider.
+  {
+    const calls = [];
+    globalThis.fetch = async url => {
+      calls.push(String(url));
+      if (String(url).includes("api.openalex.org")) return response({ results: [] });
+      if (String(url).includes("api.groq.com")) return response({ error: { message: "mock Groq quota" } }, 429);
+      if (String(url).includes("generativelanguage.googleapis.com")) return response({ error: { message: "mock Gemini quota" } }, 429);
+      throw new Error("Unexpected provider in quota fail-closed test: " + url);
+    };
+    const res = mockResponse();
+    await generateHandler({ method: "POST", body: { topic: "Prueba de cuota simulada", duration: "30–45 segundos", platform: "Reels" } }, res);
+    assert.equal(res.statusCode, 502);
+    assert.equal(res.body.providerStatus, 429);
+    assert.equal(calls.filter(url => url.includes("api.groq.com")).length, 1);
+    assert.equal(calls.filter(url => url.includes("generativelanguage.googleapis.com")).length, 1);
+    assert.ok(calls.every(url => /openalex|api\.groq\.com|generativelanguage\.googleapis\.com/.test(url)));
+  }
+
+  // Visual inspection rejects more than four frames before contacting Gemini.
+  {
+    let providerCalls = 0;
+    globalThis.fetch = async () => { providerCalls++; throw new Error("Provider must not be called for invalid frame count"); };
+    const res = mockResponse();
+    await inspectVisualHandler({ method: "POST", body: { images: Array.from({ length: 5 }, () => ({ image_base64: "AQID" })) } }, res);
+    assert.equal(res.statusCode, 400);
+    assert.equal(providerCalls, 0);
+  }
+
   console.log("PASS: editorial generation contract, chronology validation, narration validation/PCM response, and fail-closed visual audit contracts.");
 } finally {
   globalThis.fetch = originalFetch;
