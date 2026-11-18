@@ -30,6 +30,12 @@ const unauthorized = await inspectVisualFunction(new Request(url, {
 assert.equal(unauthorized.status, 403);
 assert.equal(providerCalls, 0);
 
+const wrongContentType = await inspectVisualFunction(new Request(url, {
+  method: "POST", headers: { "x-jai-proxy-secret": secret, "Content-Type": "text/plain" }, body: "{}"
+}));
+assert.equal(wrongContentType.status, 415);
+assert.equal(providerCalls, 0);
+
 const invalidJson = await inspectVisualFunction(new Request(url, {
   method: "POST", headers: { "x-jai-proxy-secret": secret, "Content-Type": "application/json" }, body: "{"
 }));

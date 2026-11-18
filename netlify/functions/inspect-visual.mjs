@@ -56,14 +56,35 @@ export default async function handler(request) {
   const geminiKey = readEnv("GEMINI_API_KEY");
   if (!geminiKey) return Response.json({ error: "El inspector no tiene configurada la clave de Gemini." }, { status: 503 });
 
+  const contentType = request.headers.get("Content-Type") || "";
+  if (!/^application\\/json(?:\\s*;|$)/i.test(contentType)) {
+    return Response.json({ error: "El inspector solo acepta application/json." }, { status: 415 });
+  }
   const declaredLength = Number(request.headers.get("Content-Length") || 0);
   if (declaredLength > MAX_BODY_BYTES) return Response.json({ error: "La auditoría supera el límite seguro de tamaño." }, { status: 413 });
 
-  let raw;
-  try { raw = await request.text(); }
-  catch { return Response.json({ error: "No se pudo leer el cuerpo de la auditoría." }, { status: 400 }); }
-  if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) {
-    return Response.json({ error: "La auditoría supera el límite seguro de tamaño." }, { status: 413 });
+  // Count bytes while reading so chunked requests cannot force an unbounded buffer.
+  let totalBytes = 0, raw = "";
+  if (request.body) {
+    const reader = request.body.getReader();
+    const decoder = new TextDecoder();
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > MAX_BODY_BYTES) {
+          await reader.cancel("inspection body limit exceeded").catch(() => {});
+          return Response.json({ error: "La auditoría supera el límite seguro de tamaño." }, { status: 413 });
+        }
+        raw += decoder.decode(value, { stream: true });
+      }
+      raw += decoder.decode();
+    } catch {
+      return Response.json({ error: "No se pudo leer el cuerpo de la auditoría." }, { status: 400 });
+    } finally {
+      reader.releaseLock();
+    }
   }
 
   let body;
