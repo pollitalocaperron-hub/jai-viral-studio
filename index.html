@@ -1082,12 +1082,42 @@ function exportCharacterLayerPNGs(){
   const ctx=canvas.getContext("2d"),path=getVectorPath(layer);if(!ctx||!path)return;
   if(layer.fill&&layer.fill!=="none"){ctx.fillStyle=layer.fill;ctx.fill(path);}
   if(layer.stroke&&layer.stroke!=="none"&&Number(layer.stroke_width)>0){ctx.strokeStyle=layer.stroke;ctx.lineWidth=Number(layer.stroke_width);ctx.stroke(path);}
+  const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  let visiblePixels=0,transparentPixels=0;
+  for(let pixel=3;pixel<pixels.length;pixel+=4){if(pixels[pixel]>0)visiblePixels++;else transparentPixels++;}
+  if(!visiblePixels)throw new Error("La pieza "+(layer.part_id||layer.id)+" quedó vacía; no se generó un PNG inválido.");
+  if(!transparentPixels)throw new Error("La pieza "+(layer.part_id||layer.id)+" perdió transparencia; se canceló la exportación.");
+  const dataUrl=canvas.toDataURL("image/png");
+  if(!dataUrl.startsWith("data:image/png;base64,")||dataUrl.length<120)throw new Error("El navegador no pudo codificar el PNG de "+(layer.part_id||layer.id)+".");
   const link=document.createElement("a");link.className="secondary";link.style.cssText="display:inline-block;padding:7px 10px";
   link.download="jai-"+(layer.character_id?String(layer.character_id)+"-":"")+String(layer.part_id||shot.shot_id||("toma-"+(shotIndex+1)))+".png";
-  link.href=canvas.toDataURL("image/png");link.textContent="PNG · "+(layer.description||layer.id||"Capa")+" · toma "+(shotIndex+1);
+  link.href=dataUrl;link.dataset.pngValidated="true";link.dataset.visiblePixels=String(visiblePixels);link.dataset.transparentPixels=String(transparentPixels);
+  link.textContent="PNG · "+(layer.description||layer.id||"Capa")+" · "+visiblePixels+" px";
   root.appendChild(link);count++;
  }));
- root.insertAdjacentText("afterbegin",count+" piezas PNG transparentes únicas listas · descarga cada pieza: ");
+ root.insertAdjacentText("afterbegin",count+" piezas PNG verificadas (con píxeles visibles y transparencia) · descarga cada pieza: ");
+}
+function createJaiSoundCue(context,destination,cue,when){
+ const kind=String(cue||"subtle_transition"),osc=context.createOscillator(),gain=context.createGain(),filter=context.createBiquadFilter();
+ const duration=kind==="impact" ? .22 : kind==="movement_whoosh" ? .34 : .28;
+ const base=kind==="impact"?105:kind==="soft_reveal"?520:kind==="movement_whoosh"?720:340;
+ osc.type=kind==="impact"?"sine":kind==="soft_reveal"?"triangle":"sawtooth";
+ osc.frequency.setValueAtTime(base,when);osc.frequency.exponentialRampToValueAtTime(kind==="impact"?48:Math.max(90,base*.48),when+duration);
+ filter.type="lowpass";filter.frequency.setValueAtTime(kind==="movement_whoosh"?1800:kind==="impact"?420:2400,when);
+ gain.gain.setValueAtTime(.0001,when);gain.gain.exponentialRampToValueAtTime(kind==="impact"?.16:.075,when+.018);gain.gain.exponentialRampToValueAtTime(.0001,when+duration);
+ osc.connect(filter);filter.connect(gain);gain.connect(destination);osc.start(when);osc.stop(when+duration+.025);
+}
+function collectJaiSoundEvents(items){
+ const events=[];let cursor=0;
+ for(const item of items){
+  const shot=item.directedShot||{},duration=Math.max(.1,Number(item.seconds)||.1),range=Math.max(.001,Number(shot.end_seconds)-Number(shot.start_seconds));
+  for(const event of Array.isArray(shot.narration_sync)?shot.narration_sync:[]){
+   const relative=Math.max(0,Math.min(duration,(Number(event.start_seconds)-Number(shot.start_seconds))/range*duration));
+   events.push({at:cursor+relative,cue:event.sound_cue||"subtle_transition",id:event.event_id||String(events.length)});
+  }
+  cursor+=duration;
+ }
+ return events.sort((a,b)=>a.at-b.at);
 }
 function vectorShotPreview(shot,progress=.5){
  const canvas=vectorShotCanvas(shot,progress);
@@ -1253,6 +1283,9 @@ async function renderVideo(){
    audioBuffer=await kokoroAudioContext.decodeAudioData(await kokoroAudioBlob.arrayBuffer());
    if(!audioBuffer||!Number.isFinite(audioBuffer.duration)||audioBuffer.duration<=0)throw new Error("La narración no contiene una duración de audio válida.");
    const destination=kokoroAudioContext.createMediaStreamDestination();
+   const effectsBus=kokoroAudioContext.createGain();effectsBus.gain.value=.82;effectsBus.connect(destination);
+   const soundEvents=collectJaiSoundEvents(timelineState.items),cueStart=kokoroAudioContext.currentTime+.12;
+   soundEvents.forEach(event=>createJaiSoundCue(kokoroAudioContext,effectsBus,event.cue,cueStart+event.at));
    audioSource=kokoroAudioContext.createBufferSource();audioSource.buffer=audioBuffer;
    const edit=getAudioEdit(),gainNode=kokoroAudioContext.createGain();
    const timing=getAudioTrackTiming(timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0));audioStartOffset=timing.offset;audioSource.playbackRate.value=timing.rate;
