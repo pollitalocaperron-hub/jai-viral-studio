@@ -345,7 +345,7 @@ function renderStory(value){
  }else{const box=document.createElement("div");box.className="result";box.textContent=readable(value);root.appendChild(box);}
 }
 
-let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,currentShotPlan=[];
+let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,currentShotPlan=[],currentVisualStyleProfileId="paper-craft-explainer";
 let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
 function visualAuditUnitCount(){return currentShotPlan.length||currentScenes.length;}
 function visualAuditPassed(){const count=visualAuditUnitCount();return count>0&&visualAuditResults.length===count&&visualAuditResults.every((item,index)=>item&&item.scene_index===index&&item.status==="pass");}
@@ -379,7 +379,7 @@ async function designAnimationShots(){
  $("directScenesStatus").textContent="El director está descomponiendo las escenas, trazando objetos vectoriales y asignando transformaciones…";
  setTaskProgress("directScenesStatus",5,"Diseñando tomas y capas vectoriales…","indeterminate");
  try{
-  const response=await fetch(jaiApiUrl("/api/direct-scenes"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:currentTopic,script:currentPlanData.script,story:currentScenes,retention_map:currentRetentionMap}),signal:AbortSignal.timeout(55000)});
+  const response=await fetch(jaiApiUrl("/api/direct-scenes"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:currentTopic,script:currentPlanData.script,story:currentScenes,retention_map:currentRetentionMap,style_profile_id:currentVisualStyleProfileId}),signal:AbortSignal.timeout(55000)});
   const data=await readJsonResponse(response,"Director vectorial de escenas");
   if(!response.ok)throw new Error(data.error||"No se pudo diseñar la secuencia de tomas.");
   if(data.animation_ready!==true||!Array.isArray(data.shots)||data.shots.length<currentScenes.length*2)throw new Error("El motor activo no devolvió un plan completo de capas vectoriales independientes.");
@@ -390,6 +390,8 @@ async function designAnimationShots(){
    shot.animation_steps.every(step=>shot.layers.some(layer=>layer.id===step.target_id)&&step.from_transform&&step.to_transform)
   );
   if(!validShots)throw new Error("Una o más rutas vectoriales no se pueden dibujar o sus acciones no apuntan a objetos reales. Rediseña el plan; no se exportará una escena incompleta.");
+  currentVisualStyleProfileId=data.style_profile_id||"paper-craft-explainer";
+  if(currentPlanData)currentPlanData.visual_style_profile_id=currentVisualStyleProfileId;
   currentShotPlan=data.shots;
   // A new direction invalidates previous previews and approvals; never reuse an audit from an older shot plan.
   jaiSceneImages=Array.from({length:currentScenes.length},()=>null);
@@ -405,7 +407,7 @@ async function designAnimationShots(){
    const actions=document.createElement("p");actions.textContent="Transformaciones: "+shot.animation_steps.map(step=>step.action+" ("+step.target_id+")").join(" → ");card.appendChild(actions);
    root.appendChild(card);
   });
-  $("directScenesStatus").textContent="Dirección vectorial validada: "+data.shot_count+" tomas, "+data.conceptual_scene_count+" escenas. Proveedor: "+data.provider+". Todas las capas tienen rutas dibujables y transformaciones independientes.";
+  $("directScenesStatus").textContent="Dirección visual validada: "+data.shot_count+" tomas, "+data.conceptual_scene_count+" escenas. Perfil: "+(data.style_profile_label||currentVisualStyleProfileId)+". Proveedor: "+data.provider+".";
   setTaskProgress("directScenesStatus",100,"Plan vectorial validado · "+data.shot_count+" tomas");
   scheduleJaiAutosave();
   return true;
@@ -488,9 +490,9 @@ async function inspectVisuals(){
      state:visualText(shot?.visual_state||scene.visual_state,"").slice(0,220),
      action:visualText(shot?.visual_action||scene.visual_action||scene.animation,"").slice(0,220),
      proof:visualText(shot?.visual_action||scene.visual_proof||scene.teaching_point,"").slice(0,220),
-     image_base64:canvas.toDataURL("image/jpeg",0.58).split(",")[1]};
+     image_base64:canvas.toDataURL("image/jpeg",0.58).split(",")[1],style_profile_id:currentVisualStyleProfileId};
    });
-   const response=await fetch(jaiApiUrl("/api/inspect-visual"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images}),signal:AbortSignal.timeout(45000)});
+   const response=await fetch(jaiApiUrl("/api/inspect-visual"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images,style_profile_id:currentVisualStyleProfileId,topic:currentTopic,script:currentPlanData?.script||""}),signal:AbortSignal.timeout(45000)});
    const data=await readJsonResponse(response,"Inspector visual");
    if(!response.ok)throw new Error(data.error||"No se pudo completar la inspección visual.");
    if(!Array.isArray(data.results)||data.results.length!==batch.length)throw new Error("El inspector no devolvió un resultado por cada toma del lote.");
@@ -1570,7 +1572,7 @@ function loadSavedProject(project,options={}){
  if(jaiAutosaveTimer){clearTimeout(jaiAutosaveTimer);jaiAutosaveTimer=null;}
  const data=project.data;
  $("topic").value=String(project.topic||"");$("research").value=String(project.notes||"");
- currentTopic=String(project.topic||"");currentPlanData=data;currentPlan=String(project.plan||JSON.stringify(data,null,2));
+ currentTopic=String(project.topic||"");currentPlanData=data;currentVisualStyleProfileId=data.visual_style_profile_id||"paper-craft-explainer";currentPlan=String(project.plan||JSON.stringify(data,null,2));
  if(typeof stopTimelinePreview==="function")stopTimelinePreview("");
  if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
  kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;audioEdit={trimStart:0,trimEnd:0,gain:1};audioTrackOffset=0;subtitleTrackOffset=0;captionCues=[];visualAuditResults=[];

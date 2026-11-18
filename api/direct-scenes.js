@@ -1,4 +1,5 @@
 import { applyApiCors } from "../cors.js";
+import { resolveVisualStyleProfile } from "./visual-style-profiles.js";
 
 function parseRange(value) {
   const match = String(value || "").replace(/[–—]/g, "-").match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
@@ -75,7 +76,7 @@ export default async function handler(req, res) {
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Origen no autorizado." });
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Método no permitido." }); }
-  const { topic, script, story, retention_map = [] } = req.body || {};
+  const { topic, script, story, retention_map = [], style_profile_id = "" } = req.body || {};
   if (typeof topic !== "string" || !topic.trim() || topic.length > 500 || typeof script !== "string" || !script.trim() || script.length > 8000) {
     return res.status(400).json({ error: "Se requiere un tema y una narración válidos." });
   }
@@ -83,6 +84,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Se requiere un storyboard válido de 4 o 5 escenas conceptuales." });
   }
   if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) return res.status(503).json({ error: "No hay un proveedor editorial configurado." });
+
+  const styleProfile = resolveVisualStyleProfile(style_profile_id, topic, script);
 
   const prompt = [
     "Eres el DIRECTOR DE ESCENAS Y SUPERVISOR DE ANIMACIÓN de J.A.I. Convierte el storyboard conceptual en un plan de tomas ejecutable. Devuelve SOLO JSON válido con la propiedad shots.",
@@ -93,7 +96,7 @@ export default async function handler(req, res) {
     "Los elementos deben ser concretos y separables: no uses 'todo el motor' como una sola capa si necesitas mover pistón, válvula y bujía independientemente. Mantén la misma identidad, geometría, paleta y orientación de objetos repetidos entre tomas.",
     "La ilustración vectorial es la escena de producción: cada objeto debe tener su propio path_d independiente, no agrupes objetos móviles en una sola ruta. Usa coordenadas de un lienzo vertical 720x1280; path_d debe contener SOLO comandos de ruta SVG (M,L,H,V,C,S,Q,T,A,Z) y números, nunca etiquetas XML/SVG ni texto. Ordena las capas de atrás hacia delante. Cada forma debe ser una silueta cerrada y reconocible, con relleno y contorno.",
     "Cada animation_step debe incluir from_transform y to_transform con x, y (desplazamiento en píxeles), rotation (grados), scale (multiplicador) y opacity (0–1). Anima el objeto real descrito por target_id; usa movimientos pequeños y físicamente correctos, no movimiento de cámara ni partículas decorativas. Las capas que no se mueven usan la misma transformación inicial y final.",
-    "Usa el estilo fijo de J.A.I.: ilustración editorial educativa 2D premium, siluetas limpias y reconocibles, contornos de tinta consistentes, rellenos planos por capas con sombreado sutil, paleta coherente adaptada al tema, jerarquía clara y composición vertical. Todos los temas deben mantener este mismo lenguaje visual.",
+    "PERFIL AUDIOVISUAL DE REFERENCIA: " + styleProfile.label + ". " + styleProfile.prompt + " Paleta: " + styleProfile.palette + " Gramática de movimiento y montaje: " + styleProfile.motion,
     "No pongas texto dentro de las imágenes. Los subtítulos y etiquetas se añadirán en edición.",
     "Storyboard: " + JSON.stringify(story),
     "Narración: " + script,
@@ -215,7 +218,7 @@ export default async function handler(req, res) {
   const shots = parsed?.shots;
   if (validationError) return res.status(502).json({ error: validationError, diagnosticCode: "SCENE_DIRECTOR_INVALID_SHOTS" });
   const normalized = shots.map((shot, index) => ({
-    ...shot, shot_id: "shot-" + String(index + 1).padStart(2, "0"),
+    ...shot, shot_id: "shot-" + String(index + 1).padStart(2, "0"), style_profile_id: styleProfile.id,
     scene_index: Number(shot.scene_index), start_seconds: Number(shot.start_seconds), end_seconds: Number(shot.end_seconds),
     background_color: clean(shot.background_color, 16),
     layers: shot.layers.map((layer, layerIndex) => ({
@@ -230,5 +233,5 @@ export default async function handler(req, res) {
       to_transform: Object.fromEntries(["x", "y", "rotation", "scale", "opacity"].map(key => [key, Number(step.to_transform[key])]))
     }))
   }));
-  return res.status(200).json({ shots: normalized, shot_count: normalized.length, conceptual_scene_count: story.length, provider, animation_plan_validated: true, animation_ready: true });
+  return res.status(200).json({ shots: normalized, shot_count: normalized.length, conceptual_scene_count: story.length, provider, style_profile_id: styleProfile.id, style_profile_label: styleProfile.label, animation_plan_validated: true, animation_ready: true });
 }
