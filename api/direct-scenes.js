@@ -28,7 +28,7 @@ function validateShots(shots, story) {
     for (const key of required) if (!clean(shot[key], key === "visual_prompt_en" ? 1800 : 700)) return "La toma " + (index + 1) + " no incluye " + key + ".";
     if (clean(shot.visual_prompt_en, 1800).split(/\s+/).length < 25) return "El prompt de la toma " + (index + 1) + " necesita describir un fotograma concreto con mayor precisión.";
     if (!/^#[0-9a-fA-F]{6}$/.test(clean(shot.background_color, 16))) return "La toma " + (index + 1) + " necesita un color de fondo hexadecimal válido.";
-    if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 6) return "La toma " + (index + 1) + " necesita entre 3 y 6 capas vectoriales independientes.";
+    if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 10) return "La toma " + (index + 1) + " necesita entre 3 y 6 capas vectoriales independientes.";
     const layerIds = new Set();
     for (const [layerIndex, layer] of shot.layers.entries()) {
       const id = clean(layer?.id, 60), path = typeof layer?.path_d === "string" ? layer.path_d.trim() : "";
@@ -224,7 +224,7 @@ export default async function handler(req, res) {
     scene_index: Number(shot.scene_index), start_seconds: Number(shot.start_seconds), end_seconds: Number(shot.end_seconds),
     background_color: clean(shot.background_color, 16),
     layers: shot.layers.map((layer, layerIndex) => ({
-      id: clean(layer?.id, 60) || "layer-" + (layerIndex + 1), description: clean(layer?.description, 260), role: clean(layer?.role, 120),
+      id: clean(layer?.id, 60) || "layer-" + (layerIndex + 1), description: clean(layer?.description, 260), role: clean(layer?.role, 120), character_id: clean(layer?.character_id, 80), part_id: clean(layer?.part_id, 80),
       path_d: layer.path_d.trim(), fill: clean(layer.fill, 16), stroke: clean(layer.stroke, 16), stroke_width: Number(layer.stroke_width),
       pivot_x: Number(layer.pivot_x), pivot_y: Number(layer.pivot_y)
     })),
@@ -235,5 +235,6 @@ export default async function handler(req, res) {
       to_transform: Object.fromEntries(["x", "y", "rotation", "scale", "opacity"].map(key => [key, Number(step.to_transform[key])]))
     }))
   }));
-  return res.status(200).json({ shots: normalized, shot_count: normalized.length, conceptual_scene_count: story.length, provider, style_profile_id: styleProfile.id, style_profile_label: styleProfile.label, animation_plan_validated: true, animation_ready: true });
+  const characterBible = Array.isArray(data.character_bible) ? data.character_bible.slice(0, 20).map((item, index) => ({ character_id: clean(item?.character_id, 80) || "character-" + (index + 1), name: clean(item?.name, 100), silhouette: clean(item?.silhouette, 240), proportions: clean(item?.proportions, 240), facial_features: clean(item?.facial_features, 300), hairstyle: clean(item?.hairstyle, 160), wardrobe: clean(item?.wardrobe, 240), accessories: clean(item?.accessories, 240), palette: Array.isArray(item?.palette) ? item.palette.slice(0, 8).filter(color => /^#[0-9a-fA-F]{6}$/.test(color)) : [], personality: clean(item?.personality, 240), voice: clean(item?.voice, 160), signature_gestures: clean(item?.signature_gestures, 240) })) : [];
+  return res.status(200).json({ shots: normalized, character_bible: characterBible, shot_count: normalized.length, conceptual_scene_count: story.length, provider, style_profile_id: styleProfile.id, style_profile_label: styleProfile.label, animation_plan_validated: true, animation_ready: true });
 }
