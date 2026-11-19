@@ -15,7 +15,7 @@ assert.match(frontendSource, /canvas\.toDataURL\("image\/png"\)/, "Character lay
 assert.match(frontendSource, /currentCinematicReady&&currentDurationValidation/, "Final export must require verified cinematic assets, not vector previews.");
 assert.match(frontendSource, /Previsualización técnica completada/, "The UI must label legacy vector output as a preview, not final production.");
 assert.match(frontendSource, /async function inspectRenderedBlob/, "A browser export must be decoded and checked before a download is exposed.");
-assert.match(frontendSource, /distinctFrames<3/, "The export QC must reject a frozen video.");
+assert.match(frontendSource, /fingerprints\\.size<3/, "The export QC must reject a frozen video.");
 const generationTimeouts = [...generationSource.matchAll(/AbortSignal\.timeout\((\d+)\)/g)].map(match => Number(match[1]));
 assert.deepEqual(generationTimeouts, [2500, 12000, 12000, 6000, 6000], "Generation provider and repair timeouts must remain explicitly bounded.");
 const worstCaseGenerationMs = 2500 + 12000 + (12000 * 2) + 1000 + (6000 * 2);
