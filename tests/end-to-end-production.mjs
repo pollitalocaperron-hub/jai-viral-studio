@@ -190,7 +190,7 @@ try {
   assert.equal(await page.locator("#downloadVideo").isVisible(), false, "No final video download may be exposed without cinematic assets and verified QC");
   assert.match(await page.locator("#renderStatus").innerText(), /previsualizaciones vectoriales|motor visual disponible solo genera/i, "The UI must explain why final export remains blocked");
   assert.deepEqual(errors, [], "The integrated browser flow must not produce uncaught JavaScript errors");
-  console.log("PASS: full browser production flow through vector-shot direction, independent layer animation, neural narration, per-shot visual audit, captions, and decoded 9:16 video export.");
+  console.log("PASS: browser production flow through vector preview, narration, per-shot visual audit, captions, and enforced cinematic export gate.");
 } finally {
   if (browser) await browser.close();
   await new Promise(resolve => server.close(resolve));
