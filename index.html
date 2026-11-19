@@ -47,7 +47,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 </style>
 </head>
 <body><div class="wrap">
-<header class="top"><div class="brand"><div class="logo">J</div><div><h1>J.A.I. Viral Studio</h1><div class="sub">Tu idea → una producción vertical</div></div></div><div class="pill">PROTOTIPO · DÍA 1</div></header>
+<header class="top"><div class="brand"><div class="logo">J</div><div><h1>J.A.I. Viral Studio</h1><div class="sub">Tu idea → una producción vertical</div></div></div><div class="pill">ESTUDIO EN DESARROLLO</div></header>
 <section class="hero"><div class="eyebrow">Creative intelligence studio</div><h2>Convirtamos una idea<br>en un vídeo que explique.</h2><p>Escribe el tema y añade tu investigación. J.A.I. organizará el concepto, el enfoque y el plan visual para un vídeo educativo 9:16.</p></section>
 <section class="card">
 <label for="topic">¿Qué vídeo quieres crear?</label><div class="topic-input-wrap"><input id="topic" maxlength="160" placeholder="Escribe tu propia idea…" autocomplete="off"><button id="useTopicSuggestion" type="button" class="topic-use-button" aria-label="Usar la idea sugerida" title="Usar esta idea">Usar idea</button></div><div class="hint" id="topicSuggestionHint">También puedes escribir tu propio tema. La sugerencia cambia automáticamente.</div><div class="hint">J.A.I. puede trabajar con cualquier disciplina: ciencia, historia, tecnología, naturaleza, economía y mucho más.</div><div style="height:16px"></div>
@@ -143,13 +143,13 @@ function updateRenderGate(){
  const audioTiming=voiceReady&&timelineDuration?getAudioTrackTiming(timelineDuration):null;
  const audioFits=!audioTiming||audioTiming.withinRateRange;
  const animationReady=animationRendererReady();
- const ready=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&voiceReady&&audioFits&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)&&animationReady);
+ const ready=!!(currentCinematicReady&&currentDurationValidation?.within_tolerance&&timelineState.items.length&&voiceReady&&audioFits&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)&&animationReady);
  $("renderVideo").disabled=!ready||renderRecording;
- if(timelineState.items.length){const imagesReady=jaiSceneImages.length===currentScenes.length&&currentScenes.length>0&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);const montageReady=imagesReady&&voiceReady&&visualAuditPassed()&&animationReady;setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje completo · imagen, narración y revisión integradas": "Estructura creada · pendiente de ilustraciones vectoriales, narración y revisión",montageReady?"done":"idle");}
+ if(timelineState.items.length){const imagesReady=jaiSceneImages.length===currentScenes.length&&currentScenes.length>0&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);const montageReady=currentCinematicReady&&imagesReady&&voiceReady&&visualAuditPassed()&&animationReady;setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje cinematográfico validado": "Previsualización técnica · falta el motor cinematográfico y su control de calidad",montageReady?"done":"idle");}
  if(!ready&&!renderRecording){
-  const reason=!currentScenes.length?"genera primero un plan":!animationReady?"el motor de capas vectoriales independientes no está completo; rediseña las tomas":!jaiSceneImages.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)?"genera las ilustraciones vectoriales que faltan":!voiceReady?"genera y revisa la narración antes de exportar":!visualAuditPassed()?"la revisión visual está pendiente: inspecciona o aprueba las escenas manualmente":!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":!audioFits?"la narración no cabe en la duración del montaje sin alterar demasiado su tono; ajusta la duración o vuelve a generar la voz":"faltan recursos";
+  const reason=!currentScenes.length?"genera primero un plan":!currentCinematicReady?"el motor visual disponible solo genera previsualizaciones vectoriales; faltan recursos cinematográficos reales y validación de continuidad":!animationReady?"el motor de capas vectoriales independientes no está completo; rediseña las tomas":!jaiSceneImages.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)?"genera las ilustraciones vectoriales que faltan":!voiceReady?"genera y revisa la narración antes de exportar":!visualAuditPassed()?"la revisión visual está pendiente: inspecciona o aprueba las escenas manualmente":!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":!audioFits?"la narración no cabe en la duración del montaje sin alterar demasiado su tono; ajusta la duración o vuelve a generar la voz":"faltan recursos";
   $("renderStatus").textContent="Exportación bloqueada: "+reason+".";
- }else if(ready)$("renderStatus").textContent="Todo listo para exportar. Pulsa «Renderizar y exportar video».";
+ }else if(ready)$("renderStatus").textContent="Control de calidad aprobado. El vídeo puede exportarse.";
 }
 const JAI_AUTOSAVE_DB="jai-viral-studio-recovery",JAI_AUTOSAVE_STORE="sessions",JAI_AUTOSAVE_KEY="latest";
 let jaiAutosaveTimer=null,jaiAutosaveBusy=false,jaiAutosavePending=false,projectRecoveryInProgress=false,jaiAutosaveRevision=0;
@@ -346,7 +346,7 @@ function renderStory(value){
  }else{const box=document.createElement("div");box.className="result";box.textContent=readable(value);root.appendChild(box);}
 }
 
-let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,currentShotPlan=[],currentCharacterBible=[],currentReusableRigs=[],currentVisualStyleProfileId="",currentSeriesBible=null;
+let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,currentShotPlan=[],currentSceneContracts=[],currentCinematicReady=false,currentCharacterBible=[],currentReusableRigs=[],currentVisualStyleProfileId="",currentSeriesBible=null;
 let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
 function visualStyleProfileLabel(id){
  return ({
@@ -402,7 +402,7 @@ async function designAnimationShots(){
   if(!validShots)throw new Error("Una o más rutas vectoriales no se pueden dibujar o sus acciones no apuntan a objetos reales. Rediseña el plan; no se exportará una escena incompleta.");
   currentVisualStyleProfileId=data.style_profile_id||"paper-craft-explainer";
   if(currentPlanData)currentPlanData.visual_style_profile_id=currentVisualStyleProfileId;
-  currentShotPlan=data.shots;currentCharacterBible=Array.isArray(data.character_bible)?data.character_bible:[];currentReusableRigs=Array.isArray(data.reusable_rigs)?data.reusable_rigs:[];if(currentSeriesBible&&currentCharacterBible.length){currentSeriesBible.characters=currentCharacterBible.slice(0,30);scheduleJaiAutosave();}$("exportCharacterLayers").disabled=false;$("characterLayerExports").textContent="Piezas vectoriales listas para separar en PNG.";
+  currentShotPlan=data.shots;currentSceneContracts=Array.isArray(data.scene_contracts)?data.scene_contracts:[];currentCinematicReady=data.cinematic_ready===true;currentCharacterBible=Array.isArray(data.character_bible)?data.character_bible:[];currentReusableRigs=Array.isArray(data.reusable_rigs)?data.reusable_rigs:[];if(currentSeriesBible&&currentCharacterBible.length){currentSeriesBible.characters=currentCharacterBible.slice(0,30);scheduleJaiAutosave();}$("exportCharacterLayers").disabled=false;$("characterLayerExports").textContent="Piezas vectoriales listas para separar en PNG.";
   // A new direction invalidates previous previews and approvals; never reuse an audit from an older shot plan.
   jaiSceneImages=Array.from({length:currentScenes.length},()=>null);
   visualAuditResults=Array.from({length:currentShotPlan.length||currentScenes.length},()=>null);
@@ -417,8 +417,8 @@ async function designAnimationShots(){
    const actions=document.createElement("p");actions.textContent="Transformaciones: "+shot.animation_steps.map(step=>step.action+" ("+step.target_id+")").join(" → ");card.appendChild(actions);
    root.appendChild(card);
   });
-  $("directScenesStatus").textContent="Dirección visual validada: "+data.shot_count+" tomas, "+data.conceptual_scene_count+" escenas. Perfil: "+(data.style_profile_label||currentVisualStyleProfileId)+". Proveedor: "+data.provider+".";
-  setTaskProgress("directScenesStatus",100,"Plan vectorial validado · "+data.shot_count+" tomas");
+  $("directScenesStatus").textContent="Contrato de "+currentSceneContracts.length+" tomas recibido. Estado: "+(data.visual_engine_status||"sin clasificar")+". El director actual produce geometría vectorial y previsualizaciones; todavía no genera metraje cinematográfico ni imágenes CGI. No se marcará como producción final.";
+  setTaskProgress("directScenesStatus",100,"Contrato técnico validado · previsualización vectorial, no final");
   scheduleJaiAutosave();
   return true;
  }catch(error){
@@ -1240,7 +1240,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  // El progreso de render es exclusivo de la interfaz; nunca se dibuja dentro del vídeo exportado.
 }
 async function renderVideo(){
- if(currentPlanData?.clarification_required){$("renderStatus").textContent="Exportación bloqueada: "+(currentPlanData.clarification_question||"primero aclara el enfoque del tema.");return;}
+ if(currentPlanData?.clarification_required){$("renderStatus").textContent="Exportación bloqueada: "+(currentPlanData.clarification_question||"primero aclara el enfoque del tema.");return;}\n if(!currentCinematicReady){$("renderStatus").textContent="Exportación bloqueada: el proyecto solo contiene previsualizaciones vectoriales. Faltan recursos cinematográficos reales, continuidad verificada y control de calidad del render.";return;}
  if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating){$("renderStatus").textContent="Espera a que termine la producción o la recuperación del proyecto antes de exportar.";return;}
  if(renderRecording)return;
  if(!timelineState.items.length){$("renderStatus").textContent="Prepara la línea de tiempo antes de exportar.";return;}
