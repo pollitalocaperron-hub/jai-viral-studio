@@ -462,9 +462,9 @@ async function generateAIVisuals(){
    setPipelineStage("visual",percent,"Capas vectoriales y transformaciones: "+generatedCount+" de "+scenes.length+" escenas","running");
    renderVisualScenes();scheduleJaiAutosave();
   }
-  setPipelineStage("visual",100,generatedCount+" escenas ilustradas · "+currentShotPlan.length+" tomas vectoriales listas","done");
-  $("visualStatus").textContent="Producción visual lista: "+generatedCount+" escenas ilustradas y "+currentShotPlan.length+" tomas con objetos independientes animables. No se llamó a ningún generador externo de imágenes.";
-  setTaskProgress("visualStatus",100,"Ilustraciones vectoriales completadas");
+  setPipelineStage("visual",100,generatedCount+" previsualizaciones vectoriales · motor cinematográfico pendiente","error");
+  $("visualStatus").textContent="Previsualización técnica completada: "+generatedCount+" escenas rasterizadas desde capas vectoriales. Esto NO es metraje cinematográfico ni imágenes CGI generadas. La producción final y la exportación permanecen bloqueadas hasta integrar y verificar recursos visuales reales.";
+  setTaskProgress("visualStatus",100,"Previsualización lista · producción final bloqueada");
   $("inspectVisuals").disabled=false;
   updateRenderGate();
  }catch(error){
