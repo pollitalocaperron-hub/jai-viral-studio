@@ -108,7 +108,7 @@ const server = http.createServer((req, res) => {
           });
         }
       });
-      res.end(JSON.stringify({ shots, shot_count: shots.length, conceptual_scene_count: requestedStory.length, provider: "Mock free-tier", animation_ready: true }));
+      res.end(JSON.stringify({ shots, shot_count: shots.length, conceptual_scene_count: requestedStory.length, provider: "Mock free-tier", vector_preview_ready: true, animation_ready: false, cinematic_ready: false }));
       return;
     }
     if (req.url === "/api/narrate") {
@@ -150,7 +150,7 @@ try {
 
   // La producción visual debe invocar automáticamente al director de tomas.
   await page.locator("#makeVisuals").click();
-  await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Producción visual lista"), null, { timeout: 30000 });
+  await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Previsualización técnica completada"), null, { timeout: 30000 });
   assert.equal(counters.directScenes, 1, "Visual production must automatically request and validate the directed shot plan");
   assert.equal(await page.locator("#timelineTracks .scene").count(), 8, "The editable timeline must use the eight directed shots, not repeat four conceptual stills.");
   assert.ok((await page.locator("#timelineTracks").innerText()).includes("SHOT-01"), "Directed shot IDs must be carried into the editable timeline");
@@ -186,25 +186,9 @@ try {
   await page.waitForFunction(() => (document.querySelector("#visualAuditStatus")?.textContent || "").includes("todas las escenas superaron"), null, { timeout: 20000 });
   assert.equal(counters.inspect, 1, "Eight directed shots fit in one visual-inspection batch");
   assert.equal(counters.inspectedImages, 8, "Every directed shot must be independently inspected before export");
-  assert.equal(await page.locator("#renderVideo").isEnabled(), true, "Only the complete plan, image set, narration, and approved audit may unlock export");
-
-  await page.locator("#renderVideo").click();
-  await page.waitForFunction(() => (document.querySelector("#renderStatus")?.textContent || "").includes("Vídeo renderizado correctamente"), null, { timeout: 60000 });
-  assert.equal(await page.locator("#downloadVideo").isVisible(), true, "The integrated production must expose its finished video file");
-  const exported = await page.evaluate(async () => {
-    const link = document.querySelector("#downloadVideo");
-    const video = document.createElement("video"); video.preload = "auto"; video.muted = true; video.src = link.href;
-    await new Promise((resolve, reject) => {
-      video.onloadedmetadata = resolve;
-      video.onerror = () => reject(new Error("The end-to-end export could not be decoded"));
-      setTimeout(() => reject(new Error("Timed out reading end-to-end video metadata")), 10000);
-    });
-    return { width: video.videoWidth, height: video.videoHeight, duration: video.duration, size: (await fetch(link.href).then(r => r.blob())).size };
-  });
-  assert.equal(exported.width, 720);
-  assert.equal(exported.height, 1280);
-  assert.ok(exported.duration >= 35 && exported.duration <= 38, "The final export must preserve the 36-second storyboard duration");
-  assert.ok(exported.size > 100000, "The final export must contain a substantial encoded video and audio payload");
+  assert.equal(await page.locator("#renderVideo").isEnabled(), false, "Vector-only preview must never unlock final export");
+  assert.equal(await page.locator("#downloadVideo").isVisible(), false, "No final video download may be exposed without cinematic assets and verified QC");
+  assert.match(await page.locator("#renderStatus").innerText(), /previsualizaciones vectoriales|motor visual disponible solo genera/i, "The UI must explain why final export remains blocked");
   assert.deepEqual(errors, [], "The integrated browser flow must not produce uncaught JavaScript errors");
   console.log("PASS: full browser production flow through vector-shot direction, independent layer animation, neural narration, per-shot visual audit, captions, and decoded 9:16 video export.");
 } finally {
