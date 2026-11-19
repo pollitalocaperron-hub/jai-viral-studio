@@ -247,7 +247,8 @@ try {
     assert.equal(res.body.shot_count, 20, "The director must accept five continuous shots per conceptual scene");
     assert.equal(res.body.conceptual_scene_count, 4);
     assert.equal(res.body.animation_plan_validated, true);
-    assert.equal(res.body.animation_ready, true, "Validated independent vector layers and transforms must be renderable as a vector preview");
+    assert.equal(res.body.vector_preview_ready, true, "Validated independent vector layers and transforms must be renderable as a vector preview");
+    assert.equal(res.body.animation_ready, false, "Vector layer transforms must not be advertised as cinematic animation readiness");
     assert.equal(res.body.visual_engine_status, "vector_preview_only");
     assert.equal(res.body.cinematic_ready, false, "Vector-only scene direction must never claim cinematic readiness.");
     assert.equal(res.body.scene_contracts.length, res.body.shots.length);
