@@ -392,7 +392,7 @@ async function designAnimationShots(){
   const response=await fetch(jaiApiUrl("/api/direct-scenes"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:currentTopic,script:currentPlanData.script,story:currentScenes,retention_map:currentRetentionMap,style_profile_id:currentVisualStyleProfileId}),signal:AbortSignal.timeout(55000)});
   const data=await readJsonResponse(response,"Director vectorial de escenas");
   if(!response.ok)throw new Error(data.error||"No se pudo diseñar la secuencia de tomas.");
-  if(data.animation_ready!==true||!Array.isArray(data.shots)||data.shots.length<currentScenes.length*2)throw new Error("El motor activo no devolvió un plan completo de capas vectoriales independientes.");
+  if(data.vector_preview_ready!==true||!Array.isArray(data.shots)||data.shots.length<currentScenes.length*2)throw new Error("El motor activo no devolvió un plan completo de capas vectoriales independientes.");
   const validShots=data.shots.every(shot=>
    Array.isArray(shot.layers)&&shot.layers.length>=3&&
    shot.layers.every(layer=>typeof layer.path_d==="string"&&!!getVectorPath(layer))&&
