@@ -6,7 +6,7 @@
   "scripts": {
     "test:browser": "node tests/browser-persistence.mjs",
     "test:api": "node tests/api-contracts.mjs",
-    "test": "npm run test:api && npm run test:worker && npm run test:netlify && npm run test:browser && npm run test:e2e",
+    "test": "npm run test:api && npm run test:scene-contract && npm run test:worker && npm run test:netlify && npm run test:browser && npm run test:e2e",
     "test:e2e": "node tests/end-to-end-production.mjs",
     "test:worker": "node tests/worker-adapter.mjs",
     "test:netlify": "node tests/netlify-inspect-adapter.mjs",
