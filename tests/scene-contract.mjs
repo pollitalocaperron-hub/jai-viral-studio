@@ -19,5 +19,4 @@ assert.equal(scene.visual.source_type, "vector_scene");
 assert.equal(getSceneReadiness(scene).cinematic_ready, false);
 assert.equal(getSceneReadiness(scene).status, "vector_preview_only");
 
-const invalid = normalizeLegacyShot({ ...legacy, end_seconds: -1 });
-assert.fail("No debe normalizar intervalos inválidos: " + JSON.stringify(invalid));
+assert.throws(() => normalizeLegacyShot({ ...legacy, end_seconds: -1 }), /intervalo temporal inválido/);
