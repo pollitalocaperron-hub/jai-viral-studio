@@ -385,7 +385,7 @@ $("exportCharacterLayers").addEventListener("click",exportCharacterLayerPNGs);
 async function designAnimationShots(){
  if(!currentPlanData||!currentScenes.length){$("directScenesStatus").textContent="Primero genera un plan editorial completo.";return false;}
  if(shotPlanningInProgress||projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("directScenesStatus").textContent="Espera a que termine la tarea actual.";return false;}
- const button=$("directScenes");shotPlanningInProgress=true;button.disabled=true;$("makeVisuals").disabled=true;
+ const button=$("directScenes");currentCinematicReady=false;currentSceneContracts=[];shotPlanningInProgress=true;button.disabled=true;$("makeVisuals").disabled=true;
  $("directScenesStatus").textContent="El director está descomponiendo las escenas, trazando objetos vectoriales y asignando transformaciones…";
  setTaskProgress("directScenesStatus",5,"Diseñando tomas y capas vectoriales…","indeterminate");
  try{
