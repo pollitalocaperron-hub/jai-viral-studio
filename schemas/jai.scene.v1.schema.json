@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jai-viral-studio.local/schemas/jai.scene.v1.schema.json",
+  "title": "J.A.I. Scene Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scene_id", "shot_id", "engine", "time", "canvas", "visual", "audio", "transition", "validation"],
+  "properties": {
+    "schema_version": { "const": "jai.scene.v1" },
+    "scene_id": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "shot_id": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "engine": { "enum": ["cinematic", "legacy-vector"] },
+    "time": {
+      "type": "object", "additionalProperties": false,
+      "required": ["start", "end", "fps"],
+      "properties": {
+        "start": { "type": "number", "minimum": 0 },
+        "end": { "type": "number", "exclusiveMinimum": 0 },
+        "fps": { "type": "integer", "enum": [24, 25, 30, 50, 60] }
+      }
+    },
+    "canvas": {
+      "type": "object", "additionalProperties": false,
+      "required": ["width", "height", "aspect_ratio"],
+      "properties": {
+        "width": { "const": 720 },
+        "height": { "const": 1280 },
+        "aspect_ratio": { "const": "9:16" }
+      }
+    },
+    "visual": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_type", "assets", "character_ids", "continuity_anchor", "camera", "motion"],
+      "properties": {
+        "source_type": { "enum": ["image", "image_sequence", "video_clip", "vector_scene"] },
+        "assets": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["asset_id", "mime_type", "width", "height", "sha256"],
+            "properties": {
+              "asset_id": { "type": "string", "minLength": 1 },
+              "uri": { "type": "string", "minLength": 1 },
+              "mime_type": { "enum": ["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm"] },
+              "width": { "type": "integer", "minimum": 1 },
+              "height": { "type": "integer", "minimum": 1 },
+              "duration": { "type": "number", "exclusiveMinimum": 0 },
+              "fps": { "type": "number", "exclusiveMinimum": 0 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            },
+            "anyOf": [{ "required": ["uri"] }]
+          }
+        },
+        "vector_layers": { "type": "array" },
+        "character_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "environment_id": { "type": ["string", "null"] },
+        "continuity_anchor": { "type": "string", "minLength": 1 },
+        "camera": { "type": "object" },
+        "motion": { "type": "array" }
+      }
+    },
+    "audio": {
+      "type": "object", "additionalProperties": false,
+      "required": ["narration_segment", "subtitle", "sync_events"],
+      "properties": {
+        "narration_segment": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "sync_events": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "transition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "duration"],
+      "properties": {
+        "type": { "enum": ["cut", "fade", "wipe", "dissolve"] },
+        "duration": { "type": "number", "minimum": 0, "maximum": 2 }
+      }
+    },
+    "validation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["assets_verified", "continuity_verified", "render_verified"],
+      "properties": {
+        "assets_verified": { "type": "boolean" },
+        "continuity_verified": { "type": "boolean" },
+        "render_verified": { "type": "boolean" }
+      }
+    }
+  }
+}
