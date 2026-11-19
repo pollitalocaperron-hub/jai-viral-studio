@@ -12,6 +12,8 @@ const frontendSource = readFileSync(new URL("../index.html", import.meta.url), "
 assert.match(frontendSource, /const transformChain=\[\.\.\.chain,layer\]/, "Character rendering must apply parent-bone transforms before the child part.");
 assert.match(frontendSource, /exportedParts\.has\(reusableKey\)/, "PNG export must deduplicate recurring character parts across shots.");
 assert.match(frontendSource, /canvas\.toDataURL\("image\/png"\)/, "Character layer export must encode transparent canvas output as PNG.");
+assert.match(frontendSource, /currentCinematicReady&&currentDurationValidation/, "Final export must require verified cinematic assets, not vector previews.");
+assert.match(frontendSource, /Previsualización técnica completada/, "The UI must label legacy vector output as a preview, not final production.");
 const generationTimeouts = [...generationSource.matchAll(/AbortSignal\.timeout\((\d+)\)/g)].map(match => Number(match[1]));
 assert.deepEqual(generationTimeouts, [2500, 12000, 12000, 6000, 6000], "Generation provider and repair timeouts must remain explicitly bounded.");
 const worstCaseGenerationMs = 2500 + 12000 + (12000 * 2) + 1000 + (6000 * 2);
@@ -245,7 +247,12 @@ try {
     assert.equal(res.body.shot_count, 20, "The director must accept five continuous shots per conceptual scene");
     assert.equal(res.body.conceptual_scene_count, 4);
     assert.equal(res.body.animation_plan_validated, true);
-    assert.equal(res.body.animation_ready, true, "Validated independent vector layers and transforms must be animation-ready");
+    assert.equal(res.body.animation_ready, true, "Validated independent vector layers and transforms must be renderable as a vector preview");
+    assert.equal(res.body.visual_engine_status, "vector_preview_only");
+    assert.equal(res.body.cinematic_ready, false, "Vector-only scene direction must never claim cinematic readiness.");
+    assert.equal(res.body.scene_contracts.length, res.body.shots.length);
+    assert.equal(res.body.scene_contracts[0].schema_version, "jai.scene.v1");
+    assert.equal(res.body.scene_contracts[0].visual.source_type, "vector_scene");
     assert.equal(res.body.shots[0].shot_id, "shot-01");
     assert.equal(res.body.shots[0].layers.length, 3, "Each shot must contain multiple independently rendered vector layers");
     assert.equal(res.body.reusable_rigs.length, 1, "Repeated character parts must be consolidated into one reusable rig");
