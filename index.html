@@ -1272,7 +1272,8 @@ async function inspectRenderedBlob(blob,expectedDuration,expectedAudioTrackCount
  }finally{video.pause();video.removeAttribute("src");video.load();URL.revokeObjectURL(url);}
 }
 async function renderVideo(){
- if(currentPlanData?.clarification_required){$("renderStatus").textContent="Exportación bloqueada: "+(currentPlanData.clarification_question||"primero aclara el enfoque del tema.");return;}\n if(!currentCinematicReady){$("renderStatus").textContent="Exportación bloqueada: el proyecto solo contiene previsualizaciones vectoriales. Faltan recursos cinematográficos reales, continuidad verificada y control de calidad del render.";return;}
+ if(currentPlanData?.clarification_required){$("renderStatus").textContent="Exportación bloqueada: "+(currentPlanData.clarification_question||"primero aclara el enfoque del tema.");return;}
+ if(!currentCinematicReady){$("renderStatus").textContent="Exportación bloqueada: el proyecto solo contiene previsualizaciones vectoriales. Faltan recursos cinematográficos reales, continuidad verificada y control de calidad del render.";return;}
  if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating){$("renderStatus").textContent="Espera a que termine la producción o la recuperación del proyecto antes de exportar.";return;}
  if(renderRecording)return;
  if(!timelineState.items.length){$("renderStatus").textContent="Prepara la línea de tiempo antes de exportar.";return;}
