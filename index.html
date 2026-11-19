@@ -1239,6 +1239,38 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  }
  // El progreso de render es exclusivo de la interfaz; nunca se dibuja dentro del vídeo exportado.
 }
+async function inspectRenderedBlob(blob,expectedDuration,expectedAudioTrackCount){
+ if(!(blob instanceof Blob)||blob.size<1024)throw new Error("El archivo exportado está vacío o es demasiado pequeño.");
+ const url=URL.createObjectURL(blob),video=document.createElement("video");
+ video.preload="auto";video.muted=true;video.playsInline=true;video.src=url;
+ const wait=(target,event,timeout=12000)=>new Promise((resolve,reject)=>{
+  const timer=setTimeout(()=>{cleanup();reject(new Error("Tiempo agotado al validar "+event+" del vídeo."));},timeout);
+  const cleanup=()=>{clearTimeout(timer);target.removeEventListener(event,done);target.removeEventListener("error",failed);};
+  const done=()=>{cleanup();resolve();},failed=()=>{cleanup();reject(new Error("El navegador no pudo decodificar el vídeo exportado."));};
+  target.addEventListener(event,done,{once:true});target.addEventListener("error",failed,{once:true});
+ });
+ try{
+  const metadata=wait(video,"loadedmetadata");video.load();await metadata;
+  if(video.videoWidth!==720||video.videoHeight!==1280)throw new Error("El vídeo exportado no conserva la resolución 720×1280.");
+  if(!Number.isFinite(video.duration)||video.duration<=0)throw new Error("El archivo no contiene una duración reproducible.");
+  if(Math.abs(video.duration-expectedDuration)>Math.max(1.25,expectedDuration*.04))throw new Error("La duración decodificada no coincide con la línea de tiempo.");
+  if(expectedAudioTrackCount<1)throw new Error("El archivo se grabó sin pista de audio, aunque la producción exige narración.");
+  const canvas=document.createElement("canvas");canvas.width=32;canvas.height=56;
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});const fingerprints=new Set();
+  const samples=Math.min(9,Math.max(4,Math.floor(video.duration*2)));
+  for(let index=0;index<samples;index++){
+   const targetTime=Math.min(Math.max(.02,video.duration-.04),video.duration*(index+.5)/samples);
+   video.currentTime=targetTime;await wait(video,"seeked",8000);
+   ctx.drawImage(video,0,0,canvas.width,canvas.height);
+   const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+   let hash=2166136261;
+   for(let p=0;p<pixels.length;p+=16){hash^=pixels[p];hash=Math.imul(hash,16777619);hash^=pixels[p+1];hash=Math.imul(hash,16777619);hash^=pixels[p+2];hash=Math.imul(hash,16777619);}
+   fingerprints.add(hash>>>0);
+  }
+  if(fingerprints.size<3)throw new Error("El vídeo parece congelado: los fotogramas de control no muestran cambios suficientes.");
+  return {duration:video.duration,width:video.videoWidth,height:video.videoHeight,sampledFrames:samples,distinctFrames:fingerprints.size,audioTrackCount:expectedAudioTrackCount};
+ }finally{video.pause();video.removeAttribute("src");video.load();URL.revokeObjectURL(url);}
+}
 async function renderVideo(){
  if(currentPlanData?.clarification_required){$("renderStatus").textContent="Exportación bloqueada: "+(currentPlanData.clarification_question||"primero aclara el enfoque del tema.");return;}\n if(!currentCinematicReady){$("renderStatus").textContent="Exportación bloqueada: el proyecto solo contiene previsualizaciones vectoriales. Faltan recursos cinematográficos reales, continuidad verificada y control de calidad del render.";return;}
  if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating){$("renderStatus").textContent="Espera a que termine la producción o la recuperación del proyecto antes de exportar.";return;}
@@ -1298,19 +1330,31 @@ async function renderVideo(){
   const chunks=[];
   renderRecorder.ondataavailable=event=>{if(event.data&&event.data.size)chunks.push(event.data);};
   renderRecorder.onerror=event=>{const detail=event?.error?.message||"Error del grabador multimedia.";fail("Falló la grabación del navegador: "+detail+" No se creó un archivo incompleto.");};
-  renderRecorder.onstop=()=>{
+  renderRecorder.onstop=async()=>{
    if(finished)return;
    finished=true;
    if(renderCancelRequested){cleanup();setPipelineStage("render",0,"Render cancelado por el usuario","idle");$("renderStatus").textContent="Render cancelado. No se generó ningún archivo; puedes ajustar el montaje y volver a intentarlo.";return;}
    const actualMime=renderRecorder?.mimeType||mime;
    const blob=new Blob(chunks,{type:actualMime});
+   const expectedDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
+   const audioTrackCount=stream?.getAudioTracks?.().length||0;
+   try{
+    setPipelineStage("render",92,"Verificando decodificación, duración, resolución y movimiento…","running");
+    const qc=await inspectRenderedBlob(blob,expectedDuration,audioTrackCount);
+    if(audioBuffer&&qc.audioTrackCount<1)throw new Error("La pista de narración no llegó al archivo final.");
+    $("renderStatus").textContent="Control técnico aprobado · "+qc.width+"×"+qc.height+" · "+qc.duration.toFixed(2)+" s · "+qc.distinctFrames+"/"+qc.sampledFrames+" muestras visuales distintas · pista de audio presente.";
+   }catch(qcError){
+    cleanup();setPipelineStage("render",0,"Control de calidad rechazado","error");$("downloadVideo").hidden=true;
+    $("renderStatus").textContent="Exportación rechazada por control de calidad: "+qcError.message+" No se ofrecerá un archivo que no haya superado la verificación.";
+    return;
+   }
    cleanup();
    if(!blob.size){setPipelineStage("render",0,"El navegador no entregó datos de vídeo","error");$("renderStatus").textContent="El navegador terminó la grabación sin generar datos. No se creó un archivo descargable. Prueba Chrome actualizado, mantén esta pestaña visible y vuelve a renderizar.";return;}
    const previous=$("downloadVideo").dataset.objectUrl;if(previous)URL.revokeObjectURL(previous);
    const url=URL.createObjectURL(blob);$("downloadVideo").dataset.objectUrl=url;
    const isMp4=actualMime.toLowerCase().includes("mp4");const extension=isMp4?"mp4":"webm";
    $("downloadVideo").href=url;$("downloadVideo").download="jai-viral-studio."+extension;$("downloadVideo").textContent="Descargar video "+extension.toUpperCase();$("downloadVideo").hidden=false;
-   $("renderStatus").textContent="Vídeo renderizado correctamente ("+(blob.size/1048576).toFixed(1)+" MB), formato "+extension.toUpperCase()+(audioBuffer?" con narración integrada ("+audioBuffer.duration.toFixed(1)+" s).":" sin narración.")+(isMp4?"":" Este navegador exportó WebM porque no admite MP4 directo.");setTaskProgress("renderStatus",100,"Exportación completada · "+extension.toUpperCase());setPipelineStage("render",100,"Vídeo listo · "+extension.toUpperCase()+" · "+(blob.size/1048576).toFixed(1)+" MB","done");
+   $("renderStatus").textContent="Vídeo exportado y control técnico aprobado ("+(blob.size/1048576).toFixed(1)+" MB), formato "+extension.toUpperCase()+(audioBuffer?" con narración integrada ("+audioBuffer.duration.toFixed(1)+" s).":" sin narración.")+(isMp4?"":" Este navegador exportó WebM porque no admite MP4 directo.");setTaskProgress("renderStatus",100,"Exportación completada · "+extension.toUpperCase());setPipelineStage("render",100,"Vídeo listo · "+extension.toUpperCase()+" · "+(blob.size/1048576).toFixed(1)+" MB","done");
   };
   const timelineDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
   const totalDuration=timelineDuration;
