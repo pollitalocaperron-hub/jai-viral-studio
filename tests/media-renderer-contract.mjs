@@ -11,6 +11,8 @@ assert.match(store, /MAX_BYTES = 24 \* 1024 \* 1024/);
 assert.match(store, /crypto\.subtle\.digest\("SHA-256"/);
 assert.match(store, /indexedDB\.open/);
 assert.match(store, /ALLOWED/);
+assert.match(store, /importLocalMediaFile/);
+assert.match(store, /video\\/mp4/);
 assert.match(renderer, /source_type === "image"/);
 assert.match(renderer, /source_type === "image_sequence"/);
 assert.match(renderer, /prepareVisualSequence/);
