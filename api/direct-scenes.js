@@ -38,6 +38,29 @@ function buildReusableRigs(shots) {
       bones: [...parts.values()].map(bone => ({ ...bone, parent_bone_id: inferBoneParent(bone.part_id, character_id, ids) })) };
   });
 }
+function buildCharacterBible(shots) {
+  const characters = new Map();
+  for (const shot of Array.isArray(shots) ? shots : []) {
+    for (const layer of Array.isArray(shot?.layers) ? shot.layers : []) {
+      const characterId = clean(layer?.character_id, 80);
+      const partId = clean(layer?.part_id, 80);
+      if (!characterId || !partId) continue;
+      if (!characters.has(characterId)) characters.set(characterId, new Map());
+      const parts = characters.get(characterId);
+      if (!parts.has(partId)) parts.set(partId, {
+        part_id: partId,
+        description: clean(layer?.description, 260),
+        role: clean(layer?.role, 120),
+        pivot_x: Number.isFinite(Number(layer?.pivot_x)) ? Number(layer.pivot_x) : null,
+        pivot_y: Number.isFinite(Number(layer?.pivot_y)) ? Number(layer.pivot_y) : null
+      });
+    }
+  }
+  return [...characters.entries()].map(([character_id, parts]) => ({
+    character_id,
+    parts: [...parts.values()]
+  }));
+}
 function buildNarrationSync(shot) {
   const duration = Math.max(0, Number(shot.end_seconds) - Number(shot.start_seconds));
   return (shot.animation_steps || []).map((step, index) => {
@@ -278,6 +301,7 @@ export default async function handler(req, res) {
     }))
   }));
   normalized.forEach(shot => { shot.narration_sync = buildNarrationSync(shot); });
+  const characterBible = buildCharacterBible(normalized);
   const reusableRigs = buildReusableRigs(normalized);
   const sceneContracts = normalized.map((shot, index) => normalizeLegacyShot(shot, index));
   const sceneReadiness = sceneContracts.map(getSceneReadiness);
