@@ -26,6 +26,7 @@ try {
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded" });
   await page.locator("#topic").waitFor();
+  await page.waitForFunction(() => typeof writeJaiRecoveryKey === "function" && typeof readJaiRecovery === "function" && typeof deleteJaiRecoveryKey === "function", null, { timeout: 10000 });
   assert.equal(await page.locator("#topic").inputValue(), "", "New sessions must start with an empty topic");
   assert.match(await page.locator("#projects").innerText(), /Todavía no hay proyectos guardados/);
 
