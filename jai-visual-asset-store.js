@@ -8,7 +8,7 @@ function safeRemoteMediaUrl(value) {
   try {
     const url = new URL(value);
     const host = url.hostname.toLowerCase();
-    if (url.protocol !== "https:" || !host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || /^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(host) || host.includes(":")) return "";
+    if (url.protocol !== "https:" || !host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) || host.includes(":")) return "";
     return url.toString();
   } catch { return ""; }
 }
