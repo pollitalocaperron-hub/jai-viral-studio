@@ -54,14 +54,14 @@ const valid = await inspectVisualFunction(new Request(url, {
   headers: { "x-jai-proxy-secret": secret, "Content-Type": "application/json" },
   body: JSON.stringify({
     topic: "Prueba de inspección protegida",
-    style_profile_id: "paper-craft-explainer",
+    style_profile_id: "jai-reference-motion-01",
     images: [{ scene_index: 0, image_base64: "AQID", subject: "Objeto de prueba", state: "Visible", action: "Se transforma", proof: "El resultado se entiende" }]
   })
 }));
 assert.equal(valid.status, 200);
 const payload = await valid.json();
 assert.equal(payload.results[0].status, "pass");
-assert.equal(payload.style_profile_id, "paper-craft-explainer");
+assert.equal(payload.style_profile_id, "jai-reference-motion-01");
 assert.equal(providerCalls, 1);
 
 globalThis.fetch = originalFetch;
