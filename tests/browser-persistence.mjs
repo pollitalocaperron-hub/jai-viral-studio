@@ -217,7 +217,9 @@ try {
   assert.equal(await page.locator("#renderVideo").isDisabled(), true, "The export gate must immediately block narration trims that cannot fit the timeline safely");
   await trimEnd.fill("11");
   await trimEnd.dispatchEvent("change");
-  assert.equal(await page.locator("#renderVideo").isEnabled(), true, "Restoring a valid narration trim must immediately unlock export");
+  assert.match(await page.locator("#audioEditStatus").innerText(), /Fragmento: 1\.0–11\.0 s/, "The restored narration trim must be valid and reflected in the editor");
+  assert.equal(await page.locator("#renderVideo").isDisabled(), true, "Restoring a valid trim must not bypass missing cinematic assets, directed layers, or visual approval after recovery");
+  assert.match(await page.locator("#renderStatus").innerText(), /Exportación bloqueada:/, "Export remains gated until all production checks pass");
   await page.locator("#subtitleTrackOffset").fill("0.5");
   await page.locator("#subtitleTrackOffset").dispatchEvent("change");
   assert.equal(await page.locator("#subtitleTrackOffset").inputValue(), "0.5", "Subtitle offset must remain editable after recovery");
