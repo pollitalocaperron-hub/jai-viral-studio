@@ -51,7 +51,7 @@ try {
     oscillator.start();
     const paintTimer = setInterval(paint, 1000 / 30);
     recorder.start(100);
-    await new Promise(resolve => setTimeout(resolve, 2300));
+    await new Promise(resolve => setTimeout(resolve, 3000));
     recorder.stop();
     await stopped;
     clearInterval(paintTimer);
@@ -92,19 +92,33 @@ try {
   assert.equal(result.audioTracks, 1);
   assert.ok(result.decodedCurrentTime > 0, "Chromium must decode and play captured frames");
   const outputPath = "artifacts/jai-chromium-av-capture.webm";
+  const rawPath = "artifacts/jai-chromium-av-capture-raw.webm";
+  const reportPath = "artifacts/jai-chromium-av-capture.ffprobe.json";
   await (await import("node:fs/promises")).mkdir("artifacts", { recursive: true });
-  await writeFile(outputPath, Buffer.from(result.base64, "base64"));
+  await writeFile(rawPath, Buffer.from(result.base64, "base64"));
   delete result.base64;
-  const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration,size:stream=codec_type,codec_name,width,height", "-of", "json", outputPath], { encoding: "utf8" }));
+  // Finalize MediaRecorder WebM cues/duration before independent probing.
+  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", rawPath, "-map", "0", "-c", "copy", "-fflags", "+genpts", outputPath], { encoding: "utf8" });
+  const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration,size:stream=codec_type,codec_name,width,height,duration", "-of", "json", outputPath], { encoding: "utf8" }));
   const video = probe.streams.find(stream => stream.codec_type === "video");
   const audio = probe.streams.find(stream => stream.codec_type === "audio");
+  const durations = [probe.format?.duration, ...probe.streams.map(stream => stream.duration)].map(Number).filter(Number.isFinite);
+  const inspectedDuration = durations.length ? Math.max(...durations) : 0;
+  const report = {
+    generatedAt: new Date().toISOString(),
+    capture: { mimeType: result.mimeType, bytes: result.bytes, width: result.width, height: result.height, duration: result.duration, videoTracks: result.videoTracks, audioTracks: result.audioTracks, decodedCurrentTime: result.decodedCurrentTime },
+    file: outputPath,
+    ffprobe: probe,
+    checks: { videoStream: Boolean(video), audioStream: Boolean(audio), inspectedDurationSeconds: inspectedDuration, minimumDurationSeconds: 2 }
+  };
+  await writeFile(reportPath, JSON.stringify(report, null, 2) + "\n");
   assert.ok(video, "FFprobe must detect a video stream");
   assert.ok(audio, "FFprobe must detect an audio stream");
   assert.equal(video.width, 320);
   assert.equal(video.height, 568);
-  assert.ok(Number(probe.format.duration) >= 2, "FFprobe duration must be at least two seconds");
+  assert.ok(inspectedDuration >= 2, `FFprobe duration must be at least two seconds; got ${inspectedDuration}`);
   assert.ok(Number(probe.format.size) > 10000);
-  console.log("Chromium audiovisual capture + FFprobe: PASS", JSON.stringify({ ...result, ffprobe: probe }));
+  console.log("Chromium audiovisual capture + FFprobe: PASS", JSON.stringify(report));
 } finally {
   await browser.close();
 }

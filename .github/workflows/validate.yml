@@ -94,4 +94,5 @@ jobs:
           path: |
             artifacts/jai-preview-mobile.png
             artifacts/jai-chromium-av-capture.webm
+            artifacts/jai-chromium-av-capture.ffprobe.json
           if-no-files-found: ignore
