@@ -1,3 +1,5 @@
+import { importOpenverseAsset, listStoredAssets } from "./jai-visual-asset-store.js";
+import { prepareVisualAsset } from "./jai-media-renderer.js";
 const API_BASE = location.hostname === "pollitalocaperron-hub.github.io" ? "https://jai-viral-studio.vercel.app" : "";
 const LIBRARY_KEY = "jai-visual-asset-library-v1";
 const $ = id => document.getElementById(id);
@@ -14,7 +16,7 @@ function renderLibrary(target) {
   target.innerHTML = "";
   const heading = document.createElement("p");
   heading.className = "hint";
-  heading.textContent = "Biblioteca local: " + items.length + " candidatos guardados (metadatos y enlaces; los archivos originales permanecen en Openverse).";
+  heading.textContent = "Biblioteca local: " + items.length + " candidatos registrados. Los archivos importados se guardan en IndexedDB de este dispositivo.";
   target.append(heading);
   for (const item of items.slice(0, 12)) {
     const row = document.createElement("div");
@@ -32,7 +34,7 @@ function init() {
   const panel = document.createElement("section");
   panel.className = "scene";
   panel.id = "jaiAssetLibrary";
-  panel.innerHTML = '<b>Biblioteca de recursos visuales · Openverse</b><p class="hint">Busca fotografías e ilustraciones con licencias abiertas. Los candidatos conservan autoría, fuente y licencia; no se insertan automáticamente en el vídeo.</p><div class="row" style="gap:8px;flex-wrap:wrap"><input id="jaiAssetQuery" maxlength="180" placeholder="Ej. router Wi-Fi, fibra óptica, bosque" aria-label="Buscar recursos visuales"><button class="secondary" id="jaiAssetSearch" type="button">Buscar recursos</button></div><div class="hint" id="jaiAssetStatus" role="status">Los resultados se pueden revisar y guardar en la biblioteca local.</div><div id="jaiAssetResults" style="display:grid;gap:9px;margin-top:10px"></div><div id="jaiAssetSaved" style="display:grid;gap:8px;margin-top:12px"></div>';
+  panel.innerHTML = '<b>Biblioteca de recursos visuales · Openverse</b><p class="hint">Busca fotografías e ilustraciones con licencias abiertas. Importa el archivo original con verificación SHA-256 y asígnalo a una toma; el archivo se conserva localmente en IndexedDB.</p><div class="row" style="gap:8px;flex-wrap:wrap"><input id="jaiAssetQuery" maxlength="180" placeholder="Ej. router Wi-Fi, fibra óptica, bosque" aria-label="Buscar recursos visuales"><button class="secondary" id="jaiAssetSearch" type="button">Buscar recursos</button></div><div class="hint" id="jaiAssetStatus" role="status">Los resultados se pueden revisar y guardar en la biblioteca local.</div><div id="jaiAssetResults" style="display:grid;gap:9px;margin-top:10px"></div><div id="jaiAssetSaved" style="display:grid;gap:8px;margin-top:12px"></div>';
   const visualScenes = $("visualScenes");
   if (visualScenes) visualScenes.insertAdjacentElement("beforebegin", panel); else studio.append(panel);
   const input = $("jaiAssetQuery"), button = $("jaiAssetSearch"), status = $("jaiAssetStatus"), results = $("jaiAssetResults"), saved = $("jaiAssetSaved");
@@ -55,11 +57,22 @@ function init() {
         const title = document.createElement("b"); title.textContent = asset.title;
         const meta = document.createElement("p"); meta.className = "hint"; meta.textContent = asset.creator + " · " + asset.license.toUpperCase() + (asset.license_version ? " " + asset.license_version : "");
         const source = document.createElement("a"); source.href = asset.source_url; source.target = "_blank"; source.rel = "noopener noreferrer"; source.textContent = "Abrir fuente y revisar condiciones";
-        const save = document.createElement("button"); save.type = "button"; save.className = "secondary"; save.textContent = "Guardar en biblioteca";
-        save.addEventListener("click", () => {
-          const library = readLibrary();
-          if (!library.some(item => item.id === asset.id)) library.unshift(asset);
-          saveLibrary(library); renderLibrary(saved); save.textContent = "Guardado"; save.disabled = true;
+        const save = document.createElement("button"); save.type = "button"; save.className = "secondary"; save.textContent = "Importar archivo original";
+        save.addEventListener("click", async () => {
+          save.disabled = true; save.textContent = "Descargando y verificando…";
+          try {
+            const stored = await importOpenverseAsset(asset);
+            const prepared = await prepareVisualAsset(stored);
+            const library = readLibrary();
+            if (!library.some(item => item.id === asset.id)) library.unshift(asset);
+            saveLibrary(library); renderLibrary(saved);
+            document.dispatchEvent(new CustomEvent("jai:visual-asset-ready", { detail: { asset: stored, prepared } }));
+            save.textContent = "Importado · listo para asignar";
+            status.textContent = "Archivo original guardado localmente, decodificado y verificado con SHA-256. Asigna la toma en el panel de producción.";
+          } catch (error) {
+            save.disabled = false; save.textContent = "Reintentar importación";
+            status.textContent = "No se pudo importar este original: " + (error?.message || "error CORS o archivo no válido");
+          }
         });
         card.append(image, title, meta, source, save); results.append(card);
       }
