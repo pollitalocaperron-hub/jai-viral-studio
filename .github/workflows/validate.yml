@@ -76,6 +76,10 @@ jobs:
         run: npm run test:browser
       - name: Test complete production flow in Chromium
         run: npm run test:e2e
+      - name: Test real local media import and canvas rendering in Chromium
+        run: npm run test:media-browser
+      - name: Test real audiovisual MediaRecorder capture in Chromium
+        run: node tests/media-capture-browser.mjs
       - name: Verify deployed Vercel preview in Chromium
         env:
           JAI_PREVIEW_URL: https://jai-viral-studio-git-jai-visual-assets-preview-f3dcf1-jai-cc19.vercel.app
