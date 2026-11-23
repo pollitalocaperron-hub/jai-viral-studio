@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'jai/visual-assets-preview-20261123']
   pull_request:
     branches: [main]
 
@@ -25,6 +25,9 @@ jobs:
           node --check --input-type=module < api/inspect-visual.js
           node --check --input-type=module < api/direct-scenes.js
           node --check --input-type=module < api/visual-style-profiles.js
+          node --check --input-type=module < api/search-visual-assets.js
+          node --check --input-type=module < jai-openverse-asset-bridge.js
+          node --check tests/visual-assets-contract.mjs
           node --check --input-type=module < worker.js
           node --check tests/worker-adapter.mjs
           node --check netlify/functions/inspect-visual.mjs
@@ -54,6 +57,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Test API contracts
         run: npm run test:api
+      - name: Test locked visual style and asset library
+        run: npm run test:visual-assets
       - name: Test Cloudflare Worker adapter and shared limiter
         run: npm run test:worker
       - name: Test private Netlify inspector adapter with mocked Gemini
