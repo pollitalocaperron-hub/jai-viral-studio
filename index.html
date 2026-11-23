@@ -1394,7 +1394,7 @@ async function renderVideo(){
   const totalDuration=timelineDuration;
   const visualTimeScale=1;
   let startedAt=null;
-  const draw=now=>{
+  const draw=async now=>{
    try{
    if(!renderRecording||finished)return;
    if(startedAt===null){startedAt=now;if(audioSource){const edit=getAudioEdit();audioSource.start(kokoroAudioContext.currentTime+audioStartOffset,edit.trimStart,edit.duration);}}
@@ -1413,6 +1413,11 @@ async function renderVideo(){
    const sceneProgress=trimStart+blockProgress*(trimEnd-trimStart);
    const audioTiming=getAudioTrackTiming(timelineDuration),audioEditState=getAudioEdit();
    const audioElapsed=audioBuffer?(elapsed<audioTiming.offset?-1:audioEditState.trimStart+(elapsed-audioTiming.offset)*audioTiming.rate):elapsed;
+   const assignedVisual=window.jaiVisualAssignments?.[activeItem?.shot_id];
+   if(assignedVisual?.prepared?.source_type==="video_clip"&&window.JAIMediaRenderer?.awaitPreparedVisualFrame){
+    const frameReady=await window.JAIMediaRenderer.awaitPreparedVisualFrame(assignedVisual.prepared,sceneProgress,2500);
+    if(!frameReady)throw new Error("No se pudo decodificar el fotograma solicitado del clip asignado a "+(activeItem?.shot_id||"la toma activa")+".");
+   }
    drawVideoScene(activeItem,sceneIndex,sceneProgress,audioElapsed);
    $("renderStatus").textContent="Renderizando escena "+(sceneIndex+1)+" de "+currentScenes.length+" · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%"+(audioBuffer?" · narración integrada":"")+"…";setTaskProgress("renderStatus",Math.min(100,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.min(100,Math.round(elapsed/totalDuration*100))+"%");setPipelineStage("render",Math.min(99,Math.round(elapsed/totalDuration*100)),"Renderizado · "+Math.round(elapsed/totalDuration*100)+"%","running");
    if(elapsed>=totalDuration){try{renderRecorder.stop();}catch(error){fail("No se pudo cerrar el archivo de vídeo: "+error.message);}return;}
