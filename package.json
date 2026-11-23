@@ -10,7 +10,9 @@
     "test:e2e": "node tests/end-to-end-production.mjs",
     "test:worker": "node tests/worker-adapter.mjs",
     "test:netlify": "node tests/netlify-inspect-adapter.mjs",
-    "test:scene-contract": "node tests/scene-contract.mjs"
+    "test:scene-contract": "node tests/scene-contract.mjs",
+    "test:visual-assets": "node tests/visual-assets-contract.mjs",
+    "test:branch": "npm run test:api && npm run test:scene-contract && npm run test:worker && npm run test:netlify && npm run test:visual-assets"
   },
   "devDependencies": {
     "playwright": "1.56.1"
