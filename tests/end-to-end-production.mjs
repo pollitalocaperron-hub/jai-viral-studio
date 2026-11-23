@@ -155,7 +155,7 @@ try {
   assert.equal(await page.locator("#timelineTracks .scene").count(), 8, "The editable timeline must use the eight directed shots, not repeat four conceptual stills.");
   assert.ok((await page.locator("#timelineTracks").innerText()).includes("SHOT-01"), "Directed shot IDs must be carried into the editable timeline");
   assert.equal(counters.images, 0, "The vector illustration pipeline must not call external image-generation APIs or consume image credits");
-  assert.equal(await page.locator("#visualScenes img").count(), 4, "All AI-generated vector illustrations must be rasterized and displayed");
+  assert.equal(await page.locator("#visualScenes img").count(), 8, "Each of the eight directed shots must be rasterized and displayed as its own vector preview");
   await page.locator("#exportCharacterLayers").click();
   const pngCount=await page.locator('#characterLayerExports a[data-png-validated="true"]').count();
   assert.equal(pngCount,24,"The PNG exporter must create a validated transparent file for every unique vector part.");
