@@ -2,6 +2,7 @@ const DB_NAME = "jai-visual-assets-v2";
 const STORE = "media";
 const MAX_BYTES = 24 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_VIDEO = new Set(["video/mp4", "video/webm"]);
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -51,6 +52,39 @@ export async function importOpenverseAsset(asset) {
     imported_at: new Date().toISOString()
   };
   bitmap.close();
+  return put(record);
+}
+
+export async function importLocalMediaFile(file) {
+  if (!file || !(ALLOWED.has(file.type) || ALLOWED_VIDEO.has(file.type))) throw new Error("Selecciona una imagen PNG/JPEG/WebP o un vídeo MP4/WebM.");
+  if (!file.size || file.size > MAX_BYTES) throw new Error("El archivo está vacío o supera el límite local de 24 MB.");
+  const bytes = await file.arrayBuffer();
+  const sha256 = await digest(bytes);
+  let width = 0, height = 0, duration = null;
+  if (ALLOWED.has(file.type)) {
+    const bitmap = await createImageBitmap(file);
+    width = bitmap.width; height = bitmap.height; bitmap.close();
+  } else {
+    const url = URL.createObjectURL(file);
+    try {
+      const metadata = await new Promise((resolve, reject) => {
+        const video = document.createElement("video");
+        video.preload = "metadata"; video.muted = true; video.src = url;
+        video.onloadedmetadata = () => resolve({ width: video.videoWidth, height: video.videoHeight, duration: video.duration });
+        video.onerror = () => reject(new Error("No se pudo leer la metadata del vídeo."));
+      });
+      width = metadata.width; height = metadata.height; duration = metadata.duration;
+    } finally { URL.revokeObjectURL(url); }
+  }
+  if (!width || !height || (duration !== null && (!Number.isFinite(duration) || duration <= 0))) throw new Error("El archivo no contiene dimensiones o duración válidas.");
+  const record = {
+    asset_id: "local-" + sha256.slice(0, 24), blob: file.slice(0, file.size, file.type),
+    mime_type: file.type, width, height, duration, sha256,
+    title: String(file.name || "Archivo local").slice(0, 220), creator: "Archivo proporcionado localmente",
+    source_url: "", creator_url: "", license: "user-provided", license_version: "",
+    attribution: "Archivo importado por el usuario; verifica que tienes derechos de uso.",
+    imported_at: new Date().toISOString()
+  };
   return put(record);
 }
 export async function getStoredAsset(assetId) {
