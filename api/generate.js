@@ -559,6 +559,7 @@ Return no other keys and no markdown.`;
     if (!narrationWithinTolerance || !wordCountWithinTarget) {
       plan.editorial_warnings.push({ claim: "Duración de la narración", reason: "La cantidad de palabras y la duración estimada no coinciden con el montaje objetivo; ajustar el guion antes de producir." });
     }
+    plan.provider = providerUsed;
     console.info("[JAI] Plan generado y validado con", providerUsed);
     return res.status(200).json(plan);
   } catch (error) {
