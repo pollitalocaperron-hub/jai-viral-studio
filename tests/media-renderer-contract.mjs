@@ -12,6 +12,8 @@ assert.match(store, /crypto\.subtle\.digest\("SHA-256"/);
 assert.match(store, /indexedDB\.open/);
 assert.match(store, /ALLOWED/);
 assert.match(renderer, /source_type === "image"/);
+assert.match(renderer, /source_type === "image_sequence"/);
+assert.match(renderer, /prepareVisualSequence/);
 assert.match(renderer, /source_type === "video_clip"/);
 assert.match(renderer, /createImageBitmap/);
 assert.match(renderer, /loadedmetadata/);
