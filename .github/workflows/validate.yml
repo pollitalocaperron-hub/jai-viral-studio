@@ -57,6 +57,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Test API contracts
         run: npm run test:api
+      - name: Test scene contracts
+        run: npm run test:scene-contract
       - name: Test locked visual style and asset library
         run: npm run test:visual-assets
       - name: Test Cloudflare Worker adapter and shared limiter
