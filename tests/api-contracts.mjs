@@ -259,11 +259,22 @@ try {
     assert.equal(res.body.shots[0].shot_id, "shot-01");
     assert.equal(res.body.shots[0].layers.length, 3, "Each shot must contain multiple independently rendered vector layers");
     assert.equal(res.body.reusable_rigs.length, 1, "Repeated character parts must be consolidated into one reusable rig");
+    assert.equal(res.body.character_bible.length, 1, "The character bible must only contain characters present in actual shot layers");
+    assert.equal(res.body.character_bible[0].character_id, "hero");
+    assert.deepEqual(res.body.character_bible[0].parts.map(part => part.part_id).sort(), ["head", "torso"]);
     assert.deepEqual(res.body.reusable_rigs[0].bones.map(bone => bone.bone_id).sort(), ["head", "torso"]);
     assert.equal(res.body.reusable_rigs[0].bones.find(bone => bone.bone_id === "head").parent_bone_id, "torso");
     assert.equal(res.body.narration_sync_validated, true);
     assert.equal(res.body.shots[0].narration_sync.length, 3);
     assert.ok(res.body.shots[0].narration_sync.every(event => event.start_seconds >= res.body.shots[0].start_seconds && event.end_seconds <= res.body.shots[0].end_seconds));
+
+    // If the director supplies no character IDs/parts, no character is invented.
+    const noCharacterShots = shots.map(shot => ({ ...shot, layers: shot.layers.map(layer => ({ ...layer, character_id: "", part_id: "" })) }));
+    globalThis.fetch = async () => response({ choices: [{ message: { content: JSON.stringify({ shots: noCharacterShots }) } }] });
+    const emptyBibleResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso sin personajes", script: "Narración de prueba.", story, retention_map: [] } }, emptyBibleResponse);
+    assert.equal(emptyBibleResponse.statusCode, 200);
+    assert.deepEqual(emptyBibleResponse.body.character_bible, [], "No character bible entries may be invented when shot layers contain no characters.");
 
   }
 
