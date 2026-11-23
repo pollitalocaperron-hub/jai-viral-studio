@@ -12,7 +12,8 @@
     "test:netlify": "node tests/netlify-inspect-adapter.mjs",
     "test:scene-contract": "node tests/scene-contract.mjs",
     "test:visual-assets": "node tests/visual-assets-contract.mjs",
-    "test:branch": "npm run test:api && npm run test:scene-contract && npm run test:worker && npm run test:netlify && npm run test:visual-assets",
+    "test:media-renderer": "node tests/media-renderer-contract.mjs",
+    "test:branch": "npm run test:api && npm run test:scene-contract && npm run test:worker && npm run test:netlify && npm run test:visual-assets && npm run test:media-renderer",
     "test:preview": "node tests/deployed-preview.mjs"
   },
   "devDependencies": {
