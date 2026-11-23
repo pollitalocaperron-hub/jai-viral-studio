@@ -184,7 +184,7 @@ try {
 
   await page.locator("#inspectVisuals").click();
   await page.waitForFunction(() => (document.querySelector("#visualAuditStatus")?.textContent || "").includes("todas las escenas superaron"), null, { timeout: 20000 });
-  assert.equal(counters.inspect, 1, "Eight directed shots fit in one visual-inspection batch");
+  assert.equal(counters.inspect, 2, "Eight directed shots must be split into two batches of four, matching the inspector API limit");
   assert.equal(counters.inspectedImages, 8, "Every directed shot must be independently inspected before export");
   assert.equal(await page.locator("#renderVideo").isEnabled(), false, "Vector-only preview must never unlock final export");
   assert.equal(await page.locator("#downloadVideo").isVisible(), false, "No final video download may be exposed without cinematic assets and verified QC");
