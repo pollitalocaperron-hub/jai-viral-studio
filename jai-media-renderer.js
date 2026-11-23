@@ -29,6 +29,11 @@ async function decodeVideo(asset) {
   videoCache.set(asset.asset_id, promise);
   try { return await promise; } catch (error) { videoCache.delete(asset.asset_id); throw error; }
 }
+export async function prepareVisualSequence(assets) {
+  if (!Array.isArray(assets) || assets.length < 2) throw new Error("Una secuencia necesita al menos dos imágenes verificadas.");
+  const frames = await Promise.all(assets.map(asset => decodeImage(asset)));
+  return { source_type: "image_sequence", asset_ids: assets.map(asset => asset.asset_id), frames, width: frames[0].width, height: frames[0].height, sha256: assets.map(asset => asset.sha256) };
+}
 export async function prepareVisualAsset(asset) {
   if (!asset?.asset_id || !asset?.blob) throw new Error("El recurso no contiene archivo local.");
   if (String(asset.mime_type).startsWith("image/")) {
@@ -47,11 +52,12 @@ export function drawPreparedVisualNow(ctx, width, height, prepared, progress = 0
   ctx.save();
   ctx.fillStyle = options.background || "#071326";
   ctx.fillRect(0, 0, width, height);
-  if (prepared.source_type === "image") {
-    const rect = fitRect(prepared.width, prepared.height, width, height, options.fit || "cover");
+  if (prepared.source_type === "image" || prepared.source_type === "image_sequence") {
+    const image = prepared.source_type === "image_sequence" ? prepared.frames[Math.min(prepared.frames.length - 1, Math.floor(p * prepared.frames.length))] : prepared.image;
+    const rect = fitRect(image.width, image.height, width, height, options.fit || "cover");
     const zoom = 1 + p * 0.035;
     const dw = rect.width * zoom, dh = rect.height * zoom;
-    ctx.drawImage(prepared.image, (width - dw) / 2, (height - dh) / 2, dw, dh);
+    ctx.drawImage(image, (width - dw) / 2, (height - dh) / 2, dw, dh);
   } else if (prepared.source_type === "video_clip") {
     const video = prepared.video;
     const targetTime = Math.max(0, Math.min(prepared.duration - 0.04, p * prepared.duration));
