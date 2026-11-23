@@ -20,7 +20,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Envía entre 1 y 4 fotogramas para inspección." });
   }
   const styleProfile = resolveVisualStyleProfile(req.body?.style_profile_id || images[0]?.style_profile_id, req.body?.topic || "", req.body?.script || "");
-  if (images.some(item => item?.style_profile_id && item.style_profile_id !== styleProfile.id)) return res.status(400).json({ error: "Todas las tomas de una auditoría deben usar el mismo perfil visual." });
+  const requestedStyles = [req.body?.style_profile_id, ...images.map(item => item?.style_profile_id)].filter(Boolean);
+  if (requestedStyles.some(id => id !== styleProfile.id)) return res.status(400).json({ error: "Esta producción utiliza un único estilo visual fijo. Regenera las tomas con jai-reference-motion-01." });
   const totalImageChars = images.reduce((sum, item) => sum + (typeof item?.image_base64 === "string" ? item.image_base64.length : 0), 0);
   if (totalImageChars > 1100000) return res.status(413).json({ error: "Las imágenes superan 1.1 MB de datos codificados. Reduce la resolución o divide la auditoría en lotes." });
 
