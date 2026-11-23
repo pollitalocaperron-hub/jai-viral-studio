@@ -1,5 +1,6 @@
 import { importOpenverseAsset, listStoredAssets } from "./jai-visual-asset-store.js";
-import { prepareVisualAsset } from "./jai-media-renderer.js";
+import { prepareVisualAsset, drawPreparedVisualNow } from "./jai-media-renderer.js";
+window.JAIMediaRenderer = { prepareVisualAsset, drawPreparedVisualNow };
 const API_BASE = location.hostname === "pollitalocaperron-hub.github.io" ? "https://jai-viral-studio.vercel.app" : "";
 const LIBRARY_KEY = "jai-visual-asset-library-v1";
 const $ = id => document.getElementById(id);
