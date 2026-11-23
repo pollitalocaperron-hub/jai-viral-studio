@@ -23,5 +23,7 @@ assert.match(endpoint, /OPENVERSE_CLIENT_ID/);
 const bridge = readFileSync(new URL("../jai-openverse-asset-bridge.js", import.meta.url), "utf8");
 assert.match(bridge, /localStorage/);
 assert.match(bridge, /Guardar en biblioteca/);
-assert.match(bridge, /no se insertan automáticamente/i);
+assert.match(bridge, /importOpenverseAsset/);
+assert.match(bridge, /jai:visual-asset-ready/);
+assert.match(bridge, /IndexedDB/);
 console.log("Locked style, character bible and visual asset library contracts: PASS");
