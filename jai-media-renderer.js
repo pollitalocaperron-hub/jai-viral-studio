@@ -41,7 +41,7 @@ export async function prepareVisualAsset(asset) {
   }
   throw new Error("MIME no admitido por el renderer.");
 }
-export async function drawPreparedVisual(ctx, width, height, prepared, progress = 0, options = {}) {
+export function drawPreparedVisualNow(ctx, width, height, prepared, progress = 0, options = {}) {
   if (!prepared) return false;
   const p = Math.max(0, Math.min(1, Number(progress) || 0));
   ctx.save();
@@ -55,14 +55,8 @@ export async function drawPreparedVisual(ctx, width, height, prepared, progress 
   } else if (prepared.source_type === "video_clip") {
     const video = prepared.video;
     const targetTime = Math.max(0, Math.min(prepared.duration - 0.04, p * prepared.duration));
-    if (Math.abs(video.currentTime - targetTime) > 0.08) {
-      await new Promise(resolve => {
-        const done = () => { video.removeEventListener("seeked", done); resolve(); };
-        video.addEventListener("seeked", done, { once: true });
-        video.currentTime = targetTime;
-      });
-    }
-    if (video.readyState < 2) await new Promise(resolve => video.addEventListener("loadeddata", resolve, { once: true }));
+    if (Math.abs(video.currentTime - targetTime) > 0.08 && !video.seeking) video.currentTime = targetTime;
+    if (video.readyState < 2 || video.seeking) { ctx.restore(); return false; }
     const rect = fitRect(prepared.width, prepared.height, width, height, options.fit || "cover");
     ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height);
   } else {
