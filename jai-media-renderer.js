@@ -19,7 +19,8 @@ async function decodeVideo(asset) {
     video.muted = true; video.playsInline = true; video.preload = "auto";
     const url = URL.createObjectURL(asset.blob);
     video.src = url;
-    const timeout = setTimeout(() => { cleanup(); URL.revokeObjectURL(url); reject(new Error("Tiempo agotado al leer la metadata del vídeo.")); }, 10000);\n    const cleanup = () => { clearTimeout(timeout); video.removeEventListener("loadedmetadata", ready); video.removeEventListener("error", fail); };
+    const timeout = setTimeout(() => { cleanup(); URL.revokeObjectURL(url); reject(new Error("Tiempo agotado al leer la metadata del vídeo.")); }, 10000);
+    const cleanup = () => { clearTimeout(timeout); video.removeEventListener("loadedmetadata", ready); video.removeEventListener("error", fail); };
     const ready = () => { cleanup(); resolve({ video, url, duration: video.duration, width: video.videoWidth, height: video.videoHeight }); };
     const fail = () => { cleanup(); URL.revokeObjectURL(url); reject(new Error("No se pudo decodificar el clip de vídeo.")); };
     video.addEventListener("loadedmetadata", ready, { once: true });
