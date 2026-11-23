@@ -4,6 +4,14 @@ const MAX_BYTES = 24 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ALLOWED_VIDEO = new Set(["video/mp4", "video/webm"]);
 
+function safeRemoteMediaUrl(value) {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== "https:" || !host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || /^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(host) || host.includes(":")) return "";
+    return url.toString();
+  } catch { return ""; }
+}
 function openDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
@@ -39,6 +47,7 @@ export async function importOpenverseAsset(asset) {
   const bytes = await blob.arrayBuffer();
   const sha256 = await digest(bytes);
   const bitmap = await createImageBitmap(blob);
+  if (bitmap.width * bitmap.height > 40000000) { bitmap.close(); throw new Error("La imagen supera el límite de 40 megapíxeles."); }
   const record = {
     asset_id: "ov-" + String(asset.id || sha256.slice(0, 20)).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80),
     blob, mime_type: mime, width: bitmap.width, height: bitmap.height, sha256,
@@ -64,6 +73,7 @@ export async function importLocalMediaFile(file) {
   if (ALLOWED.has(file.type)) {
     const bitmap = await createImageBitmap(file);
     width = bitmap.width; height = bitmap.height; bitmap.close();
+    if (width * height > 40000000) throw new Error("La imagen supera el límite de 40 megapíxeles.");
   } else {
     const url = URL.createObjectURL(file);
     try {
@@ -74,6 +84,7 @@ export async function importLocalMediaFile(file) {
         video.onerror = () => reject(new Error("No se pudo leer la metadata del vídeo."));
       });
       width = metadata.width; height = metadata.height; duration = metadata.duration;
+      if (width * height > 40000000 || duration > 180) throw new Error("El vídeo supera 40 megapíxeles o 180 segundos.");
     } finally { URL.revokeObjectURL(url); }
   }
   if (!width || !height || (duration !== null && (!Number.isFinite(duration) || duration <= 0))) throw new Error("El archivo no contiene dimensiones o duración válidas.");
