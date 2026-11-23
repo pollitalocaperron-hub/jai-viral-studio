@@ -1199,7 +1199,7 @@ document.addEventListener("jai:visual-asset-ready",event=>{
  let panel=$("jaiAssetAssignmentPanel");if(panel)panel.remove();
  panel=document.createElement("section");panel.id="jaiAssetAssignmentPanel";panel.className="scene";
  const title=document.createElement("b");title.textContent="Asignar recurso importado a una toma";
- const info=document.createElement("p");info.className="hint";info.textContent=asset.title+" · "+asset.mime_type+" · SHA-256 "+asset.sha256.slice(0,16)+"…";
+ const info=document.createElement("p");info.className="hint";info.textContent=asset.title+" · "+asset.mime_type+" · SHA-256 "+(Array.isArray(asset.sha256)?asset.sha256[0]:asset.sha256).slice(0,16)+"…";
  const select=document.createElement("select");select.setAttribute("aria-label","Seleccionar toma");
  currentShotPlan.forEach((shot,index)=>{const option=document.createElement("option");option.value=String(shot.shot_id);option.textContent=(shot.shot_id||("Toma "+(index+1)))+" · "+String(shot.subject||shot.visual_action||"").slice(0,90);select.append(option);});
  const assign=document.createElement("button");assign.type="button";assign.className="secondary";assign.textContent="Asignar a toma seleccionada";
