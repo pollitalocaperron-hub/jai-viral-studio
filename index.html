@@ -1211,7 +1211,7 @@ document.addEventListener("jai:visual-asset-ready",event=>{
   if(Array.isArray(timelineState.items))timelineState.items.forEach(item=>{if(String(item.shot_id)===shotId)item.mediaAsset=prepared;});
   assign.textContent="Recurso asignado · "+shotId;
   $("visualStatus").textContent="Recurso local verificado asignado a "+shotId+". Se usará en la vista previa de esa toma; la exportación final continúa sujeta al control de calidad cinematográfico.";
-  if(typeof stopTimelinePreview==="function")stopTimelinePreview("");
+  if(typeof stopTimelinePreview==="function")stopTimelinePreview("");\n  if(typeof renderTimeline==="function")renderTimeline();\n  if(typeof updateRenderGate==="function")updateRenderGate();\n  if(typeof scheduleJaiAutosave==="function")scheduleJaiAutosave();
  });
  panel.append(title,info,select,assign);host.prepend(panel);panel.scrollIntoView({behavior:"smooth",block:"nearest"});
 });
