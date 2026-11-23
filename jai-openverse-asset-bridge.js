@@ -1,6 +1,6 @@
 import { importOpenverseAsset, importLocalMediaFile } from "./jai-visual-asset-store.js";
-import { prepareVisualAsset, prepareVisualSequence, drawPreparedVisualNow } from "./jai-media-renderer.js";
-window.JAIMediaRenderer = { prepareVisualAsset, prepareVisualSequence, drawPreparedVisualNow };
+import { prepareVisualAsset, prepareVisualSequence, drawPreparedVisualNow, awaitPreparedVisualFrame } from "./jai-media-renderer.js";
+window.JAIMediaRenderer = { prepareVisualAsset, prepareVisualSequence, drawPreparedVisualNow, awaitPreparedVisualFrame };
 const API_BASE = location.hostname === "pollitalocaperron-hub.github.io" ? "https://jai-viral-studio.vercel.app" : "";
 const LIBRARY_KEY = "jai-visual-asset-library-v1";
 const $ = id => document.getElementById(id);
