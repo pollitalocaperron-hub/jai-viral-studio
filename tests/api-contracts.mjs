@@ -523,13 +523,11 @@ try {
   }
 
 
-  // Reference-derived style profiles are selected deterministically and remain overridable by a valid stored profile.
+  // Every topic and every shot must use the one locked J.A.I. visual identity.
   {
-    assert.equal(resolveVisualStyleProfile("", "Relato de un misterio histórico", "").id, "cinematic-cartoon-story");
-    assert.equal(resolveVisualStyleProfile("", "Cómo configurar OBS para transmitir en vivo", "").id, "cinematic-desk-tech");
-    assert.equal(resolveVisualStyleProfile("", "Los 5 mejores plugins gratuitos", "").id, "paper-craft-explainer");
-    assert.equal(resolveVisualStyleProfile("", "Cómo usar una app de inteligencia artificial", "").id, "retro-mascot-ui");
-    assert.equal(resolveVisualStyleProfile("cinematic-desk-tech", "Lista de plugins", "").id, "cinematic-desk-tech");
+    assert.equal(resolveVisualStyleProfile("", "Relato de un misterio histórico", "").id, "jai-reference-motion-01");
+    assert.equal(resolveVisualStyleProfile("paper-craft-explainer", "Cómo usar una app", "").id, "jai-reference-motion-01");
+    assert.equal(resolveVisualStyleProfile("cinematic-desk-tech", "Lista de plugins", "").id, "jai-reference-motion-01");
   }
 
   // Mixed visual profiles in one audit batch are rejected before the Gemini provider is contacted.
