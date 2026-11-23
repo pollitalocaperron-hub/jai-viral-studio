@@ -1,0 +1,78 @@
+const imageCache = new Map();
+const videoCache = new Map();
+
+function fitRect(sourceWidth, sourceHeight, width, height, mode = "cover") {
+  const scale = mode === "contain" ? Math.min(width / sourceWidth, height / sourceHeight) : Math.max(width / sourceWidth, height / sourceHeight);
+  const drawWidth = sourceWidth * scale, drawHeight = sourceHeight * scale;
+  return { x: (width - drawWidth) / 2, y: (height - drawHeight) / 2, width: drawWidth, height: drawHeight };
+}
+async function decodeImage(asset) {
+  if (imageCache.has(asset.asset_id)) return imageCache.get(asset.asset_id);
+  const promise = createImageBitmap(asset.blob);
+  imageCache.set(asset.asset_id, promise);
+  try { return await promise; } catch (error) { imageCache.delete(asset.asset_id); throw error; }
+}
+async function decodeVideo(asset) {
+  if (videoCache.has(asset.asset_id)) return videoCache.get(asset.asset_id);
+  const promise = new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.muted = true; video.playsInline = true; video.preload = "auto";
+    const url = URL.createObjectURL(asset.blob);
+    video.src = url;
+    const cleanup = () => { video.removeEventListener("loadedmetadata", ready); video.removeEventListener("error", fail); };
+    const ready = () => { cleanup(); resolve({ video, url, duration: video.duration, width: video.videoWidth, height: video.videoHeight }); };
+    const fail = () => { cleanup(); URL.revokeObjectURL(url); reject(new Error("No se pudo decodificar el clip de vídeo.")); };
+    video.addEventListener("loadedmetadata", ready, { once: true });
+    video.addEventListener("error", fail, { once: true });
+    video.load();
+  });
+  videoCache.set(asset.asset_id, promise);
+  try { return await promise; } catch (error) { videoCache.delete(asset.asset_id); throw error; }
+}
+export async function prepareVisualAsset(asset) {
+  if (!asset?.asset_id || !asset?.blob) throw new Error("El recurso no contiene archivo local.");
+  if (String(asset.mime_type).startsWith("image/")) {
+    const image = await decodeImage(asset);
+    return { source_type: "image", asset_id: asset.asset_id, image, width: image.width, height: image.height, sha256: asset.sha256 };
+  }
+  if (String(asset.mime_type).startsWith("video/")) {
+    const decoded = await decodeVideo(asset);
+    return { source_type: "video_clip", asset_id: asset.asset_id, ...decoded, sha256: asset.sha256 };
+  }
+  throw new Error("MIME no admitido por el renderer.");
+}
+export async function drawPreparedVisual(ctx, width, height, prepared, progress = 0, options = {}) {
+  if (!prepared) return false;
+  const p = Math.max(0, Math.min(1, Number(progress) || 0));
+  ctx.save();
+  ctx.fillStyle = options.background || "#071326";
+  ctx.fillRect(0, 0, width, height);
+  if (prepared.source_type === "image") {
+    const rect = fitRect(prepared.width, prepared.height, width, height, options.fit || "cover");
+    const zoom = 1 + p * 0.035;
+    const dw = rect.width * zoom, dh = rect.height * zoom;
+    ctx.drawImage(prepared.image, (width - dw) / 2, (height - dh) / 2, dw, dh);
+  } else if (prepared.source_type === "video_clip") {
+    const video = prepared.video;
+    const targetTime = Math.max(0, Math.min(prepared.duration - 0.04, p * prepared.duration));
+    if (Math.abs(video.currentTime - targetTime) > 0.08) {
+      await new Promise(resolve => {
+        const done = () => { video.removeEventListener("seeked", done); resolve(); };
+        video.addEventListener("seeked", done, { once: true });
+        video.currentTime = targetTime;
+      });
+    }
+    if (video.readyState < 2) await new Promise(resolve => video.addEventListener("loadeddata", resolve, { once: true }));
+    const rect = fitRect(prepared.width, prepared.height, width, height, options.fit || "cover");
+    ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height);
+  } else {
+    ctx.restore();
+    return false;
+  }
+  ctx.restore();
+  return true;
+}
+export function clearMediaRendererCache() {
+  for (const promise of videoCache.values()) promise.then(value => URL.revokeObjectURL(value.url)).catch(() => {});
+  imageCache.clear(); videoCache.clear();
+}
