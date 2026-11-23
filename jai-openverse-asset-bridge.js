@@ -35,19 +35,28 @@ function init() {
   const panel = document.createElement("section");
   panel.className = "scene";
   panel.id = "jaiAssetLibrary";
-  panel.innerHTML = '<b>Biblioteca de recursos visuales · Openverse</b><p class="hint">Busca fotografías e ilustraciones con licencias abiertas. Importa originales con SHA-256 o añade archivos propios de imagen/vídeo; después asígnalos a una toma. Se conservan localmente en IndexedDB.</p><div class="row" style="gap:8px;flex-wrap:wrap"><input id="jaiAssetQuery" maxlength="180" placeholder="Ej. router Wi-Fi, fibra óptica, bosque" aria-label="Buscar recursos visuales"><button class="secondary" id="jaiAssetSearch" type="button">Buscar recursos</button></div><label class="hint" for="jaiLocalMediaFile">Importar archivo local (imagen o vídeo, máximo 24 MB)</label><input id="jaiLocalMediaFile" type="file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"><div class="hint" id="jaiAssetStatus" role="status">Los resultados se pueden revisar y guardar en la biblioteca local.</div><div id="jaiAssetResults" style="display:grid;gap:9px;margin-top:10px"></div><div id="jaiAssetSaved" style="display:grid;gap:8px;margin-top:12px"></div>';
+  panel.innerHTML = '<b>Biblioteca de recursos visuales · Openverse</b><p class="hint">Busca fotografías e ilustraciones con licencias abiertas. Importa originales con SHA-256 o añade archivos propios de imagen/vídeo; después asígnalos a una toma. Se conservan localmente en IndexedDB.</p><div class="row" style="gap:8px;flex-wrap:wrap"><input id="jaiAssetQuery" maxlength="180" placeholder="Ej. router Wi-Fi, fibra óptica, bosque" aria-label="Buscar recursos visuales"><button class="secondary" id="jaiAssetSearch" type="button">Buscar recursos</button></div><label class="hint" for="jaiLocalMediaFile">Importar archivo local (imagen o vídeo, máximo 24 MB)</label><input id="jaiLocalMediaFile" type="file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm" multiple><div class="hint" id="jaiAssetStatus" role="status">Los resultados se pueden revisar y guardar en la biblioteca local.</div><div id="jaiAssetResults" style="display:grid;gap:9px;margin-top:10px"></div><div id="jaiAssetSaved" style="display:grid;gap:8px;margin-top:12px"></div>';
   const visualScenes = $("visualScenes");
   if (visualScenes) visualScenes.insertAdjacentElement("beforebegin", panel); else studio.append(panel);
   const input = $("jaiAssetQuery"), button = $("jaiAssetSearch"), status = $("jaiAssetStatus"), results = $("jaiAssetResults"), saved = $("jaiAssetSaved");
   const localFile = $("jaiLocalMediaFile");
   localFile.addEventListener("change", async () => {
-    const file = localFile.files?.[0]; if (!file) return;
-    status.textContent = "Importando archivo local y comprobando integridad…";
+    const files = [...(localFile.files || [])]; if (!files.length) return;
+    status.textContent = "Importando archivo(s) local(es) y comprobando integridad…";
     try {
-      const stored = await importLocalMediaFile(file);
-      const prepared = await prepareVisualAsset(stored);
-      document.dispatchEvent(new CustomEvent("jai:visual-asset-ready", { detail: { asset: stored, prepared } }));
-      status.textContent = "Archivo local decodificado y guardado en IndexedDB. SHA-256: " + stored.sha256;
+      if (files.length > 1) {
+        if (files.some(file => !String(file.type).startsWith("image/"))) throw new Error("Una secuencia debe contener solo imágenes.");
+        const stored = await Promise.all(files.map(importLocalMediaFile));
+        const prepared = await prepareVisualSequence(stored);
+        const asset = { asset_id: "sequence-" + stored.map(item => item.sha256.slice(0, 8)).join("-"), title: "Secuencia · " + stored.length + " fotogramas", mime_type: "image_sequence", sha256: stored.map(item => item.sha256) };
+        document.dispatchEvent(new CustomEvent("jai:visual-asset-ready", { detail: { asset, prepared } }));
+        status.textContent = "Secuencia de " + stored.length + " imágenes importada, decodificada y guardada en IndexedDB.";
+      } else {
+        const stored = await importLocalMediaFile(files[0]);
+        const prepared = await prepareVisualAsset(stored);
+        document.dispatchEvent(new CustomEvent("jai:visual-asset-ready", { detail: { asset: stored, prepared } }));
+        status.textContent = "Archivo local decodificado y guardado en IndexedDB. SHA-256: " + stored.sha256;
+      }
     } catch (error) { status.textContent = "No se pudo importar el archivo: " + (error?.message || "error de formato"); }
     finally { localFile.value = ""; }
   });
