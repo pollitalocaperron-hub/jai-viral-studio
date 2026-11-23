@@ -41,6 +41,14 @@ The timeline remains the master clock. Each scene's absolute times are normalize
 - `video_clip`: decode the clip, seek/render frames against the master clock, and handle trim, frame rate, and audio policy explicitly.
 - `vector_scene`: retain the current legacy renderer for previews only.
 
+## Local media import and renderer adapter
+
+The Openverse bridge now exposes the original media URL separately from its thumbnail. The browser importer attempts a CORS-safe HTTPS fetch, rejects redirects, accepts only JPEG/PNG/WebP, enforces a 24 MB limit, decodes the file, computes SHA-256, and stores the original Blob plus creator/license/source attribution in IndexedDB. A failed CORS request is reported as an import failure; the thumbnail or remote URL is never mislabeled as a locally stored original.
+
+Imported still images can be assigned to a specific directed shot. The timeline renderer decodes them with ImageBitmap and draws them into the existing 9:16 canvas before the fixed J.A.I. title/subtitle overlays. The renderer adapter also supports decoded image sequences and local video clips as distinct source types; Openverse search currently supplies images only, so video clips are not claimed to be sourced by Openverse.
+
+Storage is browser-local to the current device/profile, not shared cloud storage. Clearing browser site data or using another device does not transfer these blobs. A durable shared library still requires an approved persistent object store and credentials. The export gate remains closed until independent asset, continuity, full-file decode, and audiovisual QC pass.
+
 ## Export quality gate
 
 The browser export path now decodes the recorded Blob before exposing a download. It checks:
