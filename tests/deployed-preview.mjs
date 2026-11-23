@@ -16,6 +16,7 @@ try {
   assert.equal(await page.locator("#jaiAssetSearch").isVisible(), true, "Openverse search control must be visible in the deployed studio");
   assert.equal(await page.locator("#jaiAssetQuery").isVisible(), true, "Asset query field must be visible");
   assert.equal(await page.locator("#renderVideo").isDisabled(), true, "Export must remain gated before production QA");
+  fs.mkdirSync("artifacts", { recursive: true });
   await page.screenshot({ path: "artifacts/jai-preview-mobile.png", fullPage: true });
   assert.deepEqual(errors, [], "The deployed preview must not throw browser runtime errors: " + errors.join(" | "));
   console.log(JSON.stringify({ status: response.status(), url: page.url(), viewport: "390x844", assetLibrary: true, exportGate: "locked-before-QA", pageErrors: errors.length, screenshot: "artifacts/jai-preview-mobile.png" }, null, 2));
