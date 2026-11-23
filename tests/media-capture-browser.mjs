@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
+import { writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 
 const browser = await chromium.launch({
   headless: true,
@@ -73,7 +75,8 @@ try {
       duration: video.duration,
       videoTracks: stream.getVideoTracks().length,
       audioTracks: stream.getAudioTracks().length,
-      decodedCurrentTime: video.currentTime
+      decodedCurrentTime: video.currentTime,
+      base64: btoa(String.fromCharCode(...new Uint8Array(await blob.arrayBuffer())))
     };
     video.pause();
     URL.revokeObjectURL(url);
@@ -88,7 +91,20 @@ try {
   assert.equal(result.videoTracks, 1);
   assert.equal(result.audioTracks, 1);
   assert.ok(result.decodedCurrentTime > 0, "Chromium must decode and play captured frames");
-  console.log("Chromium audiovisual MediaRecorder capture: PASS", JSON.stringify(result));
+  const outputPath = "artifacts/jai-chromium-av-capture.webm";
+  await (await import("node:fs/promises")).mkdir("artifacts", { recursive: true });
+  await writeFile(outputPath, Buffer.from(result.base64, "base64"));
+  delete result.base64;
+  const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration,size:stream=codec_type,codec_name,width,height", "-of", "json", outputPath], { encoding: "utf8" }));
+  const video = probe.streams.find(stream => stream.codec_type === "video");
+  const audio = probe.streams.find(stream => stream.codec_type === "audio");
+  assert.ok(video, "FFprobe must detect a video stream");
+  assert.ok(audio, "FFprobe must detect an audio stream");
+  assert.equal(video.width, 320);
+  assert.equal(video.height, 568);
+  assert.ok(Number(probe.format.duration) >= 2, "FFprobe duration must be at least two seconds");
+  assert.ok(Number(probe.format.size) > 10000);
+  console.log("Chromium audiovisual capture + FFprobe: PASS", JSON.stringify({ ...result, ffprobe: probe }));
 } finally {
   await browser.close();
 }
