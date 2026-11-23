@@ -66,7 +66,7 @@ export async function awaitPreparedVisualFrame(prepared, progress = 0, timeoutMs
     video.addEventListener("error", onError, { once: true });
     if (video.readyState >= 2 && !video.seeking) finish();
   });
-  return video.readyState >= 2 && !video.seeking;
+  return video.readyState >= 2 && !video.seeking && Math.abs(video.currentTime - targetTime) <= 0.08;
 }
 export function drawPreparedVisualNow(ctx, width, height, prepared, progress = 0, options = {}) {
   if (!prepared) return false;
