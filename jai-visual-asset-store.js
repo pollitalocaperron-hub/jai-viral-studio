@@ -35,8 +35,9 @@ function put(record) {
   }));
 }
 export async function importOpenverseAsset(asset) {
-  if (!asset || !/^https:\/\//i.test(String(asset.original_url || ""))) throw new Error("Openverse no proporcionó una URL original HTTPS.");
-  const response = await fetch(asset.original_url, { mode: "cors", credentials: "omit", redirect: "error", signal: AbortSignal.timeout(12000) });
+  const originalUrl = safeRemoteMediaUrl(asset?.original_url);
+  if (!originalUrl) throw new Error("Openverse no proporcionó una URL original HTTPS pública válida.");
+  const response = await fetch(originalUrl, { mode: "cors", credentials: "omit", redirect: "error", signal: AbortSignal.timeout(12000) });
   if (!response.ok) throw new Error("El servidor del recurso respondió HTTP " + response.status + ".");
   const mime = String(response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
   if (!ALLOWED.has(mime)) throw new Error("Tipo de archivo no admitido: " + (mime || "desconocido") + ".");
