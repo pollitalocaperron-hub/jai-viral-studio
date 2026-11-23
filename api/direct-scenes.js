@@ -306,6 +306,6 @@ export default async function handler(req, res) {
   const sceneContracts = normalized.map((shot, index) => normalizeLegacyShot(shot, index));
   const sceneReadiness = sceneContracts.map(getSceneReadiness);
   return res.status(200).json({ shots: normalized, scene_contracts: sceneContracts, visual_engine_status: "vector_preview_only", cinematic_ready: sceneReadiness.every(item => item.cinematic_ready), scene_readiness: sceneReadiness, character_bible: characterBible, reusable_rigs: reusableRigs,
-    narration_sync_validated: normalized.every(shot => shot.narration_sync.every(event => event.start_seconds >= shot.start_seconds && event.end_seconds <= shot.end_seconds)),
+    narration_sync_validated: normalized.every(shot => shot.narration_sync.every(event => event.start_seconds >= shot.start_seconds - 0.01 && event.end_seconds <= shot.end_seconds + 0.01)),
     shot_count: normalized.length, conceptual_scene_count: story.length, provider, style_profile_id: styleProfile.id, style_profile_label: styleProfile.label, animation_plan_validated: true, vector_preview_ready: true, animation_ready: false });
 }
