@@ -1191,12 +1191,42 @@ function drawReferenceSubtitle(ctx,text,w,h,profile){
  }
  ctx.restore();
 }
+window.jaiVisualAssignments=window.jaiVisualAssignments||Object.create(null);
+document.addEventListener("jai:visual-asset-ready",event=>{
+ const detail=event.detail||{},asset=detail.asset,prepared=detail.prepared;
+ if(!asset||!prepared||!Array.isArray(currentShotPlan)||!currentShotPlan.length)return;
+ const host=$("visualScenes");if(!host)return;
+ let panel=$("jaiAssetAssignmentPanel");if(panel)panel.remove();
+ panel=document.createElement("section");panel.id="jaiAssetAssignmentPanel";panel.className="scene";
+ const title=document.createElement("b");title.textContent="Asignar recurso importado a una toma";
+ const info=document.createElement("p");info.className="hint";info.textContent=asset.title+" · "+asset.mime_type+" · SHA-256 "+asset.sha256.slice(0,16)+"…";
+ const select=document.createElement("select");select.setAttribute("aria-label","Seleccionar toma");
+ currentShotPlan.forEach((shot,index)=>{const option=document.createElement("option");option.value=String(shot.shot_id);option.textContent=(shot.shot_id||("Toma "+(index+1)))+" · "+String(shot.subject||shot.visual_action||"").slice(0,90);select.append(option);});
+ const assign=document.createElement("button");assign.type="button";assign.className="secondary";assign.textContent="Asignar a toma seleccionada";
+ assign.addEventListener("click",()=>{
+  const shotId=select.value;if(!shotId)return;
+  window.jaiVisualAssignments[shotId]={asset,prepared};
+  const shot=currentShotPlan.find(item=>String(item.shot_id)===shotId);
+  if(shot){shot.visual_asset_id=asset.asset_id;shot.visual_source_type=prepared.source_type;}
+  if(Array.isArray(timelineState.items))timelineState.items.forEach(item=>{if(String(item.shot_id)===shotId)item.mediaAsset=prepared;});
+  assign.textContent="Recurso asignado · "+shotId;
+  $("visualStatus").textContent="Recurso local verificado asignado a "+shotId+". Se usará en la vista previa de esa toma; la exportación final continúa sujeta al control de calidad cinematográfico.";
+  if(typeof stopTimelinePreview==="function")stopTimelinePreview("");
+ });
+ panel.append(title,info,select,assign);host.prepend(panel);panel.scrollIntoView({behavior:"smooth",block:"nearest"});
+});
 function drawVideoScene(item,index,progress,audioElapsed=0){
  const ctx=renderCtx,w=renderCanvas.width,h=renderCanvas.height,p=Math.max(0,Math.min(1,Number(progress)||0));
  ctx.clearRect(0,0,w,h);
  const vectorShot=item?.directedShot;
+ const assigned=window.jaiVisualAssignments?.[item?.shot_id];
+ const hasAssignedMedia=!!(assigned?.prepared&&window.JAIMediaRenderer?.drawPreparedVisualNow);
  const hasVector=!!(vectorShot&&Array.isArray(vectorShot.layers)&&vectorShot.layers.length>=3);
- if(hasVector){
+ if(hasAssignedMedia){
+  const rendered=window.JAIMediaRenderer.drawPreparedVisualNow(ctx,w,h,assigned.prepared,p,{fit:"cover",background:"#071326"});
+  if(!rendered&&hasVector)paintVectorShot(ctx,w,h,vectorShot,p);
+  else if(!rendered){ctx.fillStyle="#071326";ctx.fillRect(0,0,w,h);}
+ }else if(hasVector){
   const previous=item?.previousDirectedShot,transition=String(item?.transition||"fade");
   const duration=Math.max(.1,Math.min(1,Number(item?.transitionDuration)||.3));
   const transitionProgress=Math.max(0,Math.min(1,(p*Math.max(.1,Number(item?.seconds)||3))/duration));
