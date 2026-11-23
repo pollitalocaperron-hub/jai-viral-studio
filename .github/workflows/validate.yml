@@ -69,3 +69,14 @@ jobs:
         run: npm run test:browser
       - name: Test complete production flow in Chromium
         run: npm run test:e2e
+      - name: Verify deployed Vercel preview in Chromium
+        env:
+          JAI_PREVIEW_URL: https://jai-viral-studio-git-jai-visual-assets-preview-f3dcf1-jai-cc19.vercel.app
+        run: npm run test:preview
+      - name: Upload mobile preview screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jai-preview-mobile-screenshot
+          path: artifacts/jai-preview-mobile.png
+          if-no-files-found: ignore
