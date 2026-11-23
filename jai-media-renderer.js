@@ -19,7 +19,7 @@ async function decodeVideo(asset) {
     video.muted = true; video.playsInline = true; video.preload = "auto";
     const url = URL.createObjectURL(asset.blob);
     video.src = url;
-    const cleanup = () => { video.removeEventListener("loadedmetadata", ready); video.removeEventListener("error", fail); };
+    const timeout = setTimeout(() => { cleanup(); URL.revokeObjectURL(url); reject(new Error("Tiempo agotado al leer la metadata del vídeo.")); }, 10000);\n    const cleanup = () => { clearTimeout(timeout); video.removeEventListener("loadedmetadata", ready); video.removeEventListener("error", fail); };
     const ready = () => { cleanup(); resolve({ video, url, duration: video.duration, width: video.videoWidth, height: video.videoHeight }); };
     const fail = () => { cleanup(); URL.revokeObjectURL(url); reject(new Error("No se pudo decodificar el clip de vídeo.")); };
     video.addEventListener("loadedmetadata", ready, { once: true });
@@ -45,6 +45,28 @@ export async function prepareVisualAsset(asset) {
     return { source_type: "video_clip", asset_id: asset.asset_id, ...decoded, sha256: asset.sha256 };
   }
   throw new Error("MIME no admitido por el renderer.");
+}
+export async function awaitPreparedVisualFrame(prepared, progress = 0, timeoutMs = 2500) {
+  if (prepared?.source_type !== "video_clip") return true;
+  const video = prepared.video;
+  const targetTime = Math.max(0, Math.min(prepared.duration - 0.04, Math.max(0, Math.min(1, Number(progress) || 0)) * prepared.duration));
+  if (Math.abs(video.currentTime - targetTime) <= 0.04 && video.readyState >= 2 && !video.seeking) return true;
+  if (!video.seeking) video.currentTime = targetTime;
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = error => {
+      if (settled) return; settled = true;
+      clearTimeout(timer); video.removeEventListener("seeked", onReady); video.removeEventListener("error", onError);
+      error ? reject(error) : resolve();
+    };
+    const onReady = () => video.readyState >= 2 && !video.seeking && finish();
+    const onError = () => finish(new Error("Falló la decodificación de un fotograma del vídeo."));
+    const timer = setTimeout(() => finish(new Error("Tiempo agotado esperando el fotograma del vídeo.")), timeoutMs);
+    video.addEventListener("seeked", onReady);
+    video.addEventListener("error", onError, { once: true });
+    if (video.readyState >= 2 && !video.seeking) finish();
+  });
+  return video.readyState >= 2 && !video.seeking;
 }
 export function drawPreparedVisualNow(ctx, width, height, prepared, progress = 0, options = {}) {
   if (!prepared) return false;
