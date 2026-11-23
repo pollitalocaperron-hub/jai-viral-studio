@@ -15,6 +15,7 @@ function safeHttps(value) {
 function normalizeAsset(item) {
   const license = text(item.license, 30).toLowerCase();
   const thumbnail = safeHttps(item.thumbnail || item.url);
+  const original = safeHttps(item.url);
   const source = safeHttps(item.foreign_landing_url || item.detail_url);
   if (!thumbnail || !source || !ALLOWED_LICENSES.has(license)) return null;
   return {
@@ -24,6 +25,7 @@ function normalizeAsset(item) {
     creator_url: safeHttps(item.creator_url),
     source_url: source,
     thumbnail,
+    original_url: original,
     license,
     license_version: text(item.license_version, 20),
     attribution: text(item.attribution, 500),
