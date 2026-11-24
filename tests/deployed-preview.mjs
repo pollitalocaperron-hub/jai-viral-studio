@@ -20,7 +20,7 @@ try {
   };
   await page.screenshot({ path: "artifacts/jai-preview-mobile.png", fullPage: true });
   console.log("PREVIEW_INITIAL_DIAGNOSTICS=" + JSON.stringify(initial));
-  const protectedByVercel = /auth\\.vercel\\.com/i.test(initial.finalUrl) ||
+  const protectedByVercel = /auth\.vercel\.com/i.test(initial.finalUrl) ||
     (/Log in to Vercel/i.test(initial.bodyText) && initial.topicCount === 0);
   if (protectedByVercel) {
     console.log("SKIP: Vercel Deployment Protection redirected this CI browser to its login screen. The application itself was not reached; verify the public GitHub Pages deployment separately.");
