@@ -1416,13 +1416,13 @@ async function renderVideo(){
    const audioElapsed=audioBuffer?(elapsed<audioTiming.offset?-1:audioEditState.trimStart+(elapsed-audioTiming.offset)*audioTiming.rate):elapsed;
    const assignedVisual=window.jaiVisualAssignments?.[activeItem?.shot_id];
    const prepared=assignedVisual?.prepared;
-   const activeVideoKey=prepared?.source_type==="video_clip"?(prepared.asset_id||activeItem?.shot_id):null;
+   const activeVideoKey=prepared?.source_type==="video_clip"?String(prepared.asset_id||"clip")+":"+String(activeItem?.shot_id||"shot"):null;
    if(activeVideoKey!==renderActiveVideoKey){
     if(renderActiveVideo&&window.JAIMediaRenderer?.stopPreparedVisualPlayback)window.JAIMediaRenderer.stopPreparedVisualPlayback(renderActiveVideo);
     renderActiveVideo=activeVideoKey?prepared:null;
     renderActiveVideoKey=activeVideoKey;
     if(renderActiveVideo&&window.JAIMediaRenderer?.startPreparedVisualPlayback){
-     window.JAIMediaRenderer.startPreparedVisualPlayback(renderActiveVideo,sceneProgress);
+     window.JAIMediaRenderer.startPreparedVisualPlayback(renderActiveVideo,sceneProgress,Number(activeItem?.seconds)||0);
     }
    }
    drawVideoScene(activeItem,sceneIndex,sceneProgress,audioElapsed);
