@@ -79,8 +79,12 @@ jobs:
         run: npm run test:e2e
       - name: Test real local media import and canvas rendering in Chromium
         run: npm run test:media-browser
-      - name: Install FFmpeg tools for audiovisual inspection
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Verify preinstalled FFmpeg tools for audiovisual inspection
+        run: |
+          command -v ffmpeg
+          command -v ffprobe
+          ffmpeg -version
+          ffprobe -version
       - name: Render real J.A.I. image, sequence and clip timeline in Chromium; inspect with FFprobe
         run: node tests/media-renderer-integration.mjs
       - name: Test real audiovisual MediaRecorder capture in Chromium and inspect with FFprobe
