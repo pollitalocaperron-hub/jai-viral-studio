@@ -141,7 +141,7 @@ export default async function handler(req, res) {
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Origen no autorizado." });
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Método no permitido." }); }
-  const { topic, script, story, retention_map = [], style_profile_id = "" } = req.body || {};
+  const { topic, script, story, retention_map = [], style_profile_id = "", shot_plan = null } = req.body || {};
   if (typeof topic !== "string" || !topic.trim() || topic.length > 500 || typeof script !== "string" || !script.trim() || script.length > 8000) {
     return res.status(400).json({ error: "Se requiere un tema y una narración válidos." });
   }
@@ -151,30 +151,28 @@ export default async function handler(req, res) {
   if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) return res.status(503).json({ error: "No hay un proveedor editorial configurado." });
 
   const styleProfile = resolveVisualStyleProfile(style_profile_id, topic, script);
+  const reusableShotPlan = Array.isArray(shot_plan) ? shot_plan : null;
+  if (reusableShotPlan && validateShots(reusableShotPlan, story)) return res.status(400).json({ error: "El plan de tomas guardado no supera la validación; no se volverá a generar automáticamente.", diagnosticCode: "SAVED_SHOT_PLAN_INVALID" });
+  const directorStoryboard = story.map((scene, index) => ({ scene_index: index, time: scene.time, objective: clean(scene.objective, 180), teaching_point: clean(scene.teaching_point, 220), visual_proof: clean(scene.visual_proof, 180), visual_subject: clean(scene.visual_subject || scene.visual, 140), visual_state: clean(scene.visual_state, 140), visual_action: clean(scene.visual_action || scene.animation, 160), visual_composition: clean(scene.visual_composition, 120), continuity_anchor: clean(scene.continuity_anchor, 140) }));
 
   const prompt = [
-    "Eres el DIRECTOR DE ESCENAS Y SUPERVISOR DE ANIMACIÓN de J.A.I. Convierte el storyboard conceptual en un plan de tomas ejecutable. Devuelve SOLO JSON válido con la propiedad shots.",
-    "No generes una imagen final ni describas movimientos de cámara como sustituto de acciones. Cada toma debe mostrar un nuevo estado o acción didáctica.",
-    "Divide cada una de las 4 o 5 escenas conceptuales en 2 a 5 tomas, según la complejidad real. El total permitido es de 8 a 25 tomas (máximo 5 por escena). No uses una cantidad fija por vídeo.",
-    "Las tomas de cada escena deben cubrir exactamente su intervalo, en orden, sin huecos ni solapamientos. Usa start_seconds y end_seconds numéricos absolutos dentro del vídeo.",
-    "Cada toma debe incluir: scene_index (índice base cero), start_seconds, end_seconds, narration_segment (fragmento literal de la narración), subtitle, subject, visual_state, visual_action, visual_prompt_en, continuity_anchor, background_color (#RRGGBB), layers (4–10 objetos independientes con id, description, role, path_d, fill, stroke, stroke_width, pivot_x, pivot_y, character_id y part_id cuando aplique) y animation_steps (2–4 acciones con target_id, action, from_state, to_state, start_progress, end_progress, from_transform y to_transform).",
-    "Los elementos deben ser concretos y separables. Mantén la misma identidad, geometría, paleta y orientación de objetos repetidos entre tomas. Si hay personajes, separa cabeza, torso, brazos, antebrazos, manos, piernas, ojos, boca, cabello y accesorios según la acción. Asigna pivotes en articulaciones y IDs estables; las piezas móviles deben ser siluetas independientes con transparencia real al exportar PNG.",
-    "La ilustración vectorial es la escena de producción: cada objeto debe tener su propio path_d independiente, no agrupes objetos móviles en una sola ruta. Usa coordenadas de un lienzo vertical 720x1280; path_d debe contener SOLO comandos de ruta SVG (M,L,H,V,C,S,Q,T,A,Z) y números, nunca etiquetas XML/SVG ni texto. Ordena las capas de atrás hacia delante. Cada forma debe ser una silueta cerrada y reconocible, con relleno y contorno.",
-    "Cada animation_step debe incluir from_transform y to_transform con x, y (desplazamiento en píxeles), rotation (grados), scale (multiplicador) y opacity (0–1). Anima el objeto real descrito por target_id; usa movimientos pequeños y físicamente correctos, no movimiento de cámara ni partículas decorativas. Las capas que no se mueven usan la misma transformación inicial y final.",
-    "PERFIL AUDIOVISUAL DE REFERENCIA: " + styleProfile.label + ". " + styleProfile.prompt + " Paleta: " + styleProfile.palette + " Gramática de movimiento y montaje: " + styleProfile.motion,
-    "MOTOR DE PERSONAJES: define un character_bible con character_id estable, nombre, silueta, proporciones, rasgos faciales, peinado, vestuario, accesorios, paleta hexadecimal, personalidad, voz y gestos distintivos. Reutiliza los mismos rasgos en cada toma y episodio; no rediseñes personajes recurrentes. Devuelve character_bible como array en la respuesta. La continuidad debe conservar character_id, part_id, paleta, pivotes y anclas visuales; cada acción debe corresponder a narration_segment y mostrar una causa, reacción o cambio de estado.",
-    "No reproduz la interfaz de Instagram/TikTok que aparece alrededor de los clips de referencia: barras de estado, botones de me gusta, comentarios, perfiles, navegación ni marcas de agua. Son elementos de captura, no parte del diseño del vídeo.",
-    "No pongas texto dentro de las imágenes. Los subtítulos y etiquetas se añadirán en edición.",
-    "Storyboard: " + JSON.stringify(story),
-    "Narración: " + script,
-    "Mapa de ritmo: " + JSON.stringify(retention_map).slice(0, 10000),
+    "Eres el director visual 2D de J.A.I. Convierte el storyboard existente en tomas vectoriales listas para animación. Devuelve SOLO JSON con la propiedad shots.",
+    "No reescribas el guion, no crees escenas conceptuales, no generes personajes por defecto ni repitas la investigación. Ejecuta visualmente cada escena entregada.",
+    "Crea 2 tomas por escena y usa una tercera solo cuando exista un cambio didáctico real que no quepa en dos. Cada escena debe quedar cubierta exactamente, sin huecos ni solapamientos.",
+    "Cada toma: scene_index, start_seconds, end_seconds, narration_segment (extracto literal breve del guion, nunca una paráfrasis), subtitle, subject, visual_state, visual_action, visual_prompt_en (25–55 palabras concretas), continuity_anchor, background_color hexadecimal, layers (3–6 siluetas vectoriales independientes) y animation_steps (2–3 acciones sobre capas reales).",
+    "Cada layer necesita id, description, role, path_d SVG cerrado, fill, stroke, stroke_width, pivot_x y pivot_y; character_id/part_id solo si realmente es una parte de personaje. No inventes character_bible.",
+    "Cada animation_step requiere target_id existente, action, from_state, to_state, start_progress, end_progress y from_transform/to_transform con x,y,rotation,scale,opacity. Movimiento pequeño, físicamente coherente y ligado a la explicación.",
+    "Mantén identidad, geometría, escala, orientación y paleta entre tomas. Lienzo 720x1280. Sin texto incrustado, interfaz social, marcas de agua ni elementos ajenos.",
+    "ESTILO FIJO J.A.I.: " + styleProfile.label + ". " + styleProfile.prompt + " Paleta: " + styleProfile.palette + ". Movimiento: " + styleProfile.motion,
+    "Escenas editoriales ya aprobadas (no modificar): " + JSON.stringify(directorStoryboard),
+    "Guion fuente para extraer literalmente fragmentos de narración: " + script.slice(0, 2600),
     "Tema: " + topic.trim()
   ].join("\n\n");
 
-  let output = "", provider = "", groqFailure = null, geminiFailure = null;
+  let output = reusableShotPlan ? JSON.stringify({ shots: reusableShotPlan }) : "", provider = reusableShotPlan ? "Plan recuperado (sin IA)" : "", groqFailure = null, geminiFailure = null;
   // Cascada de proveedores: si Groq agota su cuota gratuita o no responde,
   // se intenta Gemini. No se habilitan planes, compras ni proveedores de pago.
-  if (process.env.GROQ_API_KEY) {
+  if (!output && process.env.GROQ_API_KEY) {
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
@@ -229,12 +227,18 @@ export default async function handler(req, res) {
     }
   }
   if (!output) {
-    const quotaLimited = [groqFailure, geminiFailure].some(item => item?.status === 429);
+    const quotaFailure = [groqFailure, geminiFailure].find(item => item?.status === 429);
+    const quotaLimited = Boolean(quotaFailure);
+    const retryMatch = String(quotaFailure?.message || "").match(/(?:retry|try again|in)\s*(?:after|in)?\s*(\d+(?:\.\d+)?)\s*s/i);
+    const retryAfterSeconds = quotaLimited ? Math.max(5, Math.min(90, Math.ceil(Number(retryMatch?.[1] || 30)))) : null;
+    if (quotaLimited) res.setHeader("Retry-After", String(retryAfterSeconds));
     return res.status(quotaLimited ? 429 : 502).json({
       error: quotaLimited
-        ? "Se agotó temporalmente la cuota gratuita de los motores editoriales disponibles. No se realizará ningún cobro; conserva tu proyecto y vuelve a intentarlo cuando se renueven las cuotas."
+        ? "Límite temporal del proveedor gratuito. El proyecto y el guion se conservan; espera antes de reintentar. No se hará una segunda llamada de respaldo que pueda consumir más cuota."
         : "Los motores editoriales gratuitos configurados no pudieron completar el plan. No se activó ningún servicio de pago.",
-      diagnosticCode: quotaLimited ? "FREE_QUOTA_EXHAUSTED" : "SCENE_DIRECTOR_FAILED",
+      diagnosticCode: quotaLimited ? "FREE_QUOTA_WAIT" : "SCENE_DIRECTOR_FAILED",
+      retryAfterSeconds,
+      resumeFrom: "editorial_plan",
       providerFailures: [groqFailure, geminiFailure].filter(Boolean)
     });
   }
