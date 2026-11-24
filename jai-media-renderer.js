@@ -47,7 +47,7 @@ export async function prepareVisualAsset(asset) {
   }
   throw new Error("MIME no admitido por el renderer.");
 }
-export function startPreparedVisualPlayback(prepared, progress = 0) {
+export function startPreparedVisualPlayback(prepared, progress = 0, timelineSeconds = 0) {
   if (prepared?.source_type !== "video_clip") return false;
   const video = prepared.video;
   const p = Math.max(0, Math.min(1, Number(progress) || 0));
@@ -55,6 +55,7 @@ export function startPreparedVisualPlayback(prepared, progress = 0) {
   video.pause();
   try { video.currentTime = targetTime; } catch { return false; }
   video.loop = true;
+  video.playbackRate = Number.isFinite(timelineSeconds) && timelineSeconds > 0 ? Math.max(0.25, Math.min(4, prepared.duration / timelineSeconds)) : 1;
   video.muted = true;
   const playResult = video.play();
   if (playResult?.catch) playResult.catch(() => {});
@@ -63,6 +64,7 @@ export function startPreparedVisualPlayback(prepared, progress = 0) {
 export function stopPreparedVisualPlayback(prepared) {
   if (prepared?.source_type !== "video_clip") return;
   prepared.video.pause();
+  prepared.video.playbackRate = 1;
 }
 export async function awaitPreparedVisualFrame(prepared, progress = 0, timeoutMs = 2500) {
   if (prepared?.source_type !== "video_clip") return true;
