@@ -1272,7 +1272,7 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  }
  // El progreso de render es exclusivo de la interfaz; nunca se dibuja dentro del vídeo exportado.
 }
-let jaiFfmpegInstance=null,jaiFfmpegLoadPromise=null;
+let jaiFfmpegInstance=null,jaiFfmpegLoadPromise=null,jaiFfmpegWorkerURL=null;
 async function transcodeFinalMp4(inputBlob,inputMime){
  if(!(inputBlob instanceof Blob)||inputBlob.size<1024)throw new Error("No hay un archivo intermedio válido para convertir a MP4.");
  const {FFmpeg}=await import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js");
@@ -1283,7 +1283,14 @@ async function transcodeFinalMp4(inputBlob,inputMime){
     const ffmpeg=new FFmpeg(),baseURL="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
     ffmpeg.on("log",({message})=>{window.jaiFfmpegLastLog=String(message||"").slice(-400);});
     ffmpeg.on("progress",({progress})=>{window.jaiFfmpegProgress=Number(progress)||0;});
-    await ffmpeg.load({coreURL:await toBlobURL(baseURL+"/ffmpeg-core.js","text/javascript"),wasmURL:await toBlobURL(baseURL+"/ffmpeg-core.wasm","application/wasm")});
+    // FFmpeg.wasm 0.12 crea su worker con new Worker(url). Los navegadores bloquean
+    // ese worker cuando la URL apunta directamente al CDN; usar un módulo Blob same-origin
+    // que importa el worker ESM remoto conserva sus imports relativos en el origen CDN.
+    const workerBootstrap='import "'+"https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js"+'";';
+    jaiFfmpegWorkerURL=URL.createObjectURL(new Blob([workerBootstrap],{type:"text/javascript"}));
+    try{
+     await ffmpeg.load({classWorkerURL:jaiFfmpegWorkerURL,coreURL:await toBlobURL(baseURL+"/ffmpeg-core.js","text/javascript"),wasmURL:await toBlobURL(baseURL+"/ffmpeg-core.wasm","application/wasm")});
+    }catch(error){URL.revokeObjectURL(jaiFfmpegWorkerURL);jaiFfmpegWorkerURL=null;throw error;}
     jaiFfmpegInstance=ffmpeg;return ffmpeg;
    })().catch(error=>{jaiFfmpegLoadPromise=null;throw error;});
   }
