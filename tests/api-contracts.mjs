@@ -12,8 +12,8 @@ const frontendSource = readFileSync(new URL("../index.html", import.meta.url), "
 assert.match(frontendSource, /const transformChain=\[\.\.\.chain,layer\]/, "Character rendering must apply parent-bone transforms before the child part.");
 assert.match(frontendSource, /exportedParts\.has\(reusableKey\)/, "PNG export must deduplicate recurring character parts across shots.");
 assert.match(frontendSource, /canvas\.toDataURL\("image\/png"\)/, "Character layer export must encode transparent canvas output as PNG.");
-assert.match(frontendSource, /currentCinematicReady&&currentDurationValidation/, "Final export must require verified cinematic assets, not vector previews.");
-assert.match(frontendSource, /Previsualización técnica completada/, "The UI must label legacy vector output as a preview, not final production.");
+assert.match(frontendSource, /currentDurationValidation\?\.within_tolerance&&timelineState\.items\.length&&auditReady&&imagesReady&&hasVoice&&animationRendererReady\(\)/, "Final 2D export must require a validated timeline, approved visuals, narration, scene images and animation-ready vector layers.");
+assert.match(frontendSource, /Ilustraciones 2D listas para animación/, "The UI must identify generated vector scenes as 2D animation assets.");
 assert.match(frontendSource, /async function inspectRenderedBlob/, "A browser export must be decoded and checked before a download is exposed.");
 assert.match(frontendSource, /fingerprints/, "The export QC must reject a frozen video.");
 const generationTimeouts = [...generationSource.matchAll(/AbortSignal\.timeout\((\d+)\)/g)].map(match => Number(match[1]));
