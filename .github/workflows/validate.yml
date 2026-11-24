@@ -71,7 +71,8 @@ jobs:
       - name: Test private Netlify inspector adapter with mocked Gemini
         run: npm run test:netlify
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 10
+        run: npx playwright install chromium
       - name: Test IndexedDB persistence in Chromium
         run: npm run test:browser
       - name: Test complete production flow in Chromium
