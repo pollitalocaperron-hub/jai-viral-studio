@@ -1413,7 +1413,9 @@ async function renderVideo(){
     if(!/^video\/mp4(?:;|$)/i.test(blob.type))throw new Error("La conversión no produjo MIME video/mp4.");
    }catch(conversionError){
     cleanup();setPipelineStage("render",0,"Conversión MP4 rechazada","error");$("downloadVideo").hidden=true;
-    $("renderStatus").textContent="Exportación rechazada: falló la conversión a MP4 H.264/AAC. No se ofrecerá el archivo intermedio ni se cambiará su extensión. Detalle: "+(conversionError?.message||"error desconocido");
+    const conversionDetail={name:conversionError?.name||typeof conversionError,message:conversionError?.message||String(conversionError),stack:conversionError?.stack||null,ffmpegLastLog:window.jaiFfmpegLastLog||null,ffmpegProgress:Number.isFinite(window.jaiFfmpegProgress)?window.jaiFfmpegProgress:null,workerURL:typeof jaiFfmpegWorkerURL==="string"?jaiFfmpegWorkerURL:null};
+    window.jaiFfmpegFailure=conversionDetail;
+    $("renderStatus").textContent="Exportación rechazada: falló la conversión a MP4 H.264/AAC. No se ofrecerá el archivo intermedio ni se cambiará su extensión. Diagnóstico: "+JSON.stringify(conversionDetail);
     return;
    }
    try{
