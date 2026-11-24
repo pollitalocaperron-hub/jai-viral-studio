@@ -150,7 +150,7 @@ try {
 
   // La producción visual debe invocar automáticamente al director de tomas.
   await page.locator("#makeVisuals").click();
-  await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Previsualización técnica completada"), null, { timeout: 30000 });
+  await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Ilustraciones 2D listas para animación"), null, { timeout: 30000 });
   assert.equal(counters.directScenes, 1, "Visual production must automatically request and validate the directed shot plan");
   assert.equal(await page.locator("#timelineTracks .scene").count(), 8, "The editable timeline must use the eight directed shots, not repeat four conceptual stills.");
   assert.ok((await page.locator("#timelineTracks").innerText()).includes("SHOT-01"), "Directed shot IDs must be carried into the editable timeline");
