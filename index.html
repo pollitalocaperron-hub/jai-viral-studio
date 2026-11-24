@@ -1717,7 +1717,7 @@ $("generateNarration").addEventListener("click",async()=>{
  if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("kokoroStatus").textContent="Espera a que termine la tarea actual o la recuperación antes de generar otra narración.";return;}
  const button=$("generateNarration");narrationGenerating=true;setPipelineStage("voice",0,"Generando voz neuronal…","running");button.disabled=true;$("downloadNarration").hidden=true;
  try{
-  $("kokoroStatus").textContent="Intentando el motor gratuito principal de voz; si alcanza su cuota, se activa el respaldo gratuito…";setTaskProgress("kokoroStatus",0,"Generando voz neuronal…","indeterminate");
+  $("kokoroStatus").textContent="Generando narración con Gemini TTS gratuito. Si alcanza su cuota, se conservará el proyecto y se podrá reintentar más tarde; no se activará otro proveedor.";setTaskProgress("kokoroStatus",0,"Generando voz neuronal…","indeterminate");
   const response=await fetch(jaiApiUrl("/api/narrate"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voice:$("kokoroVoice").value}),signal:AbortSignal.timeout(58000)});
   const data=await readJsonResponse(response,"Generador de voz Gemini");
   if(!response.ok)throw new Error(data.error||"No se pudo generar la narración.");
