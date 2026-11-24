@@ -206,7 +206,7 @@ try {
     return {mime:blob.type,size:blob.size,extension:link.download.split(".").pop(),base64:btoa(binary),status:document.querySelector("#renderStatus")?.textContent||""};
   });
   assert.ok(exported.size>20000,"The production button must create a non-trivial video Blob.");
-  assert.match(exported.mime,/^video\\/mp4(?:;|$)/i,"The production button must create an actual MP4 Blob, never WebM.");
+  assert.match(exported.mime,/^video\/mp4(?:;|$)/i,"The production button must create an actual MP4 Blob, never WebM.");
   assert.equal(exported.extension,"mp4","The downloadable filename must use the .mp4 extension.");
   assert.match(exported.status,/Vídeo exportado y control técnico aprobado/,"The download must appear only after the app's own audiovisual QC passes.");
   fs.mkdirSync(path.join(root,"artifacts"),{recursive:true});
