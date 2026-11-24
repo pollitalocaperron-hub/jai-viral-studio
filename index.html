@@ -1280,12 +1280,12 @@ async function transcodeFinalMp4(inputBlob,inputMime){
  if(!jaiFfmpegInstance){
   if(!jaiFfmpegLoadPromise){
    jaiFfmpegLoadPromise=(async()=>{
-    const ffmpeg=new FFmpeg(),baseURL="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+    const ffmpeg=new FFmpeg(),baseURL="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
     ffmpeg.on("log",({message})=>{window.jaiFfmpegLastLog=String(message||"").slice(-400);});
     ffmpeg.on("progress",({progress})=>{window.jaiFfmpegProgress=Number(progress)||0;});
-    // FFmpeg.wasm 0.12 crea su worker con new Worker(url). Los navegadores bloquean
-    // ese worker cuando la URL apunta directamente al CDN; usar un módulo Blob same-origin
-    // que importa el worker ESM remoto conserva sus imports relativos en el origen CDN.
+    // FFmpeg.wasm 0.12 ejecuta este worker como módulo. El core UMD no expone
+    // el export default que el worker importa cuando importScripts no está disponible;
+    // usar el core ESM permite que createFFmpegCore se resuelva correctamente.
     const workerBootstrap='import "'+"https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js"+'";';
     jaiFfmpegWorkerURL=URL.createObjectURL(new Blob([workerBootstrap],{type:"text/javascript"}));
     try{
