@@ -206,7 +206,8 @@ try {
     return {mime:blob.type,size:blob.size,extension:link.download.split(".").pop(),base64:btoa(binary),status:document.querySelector("#renderStatus")?.textContent||""};
   });
   assert.ok(exported.size>20000,"The production button must create a non-trivial video Blob.");
-  assert.match(exported.mime,/^video\/(webm|mp4)/,"The production button must create a playable WebM or MP4 Blob.");
+  assert.match(exported.mime,/^video\\/mp4(?:;|$)/i,"The production button must create an actual MP4 Blob, never WebM.");
+  assert.equal(exported.extension,"mp4","The downloadable filename must use the .mp4 extension.");
   assert.match(exported.status,/Vídeo exportado y control técnico aprobado/,"The download must appear only after the app's own audiovisual QC passes.");
   fs.mkdirSync(path.join(root,"artifacts"),{recursive:true});
   fs.writeFileSync(path.join(root,"artifacts","jai-production-export."+exported.extension),Buffer.from(exported.base64,"base64"));
@@ -222,6 +223,9 @@ try {
     const audio=streams.find(stream=>stream.codec_type==="audio");
     assert.ok(video,"FFprobe must detect a video stream");
     assert.ok(audio,"FFprobe must detect the narration/audio stream");
+    assert.match(String(probeData.format?.format_name||""),/mp4|mov/i,"FFprobe must identify an MP4 container.");
+    assert.equal(video.codec_name,"h264","FFprobe must confirm H.264 video.");
+    assert.equal(audio.codec_name,"aac","FFprobe must confirm AAC audio.");
     assert.equal(Number(video.width),720,"Exported video width must be 720");
     assert.equal(Number(video.height),1280,"Exported video height must be 1280");
     assert.ok(Number(probeData.format?.duration)>1,"FFprobe must report a valid media duration");
