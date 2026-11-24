@@ -1395,11 +1395,18 @@ async function renderVideo(){
    finished=true;
    if(renderCancelRequested){cleanup();setPipelineStage("render",0,"Render cancelado por el usuario","idle");$("renderStatus").textContent="Render cancelado. No se generó ningún archivo; puedes ajustar el montaje y volver a intentarlo.";return;}
    const actualMime=renderRecorder?.mimeType||mime;
-   const sourceBlob=new Blob(chunks,{type:actualMime});
-   const blob=await transcodeFinalMp4(sourceBlob,actualMime);
-   if(!/^video\/mp4(?:;|$)/i.test(blob.type))throw new Error("La conversión no produjo MIME video/mp4.");
    const expectedDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
    const audioTrackCount=stream?.getAudioTracks?.().length||0;
+   let blob;
+   try{
+    const sourceBlob=new Blob(chunks,{type:actualMime});
+    blob=await transcodeFinalMp4(sourceBlob,actualMime);
+    if(!/^video\/mp4(?:;|$)/i.test(blob.type))throw new Error("La conversión no produjo MIME video/mp4.");
+   }catch(conversionError){
+    cleanup();setPipelineStage("render",0,"Conversión MP4 rechazada","error");$("downloadVideo").hidden=true;
+    $("renderStatus").textContent="Exportación rechazada: falló la conversión a MP4 H.264/AAC. No se ofrecerá el archivo intermedio ni se cambiará su extensión. Detalle: "+(conversionError?.message||"error desconocido");
+    return;
+   }
    try{
     setPipelineStage("render",97,"Verificando MP4, duración, resolución y movimiento…","running");
     const qc=await inspectRenderedBlob(blob,expectedDuration,audioTrackCount);
