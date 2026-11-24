@@ -44,7 +44,7 @@ try {
     const makeImage = async color => {
       const c = document.createElement("canvas"); c.width = 160; c.height = 240;
       const x = c.getContext("2d"); x.fillStyle = color; x.fillRect(0, 0, c.width, c.height);
-      return c.convertToBlob({ type: "image/png" });
+      return await new Promise((resolve, reject) => c.toBlob(blob => blob ? resolve(blob) : reject(new Error("Canvas PNG encoding failed")), "image/png"));
     };
     const blobA = await makeImage("#18b4dc"), blobB = await makeImage("#f0a040");
     const image = await renderer.prepareVisualAsset({ asset_id: "still-a", mime_type: "image/png", blob: blobA, sha256: "fixture-a" });
