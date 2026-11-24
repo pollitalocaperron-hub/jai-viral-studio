@@ -47,6 +47,23 @@ export async function prepareVisualAsset(asset) {
   }
   throw new Error("MIME no admitido por el renderer.");
 }
+export function startPreparedVisualPlayback(prepared, progress = 0) {
+  if (prepared?.source_type !== "video_clip") return false;
+  const video = prepared.video;
+  const p = Math.max(0, Math.min(1, Number(progress) || 0));
+  const targetTime = Math.max(0, Math.min(prepared.duration - 0.04, p * prepared.duration));
+  video.pause();
+  try { video.currentTime = targetTime; } catch { return false; }
+  video.loop = true;
+  video.muted = true;
+  const playResult = video.play();
+  if (playResult?.catch) playResult.catch(() => {});
+  return true;
+}
+export function stopPreparedVisualPlayback(prepared) {
+  if (prepared?.source_type !== "video_clip") return;
+  prepared.video.pause();
+}
 export async function awaitPreparedVisualFrame(prepared, progress = 0, timeoutMs = 2500) {
   if (prepared?.source_type !== "video_clip") return true;
   const video = prepared.video;
@@ -83,8 +100,6 @@ export function drawPreparedVisualNow(ctx, width, height, prepared, progress = 0
     ctx.drawImage(image, (width - dw) / 2, (height - dh) / 2, dw, dh);
   } else if (prepared.source_type === "video_clip") {
     const video = prepared.video;
-    const targetTime = Math.max(0, Math.min(prepared.duration - 0.04, p * prepared.duration));
-    if (Math.abs(video.currentTime - targetTime) > 0.08 && !video.seeking) video.currentTime = targetTime;
     if (video.readyState < 2 || video.seeking) { ctx.restore(); return false; }
     const rect = fitRect(prepared.width, prepared.height, width, height, options.fit || "cover");
     ctx.drawImage(video, rect.x, rect.y, rect.width, rect.height);
