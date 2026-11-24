@@ -1124,7 +1124,7 @@ function vectorShotPreview(shot,progress=.5){
  return canvas?canvas.toDataURL("image/jpeg",.88):null;
 }
 function animationRendererReady(){
- if(!Array.isArray(currentShotPlan)||!currentShotPlan.length)return true;
+ if(!Array.isArray(currentShotPlan)||!currentShotPlan.length)return currentScenes.length===0;
  const validShot=shot=>Array.isArray(shot.layers)&&shot.layers.length>=3&&shot.layers.every(layer=>typeof layer.path_d==="string"&&layer.path_d.length>=10&&!!getVectorPath(layer))&&Array.isArray(shot.animation_steps)&&shot.animation_steps.length>=2&&shot.animation_steps.every(step=>step.from_transform&&step.to_transform);
  return currentShotPlan.every(validShot)&&timelineState.items.length===currentShotPlan.length&&timelineState.items.every(item=>item.directedShot&&validShot(item.directedShot));
 }
