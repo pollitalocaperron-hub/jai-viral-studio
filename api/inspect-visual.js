@@ -1,4 +1,5 @@
 import { applyApiCors } from "../cors.js";
+import { resolveVisualStyleProfile } from "./visual-style-profiles.js";
 export default async function handler(req, res) {
   if (!applyApiCors(req, res)) {
     return res.status(403).json({ error: "Origen no autorizado." });
@@ -11,27 +12,30 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Método no permitido." });
   }
 
-  const key = process.env.GEMINI_API_KEY;
+  const key = req.apiKeys?.gemini || process.env.GEMINI_API_KEY;
   if (!key) return res.status(503).json({ error: "El inspector necesita GEMINI_API_KEY; no se configuró ningún proveedor adicional." });
 
   const images = req.body?.images;
-  if (!Array.isArray(images) || images.length < 1 || images.length > 8) {
-    return res.status(400).json({ error: "Envía entre 1 y 8 fotogramas para inspección." });
+  if (!Array.isArray(images) || images.length < 1 || images.length > 4) {
+    return res.status(400).json({ error: "Envía entre 1 y 4 fotogramas para inspección." });
   }
+  const styleProfile = resolveVisualStyleProfile(req.body?.style_profile_id || images[0]?.style_profile_id, req.body?.topic || "", req.body?.script || "");
+  const requestedStyles = [req.body?.style_profile_id, ...images.map(item => item?.style_profile_id)].filter(Boolean);
+  if (requestedStyles.some(id => id !== styleProfile.id)) return res.status(400).json({ error: "Esta producción utiliza un único estilo visual fijo. Regenera las tomas con jai-reference-motion-01." });
   const totalImageChars = images.reduce((sum, item) => sum + (typeof item?.image_base64 === "string" ? item.image_base64.length : 0), 0);
-  if (totalImageChars > 3500000) return res.status(413).json({ error: "Las imágenes superan el tamaño seguro de inspección. Reduce la cantidad o resolución de fotogramas." });
+  if (totalImageChars > 1100000) return res.status(413).json({ error: "Las imágenes superan 1.1 MB de datos codificados. Reduce la resolución o divide la auditoría en lotes." });
 
   for (const [index, item] of images.entries()) {
-    if (!item || typeof item.image_base64 !== "string" || item.image_base64.length > 950000 ||
+    if (!item || typeof item.image_base64 !== "string" || item.image_base64.length > 300000 ||
         !/^[A-Za-z0-9+/]+={0,2}$/.test(item.image_base64)) {
-      return res.status(400).json({ error: "El fotograma " + (index + 1) + " no tiene una imagen JPEG válida o supera el tamaño permitido." });
+      return res.status(400).json({ error: "El fotograma " + (index + 1) + " no es una imagen JPEG base64 válida o supera 300 KB." });
     }
   }
 
-  const instructions = `Eres el inspector visual independiente de J.A.I. Evalúas imágenes de un vídeo educativo de CUALQUIER dominio: ciencias, historia, geografía, tecnología, arte, cultura, cocina, naturaleza, economía u otros.
-Compara CADA imagen con el sujeto, estado material, acción y prueba visual solicitados. La coincidencia del tema es un requisito eliminatorio: si el tema pedido son tablas de cortar, una imagen de cohetes, maquinaria, anatomía, laboratorios o cualquier objeto no relacionado DEBE recibir status "revise", aunque sea bonita o tenga buena calidad técnica. No apruebes por estética cuando falla la identidad del sujeto.
-Criterios: (1) el sujeto principal es reconocible y coincide con el solicitado; (2) el estado y la acción física son visibles; (3) la imagen demuestra la idea de la escena, no solo la decora; (4) no hay objetos ajenos, composición confusa, nubes abstractas ni manchas luminosas sin forma; (5) la imagen tiene un sujeto claro y legible en encuadre vertical.
-Evalúa la representación según el dominio: acepta mapas, líneas temporales, ilustraciones históricas, diagramas, CGI, personajes, procesos naturales o gráficos cuando sean adecuados al contenido. No impongas estética científica ni fotorealismo si la representación elegida es didácticamente válida. No inventes errores que no puedas observar.
+  const instructions = `Eres el inspector visual independiente de J.A.I. Evalúas imágenes de un vídeo educativo de CUALQUIER dominio. El perfil audiovisual de esta producción es "${styleProfile.label}". ${styleProfile.audit}
+Ignora la interfaz de reproducción de redes sociales que pueda aparecer en capturas de referencia: no evalúes ni reproduzcas barras de estado, botones de interacción, perfiles, comentarios, navegación o marcas de agua. Evalúa únicamente el contenido creativo del vídeo. Compara CADA imagen con el sujeto, estado material, acción y prueba visual solicitados. La coincidencia del tema es un requisito eliminatorio: si el tema pedido son tablas de cortar, una imagen de cohetes, maquinaria, anatomía, laboratorios o cualquier objeto no relacionado DEBE recibir status "revise", aunque sea bonita o tenga buena calidad técnica. No apruebes por estética cuando falla la identidad del sujeto.
+Criterios: (1) el sujeto principal es reconocible y coincide con el solicitado; (2) el estado y la acción física son visibles; (3) la imagen demuestra la idea de la escena, no solo la decora; (4) no hay objetos ajenos, composición confusa, nubes abstractas ni manchas luminosas sin forma; (5) la imagen tiene un sujeto claro y legible en encuadre vertical; (6) conserva los rasgos observables del perfil audiovisual indicado, con sujeto legible, capas coherentes y composición vertical.
+Mapas, líneas temporales, diagramas, personajes, procesos naturales y gráficos son válidos cuando estén dibujados dentro del mismo lenguaje editorial 2D. Marca revise solo si la toma contradice de forma visible el perfil seleccionado o la enseñanza. No penalices una aproximación vectorial 2.5D cuando el perfil lo permita. No inventes errores que no puedas observar.
 Devuelve SOLO JSON con esta forma: {"results":[{"scene_index":0,"status":"pass"|"revise","score":0,"reason":"explicación breve en español","issues":["problema observable"]}]}.
 Aprueba solo si la imagen comunica correctamente la escena. Si falta evidencia o el sujeto no coincide, usa revise. Un score de 80 o más no obliga a aprobar.`;
 
@@ -101,7 +105,7 @@ Aprueba solo si la imagen comunica correctamente la escena. Si falta evidencia o
         issues
       };
     });
-    return res.status(200).json({ results, model: "gemini-3.8-flash" });
+    return res.status(200).json({ results, model: "gemini-3.8-flash", style_profile_id: styleProfile.id, style_profile_label: styleProfile.label });
   } catch (error) {
     const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
     console.error("[JAI][Visual QA] Error:", error?.name || "Error", error?.message || "");

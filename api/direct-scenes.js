@@ -1,4 +1,6 @@
 import { applyApiCors } from "../cors.js";
+import { resolveVisualStyleProfile } from "./visual-style-profiles.js";
+import { normalizeLegacyShot, getSceneReadiness } from "./jai-scene-contract.js";
 
 function parseRange(value) {
   const match = String(value || "").replace(/[–—]/g, "-").match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
@@ -10,9 +12,73 @@ function parseRange(value) {
 function clean(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
+const RIG_PARENT = {
+  head: "torso", hair: "head", eyes: "head", mouth: "head", face: "head",
+  upper_arm: "torso", arm_upper: "torso", forearm: "upper_arm", lower_arm: "upper_arm", hand: "forearm",
+  upper_leg: "torso", thigh: "torso", lower_leg: "upper_leg", shin: "upper_leg", foot: "lower_leg"
+};
+function inferBoneParent(partId, characterId, layerIds) {
+  const part = String(partId || "").toLowerCase().replace(/[ -]/g, "_");
+  const candidate = RIG_PARENT[part];
+  if (candidate && layerIds.has(characterId + ":" + candidate)) return candidate;
+  return null;
+}
+function buildReusableRigs(shots) {
+  const characters = new Map();
+  for (const shot of shots) for (const layer of shot.layers || []) {
+    if (!layer.character_id || !layer.part_id) continue;
+    const key = String(layer.character_id);
+    if (!characters.has(key)) characters.set(key, new Map());
+    const parts = characters.get(key), part = String(layer.part_id).slice(0, 80);
+    if (!parts.has(part)) parts.set(part, { bone_id: part, part_id: part, description: layer.description, pivot_x: layer.pivot_x, pivot_y: layer.pivot_y, source_layer_id: layer.id, source_shot_id: shot.shot_id });
+  }
+  return [...characters.entries()].map(([character_id, parts]) => {
+    const ids = new Set([...parts.keys()].map(part => character_id + ":" + part.toLowerCase().replace(/[ -]/g, "_")));
+    return { rig_id: "rig-" + character_id, character_id, coordinate_space: "720x1280", reusable: true,
+      bones: [...parts.values()].map(bone => ({ ...bone, parent_bone_id: inferBoneParent(bone.part_id, character_id, ids) })) };
+  });
+}
+function buildCharacterBible(shots) {
+  const characters = new Map();
+  for (const shot of Array.isArray(shots) ? shots : []) {
+    for (const layer of Array.isArray(shot?.layers) ? shot.layers : []) {
+      const characterId = clean(layer?.character_id, 80);
+      const partId = clean(layer?.part_id, 80);
+      if (!characterId || !partId) continue;
+      if (!characters.has(characterId)) characters.set(characterId, new Map());
+      const parts = characters.get(characterId);
+      if (!parts.has(partId)) parts.set(partId, {
+        part_id: partId,
+        description: clean(layer?.description, 260),
+        role: clean(layer?.role, 120),
+        pivot_x: Number.isFinite(Number(layer?.pivot_x)) ? Number(layer.pivot_x) : null,
+        pivot_y: Number.isFinite(Number(layer?.pivot_y)) ? Number(layer.pivot_y) : null
+      });
+    }
+  }
+  return [...characters.entries()].map(([character_id, parts]) => ({
+    character_id,
+    parts: [...parts.values()]
+  }));
+}
+function buildNarrationSync(shot) {
+  const duration = Math.max(0, Number(shot.end_seconds) - Number(shot.start_seconds));
+  return (shot.animation_steps || []).map((step, index) => {
+    const start = Number(shot.start_seconds) + duration * Number(step.start_progress);
+    const end = Number(shot.start_seconds) + duration * Number(step.end_progress);
+    const action = String(step.action || "").toLowerCase();
+    const sound = /reveal|appear|show/.test(action) ? "soft_reveal" : /impact|hit|drop|slam/.test(action) ? "impact" :
+      /move|turn|rotate|walk|gesture|wave/.test(action) ? "movement_whoosh" : "subtle_transition";
+    return { event_id: shot.shot_id + "-sync-" + (index + 1), target_id: step.target_id,
+      narration_segment: shot.narration_segment, subtitle: shot.subtitle, action: step.action,
+      start_seconds: Number(start.toFixed(3)), end_seconds: Number(end.toFixed(3)),
+      sound_cue: sound, camera_change: index === 0 ? "shot_entry" : "hold_or_reframe",
+      from_transform: step.from_transform, to_transform: step.to_transform };
+  });
+}
 function validateShots(shots, story) {
-  if (!Array.isArray(shots) || shots.length < story.length * 2 || shots.length > 16) {
-    return "El director debe entregar entre 2 y 5 tomas visuales por escena conceptual, con un máximo de 16 tomas.";
+  if (!Array.isArray(shots) || shots.length < story.length * 2 || shots.length > story.length * 5) {
+    return "El director debe entregar entre 2 y 5 tomas visuales por cada escena conceptual.";
   }
   const byScene = new Map();
   for (const [index, shot] of shots.entries()) {
@@ -27,7 +93,7 @@ function validateShots(shots, story) {
     for (const key of required) if (!clean(shot[key], key === "visual_prompt_en" ? 1800 : 700)) return "La toma " + (index + 1) + " no incluye " + key + ".";
     if (clean(shot.visual_prompt_en, 1800).split(/\s+/).length < 25) return "El prompt de la toma " + (index + 1) + " necesita describir un fotograma concreto con mayor precisión.";
     if (!/^#[0-9a-fA-F]{6}$/.test(clean(shot.background_color, 16))) return "La toma " + (index + 1) + " necesita un color de fondo hexadecimal válido.";
-    if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 6) return "La toma " + (index + 1) + " necesita entre 3 y 6 capas vectoriales independientes.";
+    if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 10) return "La toma " + (index + 1) + " necesita entre 3 y 6 capas vectoriales independientes.";
     const layerIds = new Set();
     for (const [layerIndex, layer] of shot.layers.entries()) {
       const id = clean(layer?.id, 60), path = typeof layer?.path_d === "string" ? layer.path_d.trim() : "";
@@ -60,7 +126,7 @@ function validateShots(shots, story) {
   }
   for (let sceneIndex = 0; sceneIndex < story.length; sceneIndex++) {
     const range = parseRange(story[sceneIndex]?.time), list = (byScene.get(sceneIndex) || []).sort((a, b) => a.start - b.start);
-    if (!range || list.length < 2) return "La escena conceptual " + (sceneIndex + 1) + " no tiene suficientes tomas.";
+    if (!range || list.length < 2 || list.length > 5) return "La escena conceptual " + (sceneIndex + 1) + " debe tener entre 2 y 5 tomas.";
     let cursor = range.start;
     for (const shot of list) {
       if (Math.abs(shot.start - cursor) > 0.05) return "Las tomas de la escena " + (sceneIndex + 1) + " tienen huecos o solapamientos.";
@@ -75,7 +141,7 @@ export default async function handler(req, res) {
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Origen no autorizado." });
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Método no permitido." }); }
-  const { topic, script, story, retention_map = [] } = req.body || {};
+  const { topic, script, story, retention_map = [], style_profile_id = "" } = req.body || {};
   if (typeof topic !== "string" || !topic.trim() || topic.length > 500 || typeof script !== "string" || !script.trim() || script.length > 8000) {
     return res.status(400).json({ error: "Se requiere un tema y una narración válidos." });
   }
@@ -84,16 +150,20 @@ export default async function handler(req, res) {
   }
   if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) return res.status(503).json({ error: "No hay un proveedor editorial configurado." });
 
+  const styleProfile = resolveVisualStyleProfile(style_profile_id, topic, script);
+
   const prompt = [
     "Eres el DIRECTOR DE ESCENAS Y SUPERVISOR DE ANIMACIÓN de J.A.I. Convierte el storyboard conceptual en un plan de tomas ejecutable. Devuelve SOLO JSON válido con la propiedad shots.",
     "No generes una imagen final ni describas movimientos de cámara como sustituto de acciones. Cada toma debe mostrar un nuevo estado o acción didáctica.",
-    "Divide cada escena conceptual en 2 a 5 tomas, según la complejidad real. El total debe ser 8 a 16. No uses una cantidad fija por vídeo.",
+    "Divide cada una de las 4 o 5 escenas conceptuales en 2 a 5 tomas, según la complejidad real. El total permitido es de 8 a 25 tomas (máximo 5 por escena). No uses una cantidad fija por vídeo.",
     "Las tomas de cada escena deben cubrir exactamente su intervalo, en orden, sin huecos ni solapamientos. Usa start_seconds y end_seconds numéricos absolutos dentro del vídeo.",
-    "Cada toma debe incluir: scene_index (índice base cero), start_seconds, end_seconds, narration_segment (fragmento literal de la narración), subtitle, subject, visual_state, visual_action, visual_prompt_en, continuity_anchor, background_color (#RRGGBB), layers (3–6 objetos independientes con id, description, role, path_d, fill, stroke, stroke_width, pivot_x, pivot_y) y animation_steps (2–4 acciones con target_id, action, from_state, to_state, start_progress, end_progress, from_transform y to_transform).",
-    "Los elementos deben ser concretos y separables: no uses 'todo el motor' como una sola capa si necesitas mover pistón, válvula y bujía independientemente. Mantén la misma identidad, geometría, paleta y orientación de objetos repetidos entre tomas.",
+    "Cada toma debe incluir: scene_index (índice base cero), start_seconds, end_seconds, narration_segment (fragmento literal de la narración), subtitle, subject, visual_state, visual_action, visual_prompt_en, continuity_anchor, background_color (#RRGGBB), layers (4–10 objetos independientes con id, description, role, path_d, fill, stroke, stroke_width, pivot_x, pivot_y, character_id y part_id cuando aplique) y animation_steps (2–4 acciones con target_id, action, from_state, to_state, start_progress, end_progress, from_transform y to_transform).",
+    "Los elementos deben ser concretos y separables. Mantén la misma identidad, geometría, paleta y orientación de objetos repetidos entre tomas. Si hay personajes, separa cabeza, torso, brazos, antebrazos, manos, piernas, ojos, boca, cabello y accesorios según la acción. Asigna pivotes en articulaciones y IDs estables; las piezas móviles deben ser siluetas independientes con transparencia real al exportar PNG.",
     "La ilustración vectorial es la escena de producción: cada objeto debe tener su propio path_d independiente, no agrupes objetos móviles en una sola ruta. Usa coordenadas de un lienzo vertical 720x1280; path_d debe contener SOLO comandos de ruta SVG (M,L,H,V,C,S,Q,T,A,Z) y números, nunca etiquetas XML/SVG ni texto. Ordena las capas de atrás hacia delante. Cada forma debe ser una silueta cerrada y reconocible, con relleno y contorno.",
     "Cada animation_step debe incluir from_transform y to_transform con x, y (desplazamiento en píxeles), rotation (grados), scale (multiplicador) y opacity (0–1). Anima el objeto real descrito por target_id; usa movimientos pequeños y físicamente correctos, no movimiento de cámara ni partículas decorativas. Las capas que no se mueven usan la misma transformación inicial y final.",
-    "Usa el estilo fijo de J.A.I.: ilustración editorial educativa 2D premium, siluetas limpias y reconocibles, contornos de tinta consistentes, rellenos planos por capas con sombreado sutil, paleta coherente adaptada al tema, jerarquía clara y composición vertical. Todos los temas deben mantener este mismo lenguaje visual.",
+    "PERFIL AUDIOVISUAL DE REFERENCIA: " + styleProfile.label + ". " + styleProfile.prompt + " Paleta: " + styleProfile.palette + " Gramática de movimiento y montaje: " + styleProfile.motion,
+    "MOTOR DE PERSONAJES: define un character_bible con character_id estable, nombre, silueta, proporciones, rasgos faciales, peinado, vestuario, accesorios, paleta hexadecimal, personalidad, voz y gestos distintivos. Reutiliza los mismos rasgos en cada toma y episodio; no rediseñes personajes recurrentes. Devuelve character_bible como array en la respuesta. La continuidad debe conservar character_id, part_id, paleta, pivotes y anclas visuales; cada acción debe corresponder a narration_segment y mostrar una causa, reacción o cambio de estado.",
+    "No reproduz la interfaz de Instagram/TikTok que aparece alrededor de los clips de referencia: barras de estado, botones de me gusta, comentarios, perfiles, navegación ni marcas de agua. Son elementos de captura, no parte del diseño del vídeo.",
     "No pongas texto dentro de las imágenes. Los subtítulos y etiquetas se añadirán en edición.",
     "Storyboard: " + JSON.stringify(story),
     "Narración: " + script,
@@ -215,11 +285,11 @@ export default async function handler(req, res) {
   const shots = parsed?.shots;
   if (validationError) return res.status(502).json({ error: validationError, diagnosticCode: "SCENE_DIRECTOR_INVALID_SHOTS" });
   const normalized = shots.map((shot, index) => ({
-    ...shot, shot_id: "shot-" + String(index + 1).padStart(2, "0"),
+    ...shot, shot_id: "shot-" + String(index + 1).padStart(2, "0"), style_profile_id: styleProfile.id,
     scene_index: Number(shot.scene_index), start_seconds: Number(shot.start_seconds), end_seconds: Number(shot.end_seconds),
     background_color: clean(shot.background_color, 16),
     layers: shot.layers.map((layer, layerIndex) => ({
-      id: clean(layer?.id, 60) || "layer-" + (layerIndex + 1), description: clean(layer?.description, 260), role: clean(layer?.role, 120),
+      id: clean(layer?.id, 60) || "layer-" + (layerIndex + 1), description: clean(layer?.description, 260), role: clean(layer?.role, 120), character_id: clean(layer?.character_id, 80), part_id: clean(layer?.part_id, 80),
       path_d: layer.path_d.trim(), fill: clean(layer.fill, 16), stroke: clean(layer.stroke, 16), stroke_width: Number(layer.stroke_width),
       pivot_x: Number(layer.pivot_x), pivot_y: Number(layer.pivot_y)
     })),
@@ -230,5 +300,12 @@ export default async function handler(req, res) {
       to_transform: Object.fromEntries(["x", "y", "rotation", "scale", "opacity"].map(key => [key, Number(step.to_transform[key])]))
     }))
   }));
-  return res.status(200).json({ shots: normalized, shot_count: normalized.length, conceptual_scene_count: story.length, provider, animation_plan_validated: true, animation_ready: true });
+  normalized.forEach(shot => { shot.narration_sync = buildNarrationSync(shot); });
+  const characterBible = buildCharacterBible(normalized);
+  const reusableRigs = buildReusableRigs(normalized);
+  const sceneContracts = normalized.map((shot, index) => normalizeLegacyShot(shot, index));
+  const sceneReadiness = sceneContracts.map(getSceneReadiness);
+  return res.status(200).json({ shots: normalized, scene_contracts: sceneContracts, visual_engine_status: "vector_preview_only", cinematic_ready: sceneReadiness.every(item => item.cinematic_ready), scene_readiness: sceneReadiness, character_bible: characterBible, reusable_rigs: reusableRigs,
+    narration_sync_validated: normalized.every(shot => shot.narration_sync.every(event => event.start_seconds >= shot.start_seconds - 0.01 && event.end_seconds <= shot.end_seconds + 0.01)),
+    shot_count: normalized.length, conceptual_scene_count: story.length, provider, style_profile_id: styleProfile.id, style_profile_label: styleProfile.label, animation_plan_validated: true, vector_preview_ready: true, animation_ready: false });
 }

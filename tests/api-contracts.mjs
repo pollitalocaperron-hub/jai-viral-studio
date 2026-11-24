@@ -4,9 +4,18 @@ import generateHandler from "../api/generate.js";
 import narrateHandler from "../api/narrate.js";
 import inspectVisualHandler from "../api/inspect-visual.js";
 import directScenesHandler from "../api/direct-scenes.js";
+import { resolveVisualStyleProfile } from "../api/visual-style-profiles.js";
 
 // Guard the worst-case provider + retry + repair path against Vercel's 60s function limit.
 const generationSource = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
+const frontendSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+assert.match(frontendSource, /const transformChain=\[\.\.\.chain,layer\]/, "Character rendering must apply parent-bone transforms before the child part.");
+assert.match(frontendSource, /exportedParts\.has\(reusableKey\)/, "PNG export must deduplicate recurring character parts across shots.");
+assert.match(frontendSource, /canvas\.toDataURL\("image\/png"\)/, "Character layer export must encode transparent canvas output as PNG.");
+assert.match(frontendSource, /currentDurationValidation\?\.within_tolerance&&timelineState\.items\.length&&auditReady&&imagesReady&&hasVoice&&animationRendererReady\(\)/, "Final 2D export must require a validated timeline, approved visuals, narration, scene images and animation-ready vector layers.");
+assert.match(frontendSource, /Ilustraciones 2D listas para animación/, "The UI must identify generated vector scenes as 2D animation assets.");
+assert.match(frontendSource, /async function inspectRenderedBlob/, "A browser export must be decoded and checked before a download is exposed.");
+assert.match(frontendSource, /fingerprints/, "The export QC must reject a frozen video.");
 const generationTimeouts = [...generationSource.matchAll(/AbortSignal\.timeout\((\d+)\)/g)].map(match => Number(match[1]));
 assert.deepEqual(generationTimeouts, [2500, 12000, 12000, 6000, 6000], "Generation provider and repair timeouts must remain explicitly bounded.");
 const worstCaseGenerationMs = 2500 + 12000 + (12000 * 2) + 1000 + (6000 * 2);
@@ -174,6 +183,7 @@ try {
         groqCalls++;
         const payload = JSON.parse(options.body || "{}");
         const userPrompt = payload.messages?.[1]?.content || "";
+        if (!userPrompt.includes("Repair ONLY the storyboard")) assert.match(userPrompt, /BIBLIA DE TEMPORADA[\s\S]*"next_episode":2[\s\S]*El misterio ya fue descubierto/);
         if (userPrompt.includes("Repair ONLY the storyboard")) {
           return response({
             choices: [{
@@ -193,7 +203,7 @@ try {
     const res = mockResponse();
     await generateHandler({
       method: "POST",
-      body: { topic: "Un proceso que requiere reparar el storyboard", duration: "30–45 segundos", platform: "Reels" }
+      body: { topic: "Un proceso que requiere reparar el storyboard", duration: "30–45 segundos", platform: "Reels", format_mode: "serie-viral", series_bible: { season_number: 1, episode_count: 10, episode_number: 1, next_episode: 2, world_state: "El misterio ya fue descubierto." } }
     }, res);
     assert.equal(res.statusCode, 200);
     assert.equal(groqCalls, 2, "The incomplete storyboard must trigger exactly one bounded repair request");
@@ -213,16 +223,16 @@ try {
     const shots = [];
     story.forEach((scene, sceneIndex) => {
       const start = sceneIndex * 9;
-      for (let part = 0; part < 2; part++) {
-        const shotStart = start + part * 4.5;
+      for (let part = 0; part < 5; part++) {
+        const shotStart = start + part * 1.8;
         shots.push({
-          scene_index: sceneIndex, start_seconds: shotStart, end_seconds: shotStart + 4.5,
+          scene_index: sceneIndex, start_seconds: shotStart, end_seconds: shotStart + 1.8,
           narration_segment: "La explicación describe esta acción concreta.",
           subtitle: "Acción " + (part + 1), subject: "Componente mecánico identificable",
           visual_state: "Estado inicial y cambio visible", visual_action: "El componente se desplaza de forma observable",
           visual_prompt_en: "Clean educational 2D editorial illustration of the exact mechanical component in a coherent portrait composition, clear shapes, consistent palette, separated readable parts and a specific teaching action.",
           continuity_anchor: "Same component geometry, color, scale and orientation across adjacent shots.",
-          background_color: "#F2EEE4", layers: [{"id":"component","description":"Componente principal","role":"subject","path_d":"M 240 420 C 260 360 460 360 480 420 L 480 760 C 460 820 260 820 240 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"housing","description":"Estructura contenedora","role":"environment","path_d":"M 150 300 L 570 300 L 570 900 L 150 900 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
+          background_color: "#F2EEE4", layers: [{"id":"component","description":"Componente principal","role":"subject","character_id":"hero","part_id":"torso","path_d":"M 240 420 C 260 360 460 360 480 420 L 480 760 C 460 820 260 820 240 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"housing","description":"Estructura contenedora","role":"environment","path_d":"M 150 300 L 570 300 L 570 900 L 150 900 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","character_id":"hero","part_id":"head","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
           animation_steps: [{"target_id":"component","action":"move","from_state":"lower","to_state":"upper","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":-70,"rotation":0,"scale":1,"opacity":1}},{"target_id":"housing","action":"hold","from_state":"fixed","to_state":"fixed","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}},{"target_id":"detail","action":"reveal","from_state":"hidden","to_state":"visible","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":20,"rotation":0,"scale":0.85,"opacity":0},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}}]
         });
       }
@@ -236,12 +246,36 @@ try {
     const res = mockResponse();
     await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
     assert.equal(res.statusCode, 200);
-    assert.equal(res.body.shot_count, 8);
+    assert.equal(res.body.shot_count, 20, "The director must accept five continuous shots per conceptual scene");
     assert.equal(res.body.conceptual_scene_count, 4);
     assert.equal(res.body.animation_plan_validated, true);
-    assert.equal(res.body.animation_ready, true, "Validated independent vector layers and transforms must be animation-ready");
+    assert.equal(res.body.vector_preview_ready, true, "Validated independent vector layers and transforms must be renderable as a vector preview");
+    assert.equal(res.body.animation_ready, false, "Vector layer transforms must not be advertised as cinematic animation readiness");
+    assert.equal(res.body.visual_engine_status, "vector_preview_only");
+    assert.equal(res.body.cinematic_ready, false, "Vector-only scene direction must never claim cinematic readiness.");
+    assert.equal(res.body.scene_contracts.length, res.body.shots.length);
+    assert.equal(res.body.scene_contracts[0].schema_version, "jai.scene.v1");
+    assert.equal(res.body.scene_contracts[0].visual.source_type, "vector_scene");
     assert.equal(res.body.shots[0].shot_id, "shot-01");
     assert.equal(res.body.shots[0].layers.length, 3, "Each shot must contain multiple independently rendered vector layers");
+    assert.equal(res.body.reusable_rigs.length, 1, "Repeated character parts must be consolidated into one reusable rig");
+    assert.equal(res.body.character_bible.length, 1, "The character bible must only contain characters present in actual shot layers");
+    assert.equal(res.body.character_bible[0].character_id, "hero");
+    assert.deepEqual(res.body.character_bible[0].parts.map(part => part.part_id).sort(), ["head", "torso"]);
+    assert.deepEqual(res.body.reusable_rigs[0].bones.map(bone => bone.bone_id).sort(), ["head", "torso"]);
+    assert.equal(res.body.reusable_rigs[0].bones.find(bone => bone.bone_id === "head").parent_bone_id, "torso");
+    assert.equal(res.body.narration_sync_validated, true);
+    assert.equal(res.body.shots[0].narration_sync.length, 3);
+    assert.ok(res.body.shots[0].narration_sync.every(event => event.start_seconds >= res.body.shots[0].start_seconds && event.end_seconds <= res.body.shots[0].end_seconds));
+
+    // If the director supplies no character IDs/parts, no character is invented.
+    const noCharacterShots = shots.map(shot => ({ ...shot, layers: shot.layers.map(layer => ({ ...layer, character_id: "", part_id: "" })) }));
+    globalThis.fetch = async () => response({ choices: [{ message: { content: JSON.stringify({ shots: noCharacterShots }) } }] });
+    const emptyBibleResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso sin personajes", script: "Narración de prueba.", story, retention_map: [] } }, emptyBibleResponse);
+    assert.equal(emptyBibleResponse.statusCode, 200);
+    assert.deepEqual(emptyBibleResponse.body.character_bible, [], "No character bible entries may be invented when shot layers contain no characters.");
+
   }
 
   // A free-tier quota error from Groq must route the scene plan to the configured free Gemini fallback.
@@ -259,7 +293,7 @@ try {
           visual_state: "Estado inicial y cambio visible", visual_action: "El componente se desplaza de forma observable",
           visual_prompt_en: "Clean educational 2D editorial illustration of the exact mechanical component in a coherent portrait composition, clear shapes, consistent palette, separated readable parts and a specific teaching action.",
           continuity_anchor: "Same component geometry, color, scale and orientation across adjacent shots.",
-          background_color: "#F2EEE4", layers: [{"id":"component","description":"Componente principal","role":"subject","path_d":"M 240 420 C 260 360 460 360 480 420 L 480 760 C 460 820 260 820 240 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"housing","description":"Estructura contenedora","role":"environment","path_d":"M 150 300 L 570 300 L 570 900 L 150 900 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
+          background_color: "#F2EEE4", layers: [{"id":"component","description":"Componente principal","role":"subject","character_id":"hero","part_id":"torso","path_d":"M 240 420 C 260 360 460 360 480 420 L 480 760 C 460 820 260 820 240 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"housing","description":"Estructura contenedora","role":"environment","path_d":"M 150 300 L 570 300 L 570 900 L 150 900 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","character_id":"hero","part_id":"head","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
           animation_steps: [{"target_id":"component","action":"move","from_state":"lower","to_state":"upper","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":-70,"rotation":0,"scale":1,"opacity":1}},{"target_id":"housing","action":"hold","from_state":"fixed","to_state":"fixed","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}},{"target_id":"detail","action":"reveal","from_state":"hidden","to_state":"visible","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":20,"rotation":0,"scale":0.85,"opacity":0},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}}]
         });
       }
@@ -312,7 +346,7 @@ try {
           visual_state: "Estado inicial y cambio visible", visual_action: "El componente se desplaza de forma observable",
           visual_prompt_en: "Clean educational 2D editorial illustration of the exact mechanical component in a coherent portrait composition, clear shapes, consistent palette, separated readable parts and a specific teaching action.",
           continuity_anchor: "Same component geometry, color, scale and orientation across adjacent shots.",
-          background_color: "#F2EEE4", layers: [{"id":"component","description":"Componente principal","role":"subject","path_d":"M 240 420 C 260 360 460 360 480 420 L 480 760 C 460 820 260 820 240 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"housing","description":"Estructura contenedora","role":"environment","path_d":"M 150 300 L 570 300 L 570 900 L 150 900 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
+          background_color: "#F2EEE4", layers: [{"id":"component","description":"Componente principal","role":"subject","character_id":"hero","part_id":"torso","path_d":"M 240 420 C 260 360 460 360 480 420 L 480 760 C 460 820 260 820 240 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"housing","description":"Estructura contenedora","role":"environment","path_d":"M 150 300 L 570 300 L 570 900 L 150 900 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","character_id":"hero","part_id":"head","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
           animation_steps: [{ target_id: "missing-layer", action: "move", from_state: "lower", to_state: "upper", start_progress: 0, end_progress: 1, from_transform: { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 }, to_transform: { x: 0, y: -70, rotation: 0, scale: 1, opacity: 1 } }, { target_id: "housing", action: "hold", from_state: "fixed", to_state: "fixed", start_progress: 0, end_progress: 1, from_transform: { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 }, to_transform: { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 } }]
         });
       }
@@ -368,32 +402,21 @@ try {
     assert.equal(res.body.sampleRate, 24000);
   }
 
-  // Gemini quota exhaustion must activate the no-auth, free OVH Spanish TTS backup.
+  // Gemini TTS quota exhaustion must fail closed: no secondary provider is permitted.
   {
-    const sampleRate = 22000, pcm = Buffer.from([0, 0, 24, 0, 0, 0, 232, 255, 0, 0, 12, 0]);
-    const wav = Buffer.alloc(44 + pcm.length);
-    wav.write("RIFF", 0); wav.writeUInt32LE(36 + pcm.length, 4); wav.write("WAVE", 8);
-    wav.write("fmt ", 12); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20);
-    wav.writeUInt16LE(1, 22); wav.writeUInt32LE(sampleRate, 24);
-    wav.writeUInt32LE(sampleRate * 2, 28); wav.writeUInt16LE(2, 32);
-    wav.writeUInt16LE(16, 34); wav.write("data", 36); wav.writeUInt32LE(pcm.length, 40); pcm.copy(wav, 44);
     const calls = [];
-    globalThis.fetch = async (url, options = {}) => {
-      calls.push({ url: String(url), options });
+    globalThis.fetch = async url => {
+      calls.push(String(url));
       if (String(url).includes("generativelanguage.googleapis.com")) return response({ error: { message: "Free quota exhausted" } }, 429);
-      if (String(url).includes("nvr-tts-es-es.endpoints.kepler.ai.cloud.ovh.net")) return new Response(wav, { status: 200, headers: { "content-type": "audio/wav" } });
-      throw new Error("Unexpected provider in free TTS failover test: " + url);
+      throw new Error("Unexpected secondary provider request: " + url);
     };
     const res = mockResponse();
     await narrateHandler({ method: "POST", body: { text: "Esta es una prueba breve de narración gratuita.", voice: "Kore" } }, res);
-    assert.equal(res.statusCode, 200);
-    assert.equal(res.body.provider, "OVHcloud NVIDIA Riva (respaldo gratuito)");
-    assert.equal(res.body.sampleRate, sampleRate);
-    assert.equal(Buffer.from(res.body.audioBase64, "base64").toString("hex"), pcm.toString("hex"), "The WAV container must be removed and its PCM payload preserved.");
-    assert.equal(calls.length, 2);
-    assert.ok(calls[0].url.includes("generativelanguage.googleapis.com"));
-    assert.ok(calls[1].url.includes("nvr-tts-es-es.endpoints.kepler.ai.cloud.ovh.net"));
-    assert.equal(calls[1].options.headers.Authorization, undefined, "The free OVH fallback must not use a paid project key or payment-backed credential.");
+    assert.equal(res.statusCode, 429);
+    assert.equal(res.body.diagnosticCode, "GEMINI_TTS_QUOTA_EXHAUSTED");
+    assert.equal(calls.length, 1, "Only Gemini may be contacted for narration");
+    assert.ok(calls[0].includes("generativelanguage.googleapis.com"));
+    assert.ok(!calls.some(url => /ovh|riva|elevenlabs|openai|groq/i.test(url)));
   }
 
   // Visual QA must fail closed when the model reports issues, even with a high score.
@@ -444,6 +467,94 @@ try {
       body: { images: [{ image_base64: "AQID" }, { image_base64: "BAUG" }] }
     }, res);
     assert.equal(res.statusCode, 502);
+  }
+
+
+  // Groq 429 must activate only the configured Gemini fallback; all provider calls are mocked.
+  {
+    const plan = makeValidPlan(), calls = [];
+    globalThis.fetch = async (url) => {
+      calls.push(String(url));
+      if (String(url).includes("api.openalex.org")) return response({ results: [] });
+      if (String(url).includes("api.groq.com")) return response({ error: { message: "mock Groq quota" } }, 429);
+      if (String(url).includes("generativelanguage.googleapis.com")) return response({
+        candidates: [{ content: { parts: [{ text: JSON.stringify(plan) }] }, finishReason: "stop" }]
+      });
+      throw new Error("Unexpected provider in mocked fallback test: " + url);
+    };
+    const res = mockResponse();
+    await generateHandler({ method: "POST", body: { topic: "Prueba de compatibilidad Groq Gemini", duration: "30–45 segundos", platform: "Reels" } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.match(res.body.provider, /Gemini/);
+    assert.equal(calls.filter(url => url.includes("api.groq.com")).length, 1);
+    assert.equal(calls.filter(url => url.includes("generativelanguage.googleapis.com")).length, 1);
+    assert.ok(calls.every(url => /openalex|api\.groq\.com|generativelanguage\.googleapis\.com/.test(url)));
+  }
+
+  // If both mocked providers are quota-limited, the API returns a bounded failure without a third provider.
+  {
+    const calls = [];
+    globalThis.fetch = async url => {
+      calls.push(String(url));
+      if (String(url).includes("api.openalex.org")) return response({ results: [] });
+      if (String(url).includes("api.groq.com")) return response({ error: { message: "mock Groq quota" } }, 429);
+      if (String(url).includes("generativelanguage.googleapis.com")) return response({ error: { message: "mock Gemini quota" } }, 429);
+      throw new Error("Unexpected provider in quota fail-closed test: " + url);
+    };
+    const res = mockResponse();
+    await generateHandler({ method: "POST", body: { topic: "Prueba de cuota simulada", duration: "30–45 segundos", platform: "Reels" } }, res);
+    assert.equal(res.statusCode, 502);
+    assert.equal(res.body.providerStatus, 429);
+    assert.equal(calls.filter(url => url.includes("api.groq.com")).length, 1);
+    assert.equal(calls.filter(url => url.includes("generativelanguage.googleapis.com")).length, 1);
+    assert.ok(calls.every(url => /openalex|api\.groq\.com|generativelanguage\.googleapis\.com/.test(url)));
+  }
+
+  // Four frames over the aggregate encoded-size ceiling must be rejected before Gemini is called.
+  {
+    let providerCalls = 0;
+    globalThis.fetch = async () => { providerCalls++; throw new Error("Provider must not be called for oversized frame batches"); };
+    const res = mockResponse();
+    await inspectVisualHandler({
+      method: "POST",
+      body: { images: Array.from({ length: 4 }, () => ({ image_base64: "A".repeat(280000) })) }
+    }, res);
+    assert.equal(res.statusCode, 413);
+    assert.equal(providerCalls, 0);
+  }
+
+  // Visual inspection rejects more than four frames before contacting Gemini.
+  {
+    let providerCalls = 0;
+    globalThis.fetch = async () => { providerCalls++; throw new Error("Provider must not be called for invalid frame count"); };
+    const res = mockResponse();
+    await inspectVisualHandler({ method: "POST", body: { images: Array.from({ length: 5 }, () => ({ image_base64: "AQID" })) } }, res);
+    assert.equal(res.statusCode, 400);
+    assert.equal(providerCalls, 0);
+  }
+
+
+  // Every topic and every shot must use the one locked J.A.I. visual identity.
+  {
+    assert.equal(resolveVisualStyleProfile("", "Relato de un misterio histórico", "").id, "jai-reference-motion-01");
+    assert.equal(resolveVisualStyleProfile("paper-craft-explainer", "Cómo usar una app", "").id, "jai-reference-motion-01");
+    assert.equal(resolveVisualStyleProfile("cinematic-desk-tech", "Lista de plugins", "").id, "jai-reference-motion-01");
+  }
+
+  // Mixed visual profiles in one audit batch are rejected before the Gemini provider is contacted.
+  {
+    let providerCalls = 0;
+    globalThis.fetch = async () => { providerCalls++; throw new Error("Provider must not be called for mixed styles"); };
+    const res = mockResponse();
+    await inspectVisualHandler({
+      method: "POST",
+      body: { images: [
+        { image_base64: "AQID", style_profile_id: "paper-craft-explainer" },
+        { image_base64: "BAUG", style_profile_id: "cinematic-cartoon-story" }
+      ] }
+    }, res);
+    assert.equal(res.statusCode, 400);
+    assert.equal(providerCalls, 0);
   }
 
   console.log("PASS: editorial generation contract, chronology validation, narration validation/PCM response, and fail-closed visual audit contracts.");

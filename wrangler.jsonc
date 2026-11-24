@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jai-viral-studio-api",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-17",
+  "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
+  "workers_dev": true,
+  "vars": {
+    "ALLOWED_ORIGIN": "https://pollitalocaperron-hub.github.io"
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "ABUSE_GUARD", "class_name": "AbuseGuard" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1-abuse-guard", "new_sqlite_classes": ["AbuseGuard"] }
+  ],
+  "observability": { "enabled": true }
+}

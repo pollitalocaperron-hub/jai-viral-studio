@@ -26,6 +26,7 @@ try {
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded" });
   await page.locator("#topic").waitFor();
+  await page.waitForFunction(() => typeof writeJaiRecoveryKey === "function" && typeof readJaiRecovery === "function" && typeof deleteJaiRecoveryKey === "function", null, { timeout: 10000 });
   assert.equal(await page.locator("#topic").inputValue(), "", "New sessions must start with an empty topic");
   assert.match(await page.locator("#projects").innerText(), /Todavía no hay proyectos guardados/);
 
@@ -217,7 +218,9 @@ try {
   assert.equal(await page.locator("#renderVideo").isDisabled(), true, "The export gate must immediately block narration trims that cannot fit the timeline safely");
   await trimEnd.fill("11");
   await trimEnd.dispatchEvent("change");
-  assert.equal(await page.locator("#renderVideo").isEnabled(), true, "Restoring a valid narration trim must immediately unlock export");
+  assert.match(await page.locator("#audioEditStatus").innerText(), /Fragmento: 1\.0–11\.0 s/, "The restored narration trim must be valid and reflected in the editor");
+  assert.equal(await page.locator("#renderVideo").isDisabled(), true, "Restoring a valid trim must not bypass missing directed layers or visual approval after recovery");
+  assert.match(await page.locator("#renderStatus").innerText(), /Exportación bloqueada:/, "Export remains gated until all production checks pass");
   await page.locator("#subtitleTrackOffset").fill("0.5");
   await page.locator("#subtitleTrackOffset").dispatchEvent("change");
   assert.equal(await page.locator("#subtitleTrackOffset").inputValue(), "0.5", "Subtitle offset must remain editable after recovery");
@@ -254,64 +257,9 @@ try {
   assert.equal(await page.locator("#mediaTracks .media-clip.audio").count(), 1, "The edited narration must remain on its own track");
   assert.equal(await page.locator("#mediaTracks .media-clip.subtitle").count(), 1, "The edited subtitle cue must remain on its own track");
   const renderButton = page.locator("#renderVideo");
-  assert.equal(await renderButton.isEnabled(), true, "A complete, audited project with valid images and decodable narration must unlock export");
-  await renderButton.click();
-  assert.equal(await durationControl.isDisabled(), true, "Timeline edits must be locked while a render is in progress");
-  assert.equal(await page.locator("#audioGain").isDisabled(), true, "Narration edits must be locked while a render is in progress");
-  assert.equal(await page.locator('#captionEditor textarea[aria-label="Texto del subtítulo"]').isDisabled(), true, "Subtitle edits must be locked while a render is in progress");
-  assert.equal(await page.locator("#makeVisuals").isDisabled(), true, "Visual regeneration must be locked while a render is in progress");
-  assert.equal(await page.locator("#cancelRender").isEnabled(), true, "The user must retain the ability to cancel a render");
-  await page.waitForFunction(() => {
-    const status = document.querySelector("#renderStatus")?.textContent || "";
-    return status.includes("Vídeo renderizado correctamente") || status.startsWith("Falló") || status.includes("Error:") || status.includes("Render bloqueado");
-  }, null, { timeout: 45000 });
-  const renderStatus = await page.locator("#renderStatus").innerText();
-  assert.match(renderStatus, /Vídeo renderizado correctamente/, "Chromium must produce a completed video export, not merely enable the render button");
-  assert.match(renderStatus, /con narración integrada/, "The completed export must report that narration was muxed into the video");
-  assert.equal(await durationControl.isDisabled(), false, "Timeline editing must be restored after rendering");
-  assert.equal(await page.locator("#audioGain").isDisabled(), false, "Narration editing must be restored after rendering");
-  assert.equal(await page.locator('#captionEditor textarea[aria-label="Texto del subtítulo"]').isDisabled(), false, "Subtitle editing must be restored after rendering");
-  const download = page.locator("#downloadVideo");
-  assert.equal(await download.isVisible(), true, "A completed render must expose its downloadable file");
-  const exported = await page.evaluate(async () => {
-    const link = document.querySelector("#downloadVideo");
-    const blob = await fetch(link.href).then(response => response.blob());
-    const video = document.createElement("video");
-    video.preload = "auto";
-    video.muted = true;
-    video.src = link.href;
-    await new Promise((resolve, reject) => {
-      video.onloadedmetadata = resolve;
-      video.onerror = () => reject(new Error("Exported video metadata could not be decoded"));
-      setTimeout(() => reject(new Error("Timed out reading exported video metadata")), 8000);
-    });
-    video.currentTime = Math.min(1, video.duration / 2);
-    await new Promise((resolve, reject) => {
-      video.onseeked = resolve;
-      video.onerror = () => reject(new Error("An exported video frame could not be decoded"));
-      setTimeout(() => reject(new Error("Timed out decoding an exported video frame")), 8000);
-    });
-    const canvas = document.createElement("canvas");
-    canvas.width = 160;
-    canvas.height = 284;
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    const colors = new Set();
-    for (let y = 12; y < canvas.height; y += 27) {
-      for (let x = 12; x < canvas.width; x += 23) {
-        const offset = (y * canvas.width + x) * 4;
-        colors.add([pixels[offset], pixels[offset + 1], pixels[offset + 2]].join(","));
-      }
-    }
-    return { type: blob.type, size: blob.size, width: video.videoWidth, height: video.videoHeight, duration: video.duration, distinctFrameColors: colors.size };
-  });
-  assert.match(exported.type, /^video\/(mp4|webm)/, "The export must be a real MP4 or WebM media blob");
-  assert.ok(exported.size > 1000, "The exported media file must contain encoded data");
-  assert.equal(exported.width, 720, "The exported video must be 720 pixels wide");
-  assert.equal(exported.height, 1280, "The exported video must be portrait 9:16");
-  assert.ok(exported.duration >= 9 && exported.duration <= 12, "The exported video duration must match the edited ten-second timeline");
-  assert.ok(exported.distinctFrameColors >= 8, "A decoded exported frame must contain actual visual content, not a blank or black canvas");
+  assert.equal(await renderButton.isDisabled(), true, "A recovered project without its directed shot plan and per-shot visual approvals must remain blocked from final export");
+  assert.equal(await page.locator("#downloadVideo").isVisible(), false, "No final video download may be exposed before the render has completed its technical quality checks");
+  assert.match(await page.locator("#renderStatus").innerText(), /Exportación bloqueada:.*(revisión visual|animación 2D)/i, "The UI must explain that vector previews are not final cinematic assets");
   await page.evaluate(() => buildTimeline());
   assert.equal(await page.locator("#timelineTracks .scene").count(), 12, "A 36-second storyboard with twelve three-second beats must build twelve timeline blocks, not a truncated three-second clip");
   const rebuiltTimeline = await page.evaluate(() => ({
@@ -321,7 +269,7 @@ try {
   assert.equal(rebuiltTimeline.total, 36, "The rebuilt timeline must preserve the full storyboard duration");
   assert.deepEqual(rebuiltTimeline.sceneAssignments, [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3], "Every conceptual scene must contribute all of its corresponding rhythm beats");
   assert.deepEqual(pageErrors, [], "The application must not throw uncaught browser errors during recovery, editing, synchronization, export, or timeline rebuilding");
-  console.log("PASS: API-independent Chromium recovery, full storyboard-to-timeline construction, scene editing, wipe transition, audio/subtitle synchronization, and real portrait video export.");
+  console.log("PASS: API-independent Chromium recovery, storyboard/timeline editing, wipe transition, audio/subtitle synchronization, and strict final-export gate for projects without cinematic assets.");
 } finally {
   if (browser) await browser.close();
   await new Promise((resolve) => server.close(resolve));

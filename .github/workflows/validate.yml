@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'jai/visual-assets-preview-20261123']
   pull_request:
     branches: [main]
 
@@ -24,6 +24,17 @@ jobs:
           node --check --input-type=module < api/narrate.js
           node --check --input-type=module < api/inspect-visual.js
           node --check --input-type=module < api/direct-scenes.js
+          node --check --input-type=module < api/visual-style-profiles.js
+          node --check --input-type=module < api/search-visual-assets.js
+          node --check --input-type=module < jai-openverse-asset-bridge.js
+          node --check --input-type=module < jai-visual-asset-store.js
+          node --check --input-type=module < jai-media-renderer.js
+          node --check tests/media-renderer-contract.mjs
+          node --check tests/visual-assets-contract.mjs
+          node --check --input-type=module < worker.js
+          node --check tests/worker-adapter.mjs
+          node --check netlify/functions/inspect-visual.mjs
+          node --check tests/netlify-inspect-adapter.mjs
       - name: Check inline browser scripts
         run: |
           node --input-type=module <<'NODE'
@@ -49,9 +60,77 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Test API contracts
         run: npm run test:api
+      - name: Test scene contracts
+        run: npm run test:scene-contract
+      - name: Test locked visual style and asset library
+        run: npm run test:visual-assets
+      - name: Test local media import and renderer contracts
+        run: npm run test:media-renderer
+      - name: Test Cloudflare Worker adapter and shared limiter
+        run: npm run test:worker
+      - name: Test private Netlify inspector adapter with mocked Gemini
+        run: npm run test:netlify
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 10
+        run: npx playwright install chromium
       - name: Test IndexedDB persistence in Chromium
         run: npm run test:browser
       - name: Test complete production flow in Chromium
         run: npm run test:e2e
+      - name: Test real local media import and canvas rendering in Chromium
+        run: npm run test:media-browser
+      - name: Install portable FFmpeg and FFprobe tools
+        run: |
+          npm install --no-save --no-package-lock ffmpeg-static ffprobe-static
+          FFMPEG_BIN="$(node -p "require('ffmpeg-static')")"
+          FFPROBE_BIN="$(node -p "require('ffprobe-static').path")"
+          test -x "$FFMPEG_BIN"
+          test -x "$FFPROBE_BIN"
+          export PATH="$(dirname "$FFMPEG_BIN"):$(dirname "$FFPROBE_BIN"):$PATH"
+          echo "$(dirname "$FFMPEG_BIN")" >> "$GITHUB_PATH"
+          echo "$(dirname "$FFPROBE_BIN")" >> "$GITHUB_PATH"
+          ffmpeg -version
+          ffprobe -version
+      - name: Independently inspect the real production-button export with FFprobe
+        run: |
+          EXPORT_FILE="$(find artifacts -maxdepth 1 -type f -name 'jai-production-export.*' ! -name '*.json' | head -n 1)"
+          test -n "$EXPORT_FILE"
+          ffprobe -v error -show_entries stream=codec_type,codec_name,width,height -show_entries format=duration,size -of json "$EXPORT_FILE" > artifacts/jai-production-export.ffprobe.json
+          node --input-type=module -e '
+            import fs from "node:fs";
+            import assert from "node:assert/strict";
+            const report=JSON.parse(fs.readFileSync("artifacts/jai-production-export.ffprobe.json","utf8"));
+            const video=report.streams?.find(stream=>stream.codec_type==="video");
+            const audio=report.streams?.find(stream=>stream.codec_type==="audio");
+            assert.ok(video,"The production export must contain a video stream");
+            assert.ok(audio,"The production export must contain the narration audio stream");
+            assert.equal(video.width,720);
+            assert.equal(video.height,1280);
+            assert.ok(Number(report.format?.duration)>0);
+            assert.ok(Number(report.format?.size)>20000);
+            console.log("PASS: real production export inspected by FFprobe", {video,audio,format:report.format});
+          '
+      - name: Render real J.A.I. image, sequence and clip timeline in Chromium; inspect with FFprobe
+        run: node tests/media-renderer-integration.mjs
+      - name: Test real audiovisual MediaRecorder capture in Chromium and inspect with FFprobe
+        run: node tests/media-capture-browser.mjs
+      - name: Verify deployed Vercel preview in Chromium
+        env:
+          JAI_PREVIEW_URL: https://jai-viral-studio-git-jai-visual-assets-preview-f3dcf1-jai-cc19.vercel.app
+        run: npm run test:preview
+      - name: Upload mobile preview screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jai-preview-mobile-screenshot
+          path: |
+            artifacts/jai-preview-mobile.png
+            artifacts/jai-chromium-av-capture.webm
+            artifacts/jai-chromium-av-capture.ffprobe.json
+            artifacts/jai-real-renderer-integration.webm
+            artifacts/jai-real-renderer-integration.ffprobe.json
+            artifacts/jai-production-export.webm
+            artifacts/jai-production-export.mp4
+            artifacts/jai-production-export.json
+            artifacts/jai-production-export.ffprobe.json
+          if-no-files-found: ignore

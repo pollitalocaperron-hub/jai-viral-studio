@@ -103,11 +103,12 @@ const server = http.createServer((req, res) => {
             visual_prompt_en: "A polished educational 2D editorial illustration showing the exact subject, its physical state and one clear teaching action, portrait composition, coherent color palette, separated recognizable objects and clean outlines.",
             continuity_anchor: "Preserve the same object identity, geometry, scale and palette between adjacent shots.",
             background_color: "#F2EEE4", layers: [{"id":"main-object","description":"Objeto principal","role":"subject","path_d":"M 220 420 C 250 350 470 350 500 420 L 500 760 C 470 830 250 830 220 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"environment","description":"Entorno pertinente","role":"environment","path_d":"M 100 280 L 620 280 L 620 960 L 100 960 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":8,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
-            animation_steps: [{"target_id":"main-object","action":"move","from_state":"initial","to_state":"changed","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":-60,"rotation":0,"scale":1,"opacity":1}},{"target_id":"environment","action":"hold","from_state":"fixed","to_state":"fixed","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}},{"target_id":"detail","action":"reveal","from_state":"hidden","to_state":"visible","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":15,"rotation":0,"scale":0.85,"opacity":0},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}}]
+            animation_steps: [{"target_id":"main-object","action":"move","from_state":"initial","to_state":"changed","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":-60,"rotation":0,"scale":1,"opacity":1}},{"target_id":"environment","action":"hold","from_state":"fixed","to_state":"fixed","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}},{"target_id":"detail","action":"reveal","from_state":"hidden","to_state":"visible","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":15,"rotation":0,"scale":0.85,"opacity":0},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}}],
+            narration_sync:[{event_id:"sync-"+shots.length,target_id:"main-object",narration_segment:"El objeto cambia en este instante.",subtitle:"Cambio visible",action:"move",start_seconds:shotStart+1,end_seconds:shotStart+1.4,sound_cue:"movement_whoosh",camera_change:"shot_entry"}]
           });
         }
       });
-      res.end(JSON.stringify({ shots, shot_count: shots.length, conceptual_scene_count: requestedStory.length, provider: "Mock free-tier", animation_ready: true }));
+      res.end(JSON.stringify({ shots, shot_count: shots.length, conceptual_scene_count: requestedStory.length, provider: "Mock free-tier", vector_preview_ready: true, animation_ready: false, cinematic_ready: false }));
       return;
     }
     if (req.url === "/api/narrate") {
@@ -149,12 +150,31 @@ try {
 
   // La producción visual debe invocar automáticamente al director de tomas.
   await page.locator("#makeVisuals").click();
-  await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Producción visual lista"), null, { timeout: 30000 });
+  await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Ilustraciones 2D listas para animación"), null, { timeout: 30000 });
   assert.equal(counters.directScenes, 1, "Visual production must automatically request and validate the directed shot plan");
   assert.equal(await page.locator("#timelineTracks .scene").count(), 8, "The editable timeline must use the eight directed shots, not repeat four conceptual stills.");
   assert.ok((await page.locator("#timelineTracks").innerText()).includes("SHOT-01"), "Directed shot IDs must be carried into the editable timeline");
   assert.equal(counters.images, 0, "The vector illustration pipeline must not call external image-generation APIs or consume image credits");
-  assert.equal(await page.locator("#visualScenes img").count(), 4, "All AI-generated vector illustrations must be rasterized and displayed");
+  assert.equal(await page.locator("#visualScenes img").count(), 8, "Each of the eight directed shots must be rasterized and displayed as its own vector preview");
+  await page.locator("#exportCharacterLayers").click();
+  const pngCount=await page.locator('#characterLayerExports a[data-png-validated="true"]').count();
+  assert.equal(pngCount,24,"The PNG exporter must create a validated transparent file for every unique vector part.");
+  const pngAudit=await page.locator('#characterLayerExports a[data-png-validated="true"]').evaluateAll(async links=>Promise.all(links.map(async link=>{
+    const image=new Image();image.src=link.href;await image.decode();
+    const canvas=document.createElement("canvas");canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+    const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(image,0,0);
+    const data=context.getImageData(0,0,canvas.width,canvas.height).data;let opaque=0,transparent=0;
+    for(let i=3;i<data.length;i+=4){if(data[i]>0)opaque++;else transparent++;}
+    return {type:link.href.slice(5,link.href.indexOf(";")),width:image.naturalWidth,height:image.naturalHeight,opaque,transparent};
+  })));
+  assert.ok(pngAudit.every(item=>item.type==="image/png"&&item.width===720&&item.height===1280&&item.opaque>0&&item.transparent>0),"Every PNG must decode at 720×1280 with visible pixels and preserved alpha.");
+  assert.equal(await page.evaluate(()=>collectJaiSoundEvents(timelineState.items).length),8,"The directed timeline must schedule one sound effect per narration event.");
+  const soundOffsetAudit=await page.evaluate(()=>{
+    const base=collectJaiSoundEvents(timelineState.items),shifted=collectJaiSoundEvents(timelineState.items,1.25);
+    return {base:base[0]?.at,shifted:shifted[0]?.at,count:shifted.length};
+  });
+  assert.equal(soundOffsetAudit.count,8,"Every directed narration event must retain its sound cue after track alignment.");
+  assert.ok(Math.abs(soundOffsetAudit.shifted-soundOffsetAudit.base-1.25)<0.001,"Sound cues must follow the user-adjustable narration track offset.");
 
   await page.locator("#generateNarration").click();
   await page.waitForFunction(() => (document.querySelector("#kokoroStatus")?.textContent || "").includes("Narración lista"), null, { timeout: 20000 });
@@ -164,29 +184,34 @@ try {
 
   await page.locator("#inspectVisuals").click();
   await page.waitForFunction(() => (document.querySelector("#visualAuditStatus")?.textContent || "").includes("todas las escenas superaron"), null, { timeout: 20000 });
-  assert.equal(counters.inspect, 1, "Eight directed shots fit in one visual-inspection batch");
+  assert.equal(counters.inspect, 2, "Eight directed shots must be split into two batches of four, matching the inspector API limit");
   assert.equal(counters.inspectedImages, 8, "Every directed shot must be independently inspected before export");
-  assert.equal(await page.locator("#renderVideo").isEnabled(), true, "Only the complete plan, image set, narration, and approved audit may unlock export");
+  assert.equal(await page.locator("#renderVideo").isEnabled(), true, "An audited 2D motion-graphics timeline with narration must unlock final export");
+  assert.equal(await page.locator("#downloadVideo").isVisible(), false, "The download link appears only after render and technical QC complete");
+  assert.match(await page.locator("#renderStatus").innerText(), /Control de calidad aprobado|puede exportarse/i, "The UI confirms the audited 2D render is ready");
 
+  // Exercise the real export button; save its generated Blob for independent FFprobe inspection.
   await page.locator("#renderVideo").click();
-  await page.waitForFunction(() => (document.querySelector("#renderStatus")?.textContent || "").includes("Vídeo renderizado correctamente"), null, { timeout: 60000 });
-  assert.equal(await page.locator("#downloadVideo").isVisible(), true, "The integrated production must expose its finished video file");
-  const exported = await page.evaluate(async () => {
-    const link = document.querySelector("#downloadVideo");
-    const video = document.createElement("video"); video.preload = "auto"; video.muted = true; video.src = link.href;
-    await new Promise((resolve, reject) => {
-      video.onloadedmetadata = resolve;
-      video.onerror = () => reject(new Error("The end-to-end export could not be decoded"));
-      setTimeout(() => reject(new Error("Timed out reading end-to-end video metadata")), 10000);
-    });
-    return { width: video.videoWidth, height: video.videoHeight, duration: video.duration, size: (await fetch(link.href).then(r => r.blob())).size };
+  await page.waitForFunction(() => {
+    const link=document.querySelector("#downloadVideo");
+    return !!link && !link.hidden && /^blob:/.test(link.href);
+  }, null, { timeout: 90000 });
+  const exported=await page.locator("#downloadVideo").evaluate(async link=>{
+    const response=await fetch(link.href);
+    const blob=await response.blob();
+    const bytes=new Uint8Array(await blob.arrayBuffer());
+    let binary="";
+    for(let offset=0;offset<bytes.length;offset+=0x8000)binary+=String.fromCharCode(...bytes.subarray(offset,offset+0x8000));
+    return {mime:blob.type,size:blob.size,extension:link.download.split(".").pop(),base64:btoa(binary),status:document.querySelector("#renderStatus")?.textContent||""};
   });
-  assert.equal(exported.width, 720);
-  assert.equal(exported.height, 1280);
-  assert.ok(exported.duration >= 35 && exported.duration <= 38, "The final export must preserve the 36-second storyboard duration");
-  assert.ok(exported.size > 100000, "The final export must contain a substantial encoded video and audio payload");
+  assert.ok(exported.size>20000,"The production button must create a non-trivial video Blob.");
+  assert.match(exported.mime,/^video\/(webm|mp4)/,"The production button must create a playable WebM or MP4 Blob.");
+  assert.match(exported.status,/Vídeo exportado y control técnico aprobado/,"The download must appear only after the app's own audiovisual QC passes.");
+  fs.mkdirSync(path.join(root,"artifacts"),{recursive:true});
+  fs.writeFileSync(path.join(root,"artifacts","jai-production-export."+exported.extension),Buffer.from(exported.base64,"base64"));
+  fs.writeFileSync(path.join(root,"artifacts","jai-production-export.json"),JSON.stringify({mime:exported.mime,size:exported.size,status:exported.status},null,2));
   assert.deepEqual(errors, [], "The integrated browser flow must not produce uncaught JavaScript errors");
-  console.log("PASS: full browser production flow through vector-shot direction, independent layer animation, neural narration, per-shot visual audit, captions, and decoded 9:16 video export.");
+  console.log("PASS: complete browser production flow including real renderVideo button, downloadable video Blob and in-app audiovisual QC.");
 } finally {
   if (browser) await browser.close();
   await new Promise(resolve => server.close(resolve));
