@@ -1281,6 +1281,8 @@ async function transcodeFinalMp4(inputBlob,inputMime){
   if(!jaiFfmpegLoadPromise){
    jaiFfmpegLoadPromise=(async()=>{
     const ffmpeg=new FFmpeg(),baseURL="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+    ffmpeg.on("log",({message})=>{window.jaiFfmpegLastLog=String(message||"").slice(-400);});
+    ffmpeg.on("progress",({progress})=>{window.jaiFfmpegProgress=Number(progress)||0;});
     await ffmpeg.load({coreURL:await toBlobURL(baseURL+"/ffmpeg-core.js","text/javascript"),wasmURL:await toBlobURL(baseURL+"/ffmpeg-core.wasm","application/wasm")});
     jaiFfmpegInstance=ffmpeg;return ffmpeg;
    })().catch(error=>{jaiFfmpegLoadPromise=null;throw error;});
