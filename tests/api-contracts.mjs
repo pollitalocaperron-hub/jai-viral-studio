@@ -276,6 +276,15 @@ try {
     assert.equal(emptyBibleResponse.statusCode, 200);
     assert.deepEqual(emptyBibleResponse.body.character_bible, [], "No character bible entries may be invented when shot layers contain no characters.");
 
+    // A previously validated shot plan resumes locally without contacting any AI provider.
+    globalThis.fetch = async () => { throw new Error("A saved shot plan must not call an AI provider"); };
+    const resumed = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso sin personajes", script: "Narración de prueba.", story, shot_plan: noCharacterShots } }, resumed);
+    assert.equal(resumed.statusCode, 200);
+    assert.equal(resumed.body.provider, "Plan recuperado (sin IA)");
+    assert.equal(resumed.body.shot_count, noCharacterShots.length);
+    assert.deepEqual(resumed.body.character_bible, []);
+
   }
 
   // A Groq quota response must pause immediately instead of spending another provider's quota.
