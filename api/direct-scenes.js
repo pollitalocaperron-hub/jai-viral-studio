@@ -148,7 +148,7 @@ export default async function handler(req, res) {
   if (!Array.isArray(story) || story.length < 4 || story.length > 5 || story.some(scene => !parseRange(scene?.time))) {
     return res.status(400).json({ error: "Se requiere un storyboard válido de 4 o 5 escenas conceptuales." });
   }
-  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) return res.status(503).json({ error: "No hay un proveedor editorial configurado." });
+  if (!Array.isArray(req.body?.shot_plan) && !process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) return res.status(503).json({ error: "No hay un proveedor editorial configurado." });
 
   const styleProfile = resolveVisualStyleProfile(style_profile_id, topic, script);
   const reusableShotPlan = Array.isArray(shot_plan) ? shot_plan : null;
@@ -196,7 +196,7 @@ export default async function handler(req, res) {
       console.warn("[JAI][Scene Director] Groq no disponible; se activa el respaldo gratuito configurado:", groqFailure.message);
     }
   }
-  if (!output && process.env.GEMINI_API_KEY) {
+  if (!output && groqFailure?.status !== 429 && process.env.GEMINI_API_KEY) {
     try {
       const requestGemini = () => fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
         method: "POST",
