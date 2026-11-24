@@ -170,8 +170,8 @@ export default async function handler(req, res) {
   ].join("\n\n");
 
   let output = reusableShotPlan ? JSON.stringify({ shots: reusableShotPlan }) : "", provider = reusableShotPlan ? "Plan recuperado (sin IA)" : "", groqFailure = null, geminiFailure = null;
-  // Cascada de proveedores: si Groq agota su cuota gratuita o no responde,
-  // se intenta Gemini. No se habilitan planes, compras ni proveedores de pago.
+  // Groq es el motor primario; Gemini es respaldo solo ante fallos que no sean de cuota.
+  // Ante HTTP 429 se pausa para no gastar una segunda cuota gratuita.
   if (!output && process.env.GROQ_API_KEY) {
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -193,7 +193,7 @@ export default async function handler(req, res) {
       provider = "Groq GPT-OSS 120B";
     } catch (error) {
       groqFailure = { status: Number(error?.status || 0), message: String(error?.message || "Error de Groq").slice(0, 260) };
-      console.warn("[JAI][Scene Director] Groq no disponible; se activa el respaldo gratuito configurado:", groqFailure.message);
+      console.warn(groqFailure.status === 429 ? "[JAI][Scene Director] Cuota de Groq limitada; se pausa sin activar otro proveedor:" : "[JAI][Scene Director] Groq no disponible; se evalúa el respaldo gratuito:", groqFailure.message);
     }
   }
   if (!output && groqFailure?.status !== 429 && process.env.GEMINI_API_KEY) {
