@@ -80,6 +80,8 @@ jobs:
         run: npm run test:media-browser
       - name: Install FFmpeg tools for audiovisual inspection
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Render real J.A.I. image, sequence and clip timeline in Chromium; inspect with FFprobe
+        run: node tests/media-renderer-integration.mjs
       - name: Test real audiovisual MediaRecorder capture in Chromium and inspect with FFprobe
         run: node tests/media-capture-browser.mjs
       - name: Verify deployed Vercel preview in Chromium
@@ -95,4 +97,6 @@ jobs:
             artifacts/jai-preview-mobile.png
             artifacts/jai-chromium-av-capture.webm
             artifacts/jai-chromium-av-capture.ffprobe.json
+            artifacts/jai-real-renderer-integration.webm
+            artifacts/jai-real-renderer-integration.ffprobe.json
           if-no-files-found: ignore
