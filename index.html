@@ -385,13 +385,13 @@ $("exportCharacterLayers").addEventListener("click",exportCharacterLayerPNGs);
 async function designAnimationShots(){
  if(!currentPlanData||!currentScenes.length){$("directScenesStatus").textContent="Primero genera un plan editorial completo.";return false;}
  if(shotPlanningInProgress||projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("directScenesStatus").textContent="Espera a que termine la tarea actual.";return false;}
- const button=$("directScenes");currentCinematicReady=false;currentSceneContracts=[];shotPlanningInProgress=true;button.disabled=true;$("makeVisuals").disabled=true;
+ const button=$("directScenes");currentCinematicReady=false;currentSceneContracts=[];scheduleJaiAutosave();shotPlanningInProgress=true;button.disabled=true;$("makeVisuals").disabled=true;
  $("directScenesStatus").textContent="El director está descomponiendo las escenas, trazando objetos vectoriales y asignando transformaciones…";
  setTaskProgress("directScenesStatus",5,"Diseñando tomas y capas vectoriales…","indeterminate");
  try{
-  const response=await fetch(jaiApiUrl("/api/direct-scenes"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:currentTopic,script:currentPlanData.script,story:currentScenes,retention_map:currentRetentionMap,style_profile_id:currentVisualStyleProfileId}),signal:AbortSignal.timeout(55000)});
+  const response=await fetch(jaiApiUrl("/api/direct-scenes"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:currentTopic,script:currentPlanData.script,story:currentScenes,retention_map:currentRetentionMap,style_profile_id:currentVisualStyleProfileId,shot_plan:Array.isArray(currentShotPlan)&&currentShotPlan.length?currentShotPlan:null}),signal:AbortSignal.timeout(55000)});
   const data=await readJsonResponse(response,"Director vectorial de escenas");
-  if(!response.ok)throw new Error(data.error||"No se pudo diseñar la secuencia de tomas.");
+  if(!response.ok){if(response.status===429){const wait=Math.max(5,Number(data.retryAfterSeconds)||30);$("directScenesStatus").textContent="Límite temporal del motor gratuito. El guion y storyboard siguen guardados. Espera "+wait+" segundos antes de volver a intentar; no se volverá a generar el guion ni se llamará a otro proveedor."; }throw new Error(data.error||"No se pudo diseñar la secuencia de tomas.");}
   if(data.vector_preview_ready!==true||!Array.isArray(data.shots)||data.shots.length<currentScenes.length*2)throw new Error("El motor activo no devolvió un plan completo de capas vectoriales independientes.");
   const validShots=data.shots.every(shot=>
    Array.isArray(shot.layers)&&shot.layers.length>=3&&
