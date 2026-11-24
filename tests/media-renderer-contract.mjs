@@ -27,6 +27,6 @@ assert.doesNotMatch(drawVideo, /video\.currentTime\s*=/, "drawing a frame must n
 assert.match(drawVideo, /video\.readyState < 2/);
 const app = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 assert.match(app, /let renderActiveVideo=null,renderActiveVideoKey=null/);
-assert.match(app, /startPreparedVisualPlayback\(renderActiveVideo,sceneProgress\\)/);
+assert.match(app, /startPreparedVisualPlayback\(renderActiveVideo,sceneProgress\)/);
 assert.doesNotMatch(app, /await window\.JAIMediaRenderer\.awaitPreparedVisualFrame/, "master render loop must not await per-frame video seeks");
 console.log("Openverse media import, IndexedDB, non-blocking video clock and renderer contracts: PASS");
