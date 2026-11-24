@@ -463,7 +463,7 @@ async function generateAIVisuals(){
    renderVisualScenes();scheduleJaiAutosave();
   }
   setPipelineStage("visual",100,generatedCount+" previsualizaciones vectoriales · motor cinematográfico pendiente","error");
-  $("visualStatus").textContent="Previsualización técnica completada: "+generatedCount+" escenas rasterizadas desde capas vectoriales. Esto NO es metraje cinematográfico ni imágenes CGI generadas. La producción final y la exportación permanecen bloqueadas hasta integrar y verificar recursos visuales reales.";
+  $("visualStatus").textContent="Ilustraciones 2D listas para animación: "+generatedCount+" escenas rasterizadas desde capas vectoriales independientes. La exportación se habilitará cuando la narración, la auditoría visual, la línea de tiempo y las transformaciones estén validadas.";
   setTaskProgress("visualStatus",100,"Previsualización lista · producción final bloqueada");
   $("inspectVisuals").disabled=false;
   updateRenderGate();
