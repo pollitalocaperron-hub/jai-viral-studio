@@ -132,8 +132,10 @@ try {
   await writeFile(path.join(artifacts, "jai-real-renderer-integration.ffprobe.json"), JSON.stringify({ ...report, renderer_metrics: { drawCount: result.drawCount, clipStarts: result.clipStarts, medianFrameGapMs: result.medianFrameGapMs, maxFrameGapMs: result.maxFrameGapMs } }, null, 2));
   const video = report.streams.find(stream => stream.codec_type === "video");
   const audioTrack = report.streams.find(stream => stream.codec_type === "audio");
-  const duration = Number(report.format.duration);
   const frameCount = Number(video?.nb_read_frames);
+  const [rateNumerator, rateDenominator] = String(video?.avg_frame_rate || "0/1").split("/").map(Number);
+  // Chromium WebM MediaRecorder output may omit format.duration; derive it from decoded frames and frame rate.
+  const duration = Number(report.format?.duration) || (rateNumerator > 0 && rateDenominator > 0 ? frameCount * rateDenominator / rateNumerator : 0);
   assert.ok(video && audioTrack, "actual renderer output must contain video and audio tracks");
   assert.equal(video.width, 360);
   assert.equal(video.height, 640);
