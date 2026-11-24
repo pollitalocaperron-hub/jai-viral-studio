@@ -11,6 +11,17 @@ on:
     branches: [main]
 
 jobs:
+
+  production-api-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verify published Pages and Vercel production API without provider calls
+        run: node tests/production-api-smoke.mjs
+
   syntax:
     runs-on: ubuntu-latest
     steps:
