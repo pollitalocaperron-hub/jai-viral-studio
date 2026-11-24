@@ -20,4 +20,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: npm run test:api
+      - run: JAI_REQUIRE_FFPROBE=1 npm run test:e2e
