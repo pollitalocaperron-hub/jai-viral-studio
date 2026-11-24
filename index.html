@@ -1272,6 +1272,32 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  }
  // El progreso de render es exclusivo de la interfaz; nunca se dibuja dentro del vídeo exportado.
 }
+let jaiFfmpegInstance=null,jaiFfmpegLoadPromise=null;
+async function transcodeFinalMp4(inputBlob,inputMime){
+ if(!(inputBlob instanceof Blob)||inputBlob.size<1024)throw new Error("No hay un archivo intermedio válido para convertir a MP4.");
+ const {FFmpeg}=await import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js");
+ const {fetchFile,toBlobURL}=await import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js");
+ if(!jaiFfmpegInstance){
+  if(!jaiFfmpegLoadPromise){
+   jaiFfmpegLoadPromise=(async()=>{
+    const ffmpeg=new FFmpeg(),baseURL="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+    await ffmpeg.load({coreURL:await toBlobURL(baseURL+"/ffmpeg-core.js","text/javascript"),wasmURL:await toBlobURL(baseURL+"/ffmpeg-core.wasm","application/wasm")});
+    jaiFfmpegInstance=ffmpeg;return ffmpeg;
+   })().catch(error=>{jaiFfmpegLoadPromise=null;throw error;});
+  }
+  await jaiFfmpegLoadPromise;
+ }
+ const ffmpeg=jaiFfmpegInstance,inputName=/mp4/i.test(inputMime)?"jai-input.mp4":"jai-input.webm",outputName="jai-final.mp4";
+ try{
+  setPipelineStage("render",94,"Convirtiendo a MP4 H.264/AAC…","running");
+  $("renderStatus").textContent="Convirtiendo el render intermedio a MP4 real con vídeo H.264 y audio AAC. La descarga permanece bloqueada hasta verificar el resultado.";
+  await ffmpeg.writeFile(inputName,await fetchFile(inputBlob));
+  await ffmpeg.exec(["-i",inputName,"-map","0:v:0","-map","0:a:0","-vf","scale=720:1280:flags=lanczos","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-movflags","+faststart",outputName]);
+  const data=await ffmpeg.readFile(outputName),bytes=data instanceof Uint8Array?data:new Uint8Array(data);
+  if(bytes.length<1024||String.fromCharCode(...bytes.subarray(4,8))!=="ftyp")throw new Error("FFmpeg no produjo una estructura MP4 válida (firma ftyp ausente).");
+  return new Blob([bytes],{type:"video/mp4"});
+ }finally{for(const name of [inputName,outputName])try{await ffmpeg.deleteFile(name);}catch{}}
+}
 async function inspectRenderedBlob(blob,expectedDuration,expectedAudioTrackCount){
  if(!(blob instanceof Blob)||blob.size<1024)throw new Error("El archivo exportado está vacío o es demasiado pequeño.");
  const url=URL.createObjectURL(blob),video=document.createElement("video");
@@ -1319,9 +1345,9 @@ async function renderVideo(){
  if(!animationRendererReady()){$("renderStatus").textContent="Render bloqueado: faltan capas vectoriales independientes o acciones de transformación válidas. No se exportará un montaje de imágenes con zoom como si fuera animación real.";return;}
  if(jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,i)=>jaiSceneImages[i]?.image)){$("renderStatus").textContent="Faltan ilustraciones vectoriales. Genera todas las escenas antes de exportar.";return;}
  if(!window.MediaRecorder||typeof renderCanvas.captureStream!=="function"){$("renderStatus").textContent="Este navegador no permite grabar el lienzo. Prueba con Chrome actualizado.";return;}
- const mimeCandidates=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4"];
+ const mimeCandidates=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
  const mime=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
- if(!mime){setPipelineStage("render",0,"Formato de vídeo no compatible con este navegador","error");$("renderStatus").textContent="Este navegador no admite grabación MP4. J.A.I. no entregará un WebM como sustituto; usa un navegador compatible con MP4.";return;}
+ if(!mime){setPipelineStage("render",0,"Formato de vídeo no compatible con este navegador","error");$("renderStatus").textContent="Este navegador no admite grabación de vídeo. J.A.I. no puede iniciar la exportación en este navegador.";return;}
  renderRecording=true;renderCancelRequested=false;setRenderEditingLock(true);setPipelineStage("render",2,"Preparando lienzo vertical 720 × 1280…","running");$("renderVideo").disabled=true;$("cancelRender").hidden=false;$("cancelRender").disabled=false;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
  let stream=null,audioBuffer=null,audioSource=null,audioStartOffset=0,animationId=null,finished=false;
  const cleanup=()=>{
@@ -1369,16 +1395,13 @@ async function renderVideo(){
    finished=true;
    if(renderCancelRequested){cleanup();setPipelineStage("render",0,"Render cancelado por el usuario","idle");$("renderStatus").textContent="Render cancelado. No se generó ningún archivo; puedes ajustar el montaje y volver a intentarlo.";return;}
    const actualMime=renderRecorder?.mimeType||mime;
-   const blob=new Blob(chunks,{type:actualMime});
-   if(!/^video\/mp4(?:;|$)/i.test(actualMime)||!/^video\/mp4(?:;|$)/i.test(blob.type)){
-    cleanup();setPipelineStage("render",0,"Formato MP4 obligatorio no satisfecho","error");$("downloadVideo").hidden=true;
-    $("renderStatus").textContent="Exportación rechazada: el codificador no produjo MIME video/mp4. No se ofrecerá un WebM ni se cambiará su extensión.";
-    return;
-   }
+   const sourceBlob=new Blob(chunks,{type:actualMime});
+   const blob=await transcodeFinalMp4(sourceBlob,actualMime);
+   if(!/^video\/mp4(?:;|$)/i.test(blob.type))throw new Error("La conversión no produjo MIME video/mp4.");
    const expectedDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
    const audioTrackCount=stream?.getAudioTracks?.().length||0;
    try{
-    setPipelineStage("render",92,"Verificando decodificación, duración, resolución y movimiento…","running");
+    setPipelineStage("render",97,"Verificando MP4, duración, resolución y movimiento…","running");
     const qc=await inspectRenderedBlob(blob,expectedDuration,audioTrackCount);
     if(audioBuffer&&qc.audioTrackCount<1)throw new Error("La pista de narración no llegó al archivo final.");
     $("renderStatus").textContent="Control técnico aprobado · "+qc.width+"×"+qc.height+" · "+qc.duration.toFixed(2)+" s · "+qc.distinctFrames+"/"+qc.sampledFrames+" muestras visuales distintas · pista de audio presente.";
