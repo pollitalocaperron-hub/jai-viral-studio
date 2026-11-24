@@ -219,7 +219,7 @@ try {
   await trimEnd.fill("11");
   await trimEnd.dispatchEvent("change");
   assert.match(await page.locator("#audioEditStatus").innerText(), /Fragmento: 1\.0–11\.0 s/, "The restored narration trim must be valid and reflected in the editor");
-  assert.equal(await page.locator("#renderVideo").isDisabled(), true, "Restoring a valid trim must not bypass missing cinematic assets, directed layers, or visual approval after recovery");
+  assert.equal(await page.locator("#renderVideo").isDisabled(), true, "Restoring a valid trim must not bypass missing directed layers or visual approval after recovery");
   assert.match(await page.locator("#renderStatus").innerText(), /Exportación bloqueada:/, "Export remains gated until all production checks pass");
   await page.locator("#subtitleTrackOffset").fill("0.5");
   await page.locator("#subtitleTrackOffset").dispatchEvent("change");
@@ -257,9 +257,9 @@ try {
   assert.equal(await page.locator("#mediaTracks .media-clip.audio").count(), 1, "The edited narration must remain on its own track");
   assert.equal(await page.locator("#mediaTracks .media-clip.subtitle").count(), 1, "The edited subtitle cue must remain on its own track");
   const renderButton = page.locator("#renderVideo");
-  assert.equal(await renderButton.isDisabled(), true, "A recovered project without a directed cinematic shot plan must remain blocked from final export even when its still images and narration are present");
-  assert.equal(await page.locator("#downloadVideo").isVisible(), false, "No final video download may be exposed for a project that has not passed cinematic asset and animation QA");
-  assert.match(await page.locator("#renderStatus").innerText(), /Exportación bloqueada:.*motor visual disponible solo genera previsualizaciones vectoriales/i, "The UI must explain that vector previews are not final cinematic assets");
+  assert.equal(await renderButton.isDisabled(), true, "A recovered project without its directed shot plan and per-shot visual approvals must remain blocked from final export");
+  assert.equal(await page.locator("#downloadVideo").isVisible(), false, "No final video download may be exposed before the render has completed its technical quality checks");
+  assert.match(await page.locator("#renderStatus").innerText(), /Exportación bloqueada:.*(revisión visual|animación 2D)/i, "The UI must explain that vector previews are not final cinematic assets");
   await page.evaluate(() => buildTimeline());
   assert.equal(await page.locator("#timelineTracks .scene").count(), 12, "A 36-second storyboard with twelve three-second beats must build twelve timeline blocks, not a truncated three-second clip");
   const rebuiltTimeline = await page.evaluate(() => ({
