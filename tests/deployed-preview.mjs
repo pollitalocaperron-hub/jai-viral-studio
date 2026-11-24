@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { chromium } from "playwright";
 
+async function main() {
 const url = process.env.JAI_PREVIEW_URL || "https://jai-viral-studio-git-jai-visual-assets-preview-f3dcf1-jai-cc19.vercel.app";
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
@@ -39,3 +40,5 @@ try {
 } finally {
   await browser.close();
 }
+
+await main();
