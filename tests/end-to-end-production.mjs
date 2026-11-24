@@ -136,7 +136,9 @@ try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   const errors = [];
-  page.on("pageerror", error => errors.push(error.message));
+  page.on("pageerror", error => errors.push("pageerror: " + error.message));
+  page.on("console", message => { if (message.type() === "error") errors.push("console: " + message.text()); });
+  page.on("requestfailed", request => errors.push("requestfailed: " + request.url() + " :: " + (request.failure()?.errorText || "unknown")));
   await page.goto("http://127.0.0.1:4174/", { waitUntil: "domcontentloaded" });
   await page.locator("#topic").fill("Cómo se transforma el chocolate al calentarse");
   await page.route("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations", async route => {
@@ -193,10 +195,24 @@ try {
 
   // Exercise the real export button; save its generated Blob for independent FFprobe inspection.
   await page.locator("#renderVideo").click();
-  await page.waitForFunction(() => {
-    const link=document.querySelector("#downloadVideo");
-    return !!link && !link.hidden && /^blob:/.test(link.href);
-  }, null, { timeout: 240000 });
+  try {
+    await page.waitForFunction(() => {
+      const link=document.querySelector("#downloadVideo");
+      return !!link && !link.hidden && /^blob:/.test(link.href);
+    }, null, { timeout: 240000 });
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => ({
+      renderStatus: document.querySelector("#renderStatus")?.textContent || "",
+      downloadHidden: document.querySelector("#downloadVideo")?.hidden,
+      downloadHref: document.querySelector("#downloadVideo")?.getAttribute("href"),
+      pipeline: document.querySelector("#pipelineStatus")?.innerText || "",
+      ffmpegLastLog: window.jaiFfmpegLastLog || "",
+      ffmpegProgress: window.jaiFfmpegProgress ?? null
+    })).catch(() => ({}));
+    fs.mkdirSync(path.join(root, "artifacts"), { recursive: true });
+    await page.screenshot({ path: path.join(root, "artifacts", "jai-mp4-timeout.png"), fullPage: true }).catch(() => {});
+    throw new Error("MP4 export timeout after 240s. Browser diagnostics: " + JSON.stringify({ diagnostic, errors: errors.slice(-30) }) + ". Original: " + error.message);
+  }
   const exported=await page.locator("#downloadVideo").evaluate(async link=>{
     const response=await fetch(link.href);
     const blob=await response.blob();
