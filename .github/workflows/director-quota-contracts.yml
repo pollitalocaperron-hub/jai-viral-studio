@@ -23,3 +23,14 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: npm run test:api
       - run: JAI_REQUIRE_FFPROBE=1 npm run test:e2e
+      - name: Upload Chromium export and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jai-chromium-ffmpeg-diagnostics
+          path: |
+            artifacts/
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 7
