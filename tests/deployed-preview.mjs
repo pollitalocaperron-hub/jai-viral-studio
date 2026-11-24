@@ -40,5 +40,6 @@ try {
 } finally {
   await browser.close();
 }
+}
 
 await main();
