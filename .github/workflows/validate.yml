@@ -82,7 +82,13 @@ jobs:
       - name: Install portable FFmpeg and FFprobe tools
         run: |
           npm install --no-save --no-package-lock ffmpeg-static ffprobe-static
-          node -e "const fs=require('fs'); const path=require('path'); const ffmpeg=require('ffmpeg-static'); const ffprobe=require('ffprobe-static').path; if(!ffmpeg || !fs.existsSync(ffmpeg)) throw new Error('ffmpeg-static binary missing'); if(!ffprobe || !fs.existsSync(ffprobe)) throw new Error('ffprobe-static binary missing'); fs.appendFileSync(process.env.GITHUB_PATH, path.dirname(ffmpeg)+'\\n'+path.dirname(ffprobe)+'\\n'); console.log('Portable FFmpeg:',ffmpeg); console.log('Portable FFprobe:',ffprobe)"
+          FFMPEG_BIN="$(node -p "require('ffmpeg-static')")"
+          FFPROBE_BIN="$(node -p "require('ffprobe-static').path")"
+          test -x "$FFMPEG_BIN"
+          test -x "$FFPROBE_BIN"
+          export PATH="$(dirname "$FFMPEG_BIN"):$(dirname "$FFPROBE_BIN"):$PATH"
+          echo "$(dirname "$FFMPEG_BIN")" >> "$GITHUB_PATH"
+          echo "$(dirname "$FFPROBE_BIN")" >> "$GITHUB_PATH"
           ffmpeg -version
           ffprobe -version
       - name: Render real J.A.I. image, sequence and clip timeline in Chromium; inspect with FFprobe
