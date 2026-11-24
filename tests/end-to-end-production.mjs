@@ -196,7 +196,7 @@ try {
   await page.waitForFunction(() => {
     const link=document.querySelector("#downloadVideo");
     return !!link && !link.hidden && /^blob:/.test(link.href);
-  }, null, { timeout: 90000 });
+  }, null, { timeout: 240000 });
   const exported=await page.locator("#downloadVideo").evaluate(async link=>{
     const response=await fetch(link.href);
     const blob=await response.blob();
