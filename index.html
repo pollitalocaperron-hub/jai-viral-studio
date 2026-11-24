@@ -143,11 +143,11 @@ function updateRenderGate(){
  const audioTiming=voiceReady&&timelineDuration?getAudioTrackTiming(timelineDuration):null;
  const audioFits=!audioTiming||audioTiming.withinRateRange;
  const animationReady=animationRendererReady();
- const ready=!!(currentCinematicReady&&currentDurationValidation?.within_tolerance&&timelineState.items.length&&voiceReady&&audioFits&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)&&animationReady);
+ const ready=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&voiceReady&&audioFits&&visualAuditPassed()&&jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)&&animationReady);
  $("renderVideo").disabled=!ready||renderRecording;
- if(timelineState.items.length){const imagesReady=jaiSceneImages.length===currentScenes.length&&currentScenes.length>0&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);const montageReady=currentCinematicReady&&imagesReady&&voiceReady&&visualAuditPassed()&&animationReady;setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje cinematográfico validado": "Previsualización técnica · falta el motor cinematográfico y su control de calidad",montageReady?"done":"idle");}
+ if(timelineState.items.length){const imagesReady=jaiSceneImages.length===currentScenes.length&&currentScenes.length>0&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);const voiceReady=!!(kokoroAudioBlob&&kokoroAudioDuration>0);const montageReady=imagesReady&&voiceReady&&visualAuditPassed()&&animationReady;setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje de motion graphics 2D validado": "Montaje 2D · faltan ilustraciones, narración o aprobación visual",montageReady?"done":"idle");}
  if(!ready&&!renderRecording){
-  const reason=!currentScenes.length?"genera primero un plan":!currentCinematicReady?"el motor visual disponible solo genera previsualizaciones vectoriales; faltan recursos cinematográficos reales y validación de continuidad":!animationReady?"el motor de capas vectoriales independientes no está completo; rediseña las tomas":!jaiSceneImages.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)?"genera las ilustraciones vectoriales que faltan":!voiceReady?"genera y revisa la narración antes de exportar":!visualAuditPassed()?"la revisión visual está pendiente: inspecciona o aprueba las escenas manualmente":!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":!audioFits?"la narración no cabe en la duración del montaje sin alterar demasiado su tono; ajusta la duración o vuelve a generar la voz":"faltan recursos";
+  const reason=!currentScenes.length?"genera primero un plan":!animationReady?"el motor de animación 2D necesita tomas con capas y transformaciones válidas":!animationReady?"el motor de capas vectoriales independientes no está completo; rediseña las tomas":!jaiSceneImages.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image)?"genera las ilustraciones vectoriales que faltan":!voiceReady?"genera y revisa la narración antes de exportar":!visualAuditPassed()?"la revisión visual está pendiente: inspecciona o aprueba las escenas manualmente":!timelineState.items.length?"pulsa «Preparar línea de tiempo»":!currentDurationValidation?.within_tolerance?"la validación de duración/cronología no está aprobada":!audioFits?"la narración no cabe en la duración del montaje sin alterar demasiado su tono; ajusta la duración o vuelve a generar la voz":"faltan recursos";
   $("renderStatus").textContent="Exportación bloqueada: "+reason+".";
  }else if(ready)$("renderStatus").textContent="Control de calidad aprobado. El vídeo puede exportarse.";
 }
@@ -167,7 +167,7 @@ function syncRecoveredPipeline(){
  setPipelineStage("audit",auditReady?100:imagesReady?75:0,auditReady?"Revisión visual aprobada":imagesReady?"Fotogramas listos · falta aprobar la revisión":"Pendiente de imágenes",auditReady?"done":"idle");
  setPipelineStage("voice",hasVoice?100:currentPlanData?.script?55:0,hasVoice?"Narración recuperada · "+kokoroAudioDuration.toFixed(1)+" s":currentPlanData?.script?"Guion listo · falta generar narración":"Pendiente de guion",hasVoice?"done":"idle");
  const montageReady=!!(timelineState.items.length&&imagesReady&&hasVoice&&auditReady);setPipelineStage("timeline",montageReady?100:0,montageReady?"Montaje recuperado · medios y revisión completos":timelineState.items.length?"Estructura recuperada · faltan medios o revisión":"Pendiente de escenas",montageReady?"done":"idle");
- const canExport=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&auditReady&&imagesReady&&hasVoice);
+ const canExport=!!(currentDurationValidation?.within_tolerance&&timelineState.items.length&&auditReady&&imagesReady&&hasVoice&&animationRendererReady());
  setPipelineStage("render",canExport?25:0,canExport?"Listo para exportar":imagesReady&&!auditReady?"Pendiente de aprobación visual":"Pendiente de aprobación", "idle");
  $("pipelineHint").textContent="Estado reconstruido a partir de los recursos recuperados en este dispositivo.";
  updateRenderGate();
@@ -1306,7 +1306,7 @@ async function inspectRenderedBlob(blob,expectedDuration,expectedAudioTrackCount
 }
 async function renderVideo(){
  if(currentPlanData?.clarification_required){$("renderStatus").textContent="Exportación bloqueada: "+(currentPlanData.clarification_question||"primero aclara el enfoque del tema.");return;}
- if(!currentCinematicReady){$("renderStatus").textContent="Exportación bloqueada: el proyecto solo contiene previsualizaciones vectoriales. Faltan recursos cinematográficos reales, continuidad verificada y control de calidad del render.";return;}
+ if(!animationRendererReady()){$("renderStatus").textContent="Exportación bloqueada: faltan capas vectoriales o transformaciones válidas para la animación 2D.";return;}
  if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating){$("renderStatus").textContent="Espera a que termine la producción o la recuperación del proyecto antes de exportar.";return;}
  if(renderRecording)return;
  if(!timelineState.items.length){$("renderStatus").textContent="Prepara la línea de tiempo antes de exportar.";return;}
