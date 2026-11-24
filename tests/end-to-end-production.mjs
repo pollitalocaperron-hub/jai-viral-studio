@@ -189,8 +189,29 @@ try {
   assert.equal(await page.locator("#renderVideo").isEnabled(), true, "An audited 2D motion-graphics timeline with narration must unlock final export");
   assert.equal(await page.locator("#downloadVideo").isVisible(), false, "The download link appears only after render and technical QC complete");
   assert.match(await page.locator("#renderStatus").innerText(), /Control de calidad aprobado|puede exportarse/i, "The UI confirms the audited 2D render is ready");
+
+  // Exercise the real export button; save its generated Blob for independent FFprobe inspection.
+  await page.locator("#renderVideo").click();
+  await page.waitForFunction(() => {
+    const link=document.querySelector("#downloadVideo");
+    return !!link && !link.hidden && /^blob:/.test(link.href);
+  }, null, { timeout: 90000 });
+  const exported=await page.locator("#downloadVideo").evaluate(async link=>{
+    const response=await fetch(link.href);
+    const blob=await response.blob();
+    const bytes=new Uint8Array(await blob.arrayBuffer());
+    let binary="";
+    for(let offset=0;offset<bytes.length;offset+=0x8000)binary+=String.fromCharCode(...bytes.subarray(offset,offset+0x8000));
+    return {mime:blob.type,size:blob.size,extension:link.download.split(".").pop(),base64:btoa(binary),status:document.querySelector("#renderStatus")?.textContent||""};
+  });
+  assert.ok(exported.size>20000,"The production button must create a non-trivial video Blob.");
+  assert.match(exported.mime,/^video\/(webm|mp4)/,"The production button must create a playable WebM or MP4 Blob.");
+  assert.match(exported.status,/Vídeo exportado y control técnico aprobado/,"The download must appear only after the app's own audiovisual QC passes.");
+  fs.mkdirSync(path.join(root,"artifacts"),{recursive:true});
+  fs.writeFileSync(path.join(root,"artifacts","jai-production-export."+exported.extension),Buffer.from(exported.base64,"base64"));
+  fs.writeFileSync(path.join(root,"artifacts","jai-production-export.json"),JSON.stringify({mime:exported.mime,size:exported.size,status:exported.status},null,2));
   assert.deepEqual(errors, [], "The integrated browser flow must not produce uncaught JavaScript errors");
-  console.log("PASS: browser production flow through directed 2D motion graphics, narration, per-shot visual audit, captions, and export readiness.");
+  console.log("PASS: complete browser production flow including real renderVideo button, downloadable video Blob and in-app audiovisual QC.");
 } finally {
   if (browser) await browser.close();
   await new Promise(resolve => server.close(resolve));
