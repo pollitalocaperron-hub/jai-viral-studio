@@ -278,43 +278,21 @@ try {
 
   }
 
-  // A free-tier quota error from Groq must route the scene plan to the configured free Gemini fallback.
+  // A Groq quota response must pause immediately instead of spending another provider's quota.
   {
-    const story = makeValidPlan().story;
-    const shots = [];
-    story.forEach((scene, sceneIndex) => {
-      const start = sceneIndex * 9;
-      for (let part = 0; part < 2; part++) {
-        const shotStart = start + part * 4.5;
-        shots.push({
-          scene_index: sceneIndex, start_seconds: shotStart, end_seconds: shotStart + 4.5,
-          narration_segment: "La explicación describe esta acción concreta.",
-          subtitle: "Acción " + (part + 1), subject: "Componente mecánico identificable",
-          visual_state: "Estado inicial y cambio visible", visual_action: "El componente se desplaza de forma observable",
-          visual_prompt_en: "Clean educational 2D editorial illustration of the exact mechanical component in a coherent portrait composition, clear shapes, consistent palette, separated readable parts and a specific teaching action.",
-          continuity_anchor: "Same component geometry, color, scale and orientation across adjacent shots.",
-          background_color: "#F2EEE4", layers: [{"id":"component","description":"Componente principal","role":"subject","character_id":"hero","part_id":"torso","path_d":"M 240 420 C 260 360 460 360 480 420 L 480 760 C 460 820 260 820 240 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"housing","description":"Estructura contenedora","role":"environment","path_d":"M 150 300 L 570 300 L 570 900 L 150 900 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","character_id":"hero","part_id":"head","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
-          animation_steps: [{"target_id":"component","action":"move","from_state":"lower","to_state":"upper","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":-70,"rotation":0,"scale":1,"opacity":1}},{"target_id":"housing","action":"hold","from_state":"fixed","to_state":"fixed","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}},{"target_id":"detail","action":"reveal","from_state":"hidden","to_state":"visible","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":20,"rotation":0,"scale":0.85,"opacity":0},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}}]
-        });
-      }
-    });
     const calls = [];
-    globalThis.fetch = async (url) => {
+    globalThis.fetch = async url => {
       calls.push(String(url));
-      if (String(url).includes("api.groq.com")) return response({ error: { message: "Free tier rate limit reached" } }, 429);
-      if (String(url).includes("generativelanguage.googleapis.com")) {
-        return response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ shots }) }] } }] });
-      }
-      throw new Error("Unexpected provider in free-tier failover test: " + url);
+      if (String(url).includes("api.groq.com")) return response({ error: { message: "Please try again in 8s" } }, 429);
+      throw new Error("A quota-limited request must not call another provider: " + url);
     };
     const res = mockResponse();
-    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
-    assert.equal(res.statusCode, 200, "Gemini free fallback must complete the task after Groq quota exhaustion");
-    assert.equal(res.body.provider, "Gemini 3.8 Flash");
-    assert.equal(res.body.shot_count, 8);
-    assert.equal(calls.length, 2, "Only the primary and configured free fallback may be called");
-    assert.ok(calls[0].includes("api.groq.com"));
-    assert.ok(calls[1].includes("generativelanguage.googleapis.com"));
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story: makeValidPlan().story, retention_map: [] } }, res);
+    assert.equal(res.statusCode, 429);
+    assert.equal(res.body.diagnosticCode, "FREE_QUOTA_WAIT");
+    assert.equal(res.body.retryAfterSeconds, 8);
+    assert.equal(res.headers["Retry-After"], "8");
+    assert.equal(calls.length, 1, "Quota waits must not trigger a second paid or free-provider call");
   }
 
   // If all configured free-tier providers are quota-limited, fail closed without paid-provider escalation.
@@ -327,8 +305,8 @@ try {
     const res = mockResponse();
     await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story: makeValidPlan().story, retention_map: [] } }, res);
     assert.equal(res.statusCode, 429);
-    assert.equal(res.body.diagnosticCode, "FREE_QUOTA_EXHAUSTED");
-    assert.match(res.body.error, /No se realizará ningún cobro/);
+    assert.equal(res.body.diagnosticCode, "FREE_QUOTA_WAIT");
+    assert.match(res.body.error, /No se hará una segunda llamada/);
   }
 
   // Animation actions must target an existing layer and use a valid time interval.
