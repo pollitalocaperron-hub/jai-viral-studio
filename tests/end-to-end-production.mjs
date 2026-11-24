@@ -186,11 +186,11 @@ try {
   await page.waitForFunction(() => (document.querySelector("#visualAuditStatus")?.textContent || "").includes("todas las escenas superaron"), null, { timeout: 20000 });
   assert.equal(counters.inspect, 2, "Eight directed shots must be split into two batches of four, matching the inspector API limit");
   assert.equal(counters.inspectedImages, 8, "Every directed shot must be independently inspected before export");
-  assert.equal(await page.locator("#renderVideo").isEnabled(), false, "Vector-only preview must never unlock final export");
-  assert.equal(await page.locator("#downloadVideo").isVisible(), false, "No final video download may be exposed without cinematic assets and verified QC");
-  assert.match(await page.locator("#renderStatus").innerText(), /previsualizaciones vectoriales|motor visual disponible solo genera/i, "The UI must explain why final export remains blocked");
+  assert.equal(await page.locator("#renderVideo").isEnabled(), true, "An audited 2D motion-graphics timeline with narration must unlock final export");
+  assert.equal(await page.locator("#downloadVideo").isVisible(), false, "The download link appears only after render and technical QC complete");
+  assert.match(await page.locator("#renderStatus").innerText(), /Control de calidad aprobado|puede exportarse/i, "The UI confirms the audited 2D render is ready");
   assert.deepEqual(errors, [], "The integrated browser flow must not produce uncaught JavaScript errors");
-  console.log("PASS: browser production flow through vector preview, narration, per-shot visual audit, captions, and enforced cinematic export gate.");
+  console.log("PASS: browser production flow through directed 2D motion graphics, narration, per-shot visual audit, captions, and export readiness.");
 } finally {
   if (browser) await browser.close();
   await new Promise(resolve => server.close(resolve));
