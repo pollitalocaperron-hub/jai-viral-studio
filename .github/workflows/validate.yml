@@ -79,10 +79,10 @@ jobs:
         run: npm run test:e2e
       - name: Test real local media import and canvas rendering in Chromium
         run: npm run test:media-browser
-      - name: Verify preinstalled FFmpeg tools for audiovisual inspection
+      - name: Install portable FFmpeg and FFprobe tools
         run: |
-          command -v ffmpeg
-          command -v ffprobe
+          npm install --no-save --no-package-lock ffmpeg-static ffprobe-static
+          node -e "const fs=require('fs'); const path=require('path'); const ffmpeg=require('ffmpeg-static'); const ffprobe=require('ffprobe-static').path; if(!ffmpeg || !fs.existsSync(ffmpeg)) throw new Error('ffmpeg-static binary missing'); if(!ffprobe || !fs.existsSync(ffprobe)) throw new Error('ffprobe-static binary missing'); fs.appendFileSync(process.env.GITHUB_PATH, path.dirname(ffmpeg)+'\\n'+path.dirname(ffprobe)+'\\n'); console.log('Portable FFmpeg:',ffmpeg); console.log('Portable FFprobe:',ffprobe)"
           ffmpeg -version
           ffprobe -version
       - name: Render real J.A.I. image, sequence and clip timeline in Chromium; inspect with FFprobe
