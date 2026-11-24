@@ -177,7 +177,7 @@ export default async function handler(req, res) {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: "Bearer " + process.env.GROQ_API_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "openai/gpt-oss-120b", messages: [{ role: "system", content: "Devuelve exclusivamente JSON válido." }, { role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.35, max_completion_tokens: 7000 }),
+        body: JSON.stringify({ model: "openai/gpt-oss-120b", messages: [{ role: "system", content: "Devuelve exclusivamente JSON válido." }, { role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.35, max_completion_tokens: 5000 }),
         signal: AbortSignal.timeout(18000)
       });
       const raw = await response.text();
@@ -201,7 +201,7 @@ export default async function handler(req, res) {
       const requestGemini = () => fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
         method: "POST",
         headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.35, maxOutputTokens: 7000 } }),
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.35, maxOutputTokens: 5000 } }),
         signal: AbortSignal.timeout(18000)
       });
       let response = await requestGemini();
