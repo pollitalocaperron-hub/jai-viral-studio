@@ -13,13 +13,56 @@ function clean(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 function getVectorPathBounds(path) {
-  const values = (String(path || "").match(/[-+]?(?:\d*\.)?\d+(?:e[-+]?\d+)?/gi) || []).map(Number);
-  if (values.length < 6 || values.some(value => !Number.isFinite(value))) return null;
-  const xs = [], ys = [];
-  for (let index = 0; index + 1 < values.length; index += 2) {
-    xs.push(values[index]); ys.push(values[index + 1]);
-  }
-  if (xs.length < 3) return null;
+  const source = String(path || "").trim();
+  const tokens = source.match(/[a-zA-Z]|[-+]?(?:\\d*\\.)?\\d+(?:e[-+]?\\d+)?/gi) || [];
+  if (!tokens.length || tokens.join("").length === 0) return null;
+  // Reject unparsed characters instead of silently measuring a partial path.
+  if (source.replace(/[\\s,]/g, "").toLowerCase() !== tokens.join("").toLowerCase()) return null;
+  const arity = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7 };
+  const points = [];
+  let i = 0, command = "", x = 0, y = 0, startX = 0, startY = 0, firstMove = false;
+  const add = (px, py) => {
+    if (!Number.isFinite(px) || !Number.isFinite(py)) throw new Error("invalid path coordinate");
+    points.push([px, py]);
+  };
+  try {
+    while (i < tokens.length) {
+      if (/^[a-z]$/i.test(tokens[i])) {
+        command = tokens[i++];
+        if (command.toUpperCase() === "Z") {
+          x = startX; y = startY; add(x, y); command = "";
+          continue;
+        }
+      } else if (!command) return null;
+      const upper = command.toUpperCase(), relative = command !== upper, count = arity[upper];
+      if (!count) return null;
+      if (i + count > tokens.length || tokens.slice(i, i + count).some(token => /^[a-z]$/i.test(token))) return null;
+      const v = tokens.slice(i, i + count).map(Number);
+      if (v.some(value => !Number.isFinite(value))) return null;
+      i += count;
+      const ax = value => relative ? x + value : value;
+      const ay = value => relative ? y + value : value;
+      if (upper === "M" || upper === "L" || upper === "T") {
+        x = ax(v[0]); y = ay(v[1]); add(x, y);
+        if (upper === "M") { startX = x; startY = y; command = relative ? "l" : "L"; }
+      } else if (upper === "H") { x = ax(v[0]); add(x, y); }
+      else if (upper === "V") { y = ay(v[0]); add(x, y); }
+      else if (upper === "C") {
+        add(ax(v[0]), ay(v[1])); add(ax(v[2]), ay(v[3]));
+        x = ax(v[4]); y = ay(v[5]); add(x, y);
+      } else if (upper === "S" || upper === "Q") {
+        add(ax(v[0]), ay(v[1])); x = ax(v[2]); y = ay(v[3]); add(x, y);
+      } else if (upper === "A") {
+        if (v[0] < 0 || v[1] < 0 || ![0,1].includes(v[3]) || ![0,1].includes(v[4])) return null;
+        // Arc extrema are conservatively enclosed by the endpoint plus its radii.
+        add(x - v[0], y - v[1]); add(x + v[0], y + v[1]);
+        x = ax(v[5]); y = ay(v[6]); add(x - v[0], y - v[1]); add(x + v[0], y + v[1]); add(x, y);
+      }
+      firstMove = true;
+    }
+  } catch { return null; }
+  if (!firstMove || points.length < 3) return null;
+  const xs = points.map(point => point[0]), ys = points.map(point => point[1]);
   const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
   return { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY,
     areaRatio: Math.max(0, maxX - minX) * Math.max(0, maxY - minY) / (720 * 1280) };
