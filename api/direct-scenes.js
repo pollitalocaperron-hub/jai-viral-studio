@@ -12,6 +12,18 @@ function parseRange(value) {
 function clean(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
+function getVectorPathBounds(path) {
+  const values = (String(path || "").match(/[-+]?(?:\\d*\\.)?\\d+(?:e[-+]?\\d+)?/gi) || []).map(Number);
+  if (values.length < 6 || values.some(value => !Number.isFinite(value))) return null;
+  const xs = [], ys = [];
+  for (let index = 0; index + 1 < values.length; index += 2) {
+    xs.push(values[index]); ys.push(values[index + 1]);
+  }
+  if (xs.length < 3) return null;
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  return { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY,
+    areaRatio: Math.max(0, maxX - minX) * Math.max(0, maxY - minY) / (720 * 1280) };
+}
 const RIG_PARENT = {
   head: "torso", hair: "head", eyes: "head", mouth: "head", face: "head",
   upper_arm: "torso", arm_upper: "torso", forearm: "upper_arm", lower_arm: "upper_arm", hand: "forearm",
@@ -94,7 +106,7 @@ function validateShots(shots, story) {
     if (clean(shot.visual_prompt_en, 1800).split(/\s+/).length < 25) return "El prompt de la toma " + (index + 1) + " necesita describir un fotograma concreto con mayor precisión.";
     if (!/^#[0-9a-fA-F]{6}$/.test(clean(shot.background_color, 16))) return "La toma " + (index + 1) + " necesita un color de fondo hexadecimal válido.";
     if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 10) return "La toma " + (index + 1) + " necesita entre 3 y 6 capas vectoriales independientes.";
-    const layerIds = new Set();
+    const layerIds = new Set(), layerPaths = new Set(), layerDescriptions = new Set(), subjectBounds = [];
     for (const [layerIndex, layer] of shot.layers.entries()) {
       const id = clean(layer?.id, 60), path = typeof layer?.path_d === "string" ? layer.path_d.trim() : "";
       const fill = clean(layer?.fill, 16), stroke = clean(layer?.stroke, 16);
@@ -106,7 +118,18 @@ function validateShots(shots, story) {
       if (!/^#[0-9a-fA-F]{6}$/.test(fill) && fill !== "none") return "La capa " + id + " tiene un relleno no válido.";
       if (!/^#[0-9a-fA-F]{6}$/.test(stroke) && stroke !== "none") return "La capa " + id + " tiene un contorno no válido.";
       if (!Number.isFinite(strokeWidth) || strokeWidth < 0 || strokeWidth > 24 || !Number.isFinite(pivotX) || pivotX < 0 || pivotX > 720 || !Number.isFinite(pivotY) || pivotY < 0 || pivotY > 1280) return "La capa " + id + " tiene grosor o punto de pivote fuera del lienzo.";
+      const normalizedPath = path.replace(/\\s+/g, " ").trim();
+      const bounds = getVectorPathBounds(path);
+      if (!bounds || bounds.width < 12 || bounds.height < 12 || bounds.areaRatio < 0.001) return "La capa " + id + " no contiene geometría vectorial visible suficiente.";
+      if (layerPaths.has(normalizedPath)) return "La toma " + (index + 1) + " repite una ruta vectorial: sus capas no son ilustraciones independientes.";
+      const descriptionKey = clean(layer.description, 260).toLowerCase();
+      if (layerDescriptions.has(descriptionKey)) return "La toma " + (index + 1) + " repite descripciones de capas y no demuestra componentes visuales distintos.";
+      if (String(layer.role).toLowerCase() === "subject" || String(layer.role).toLowerCase() === "main_subject") subjectBounds.push(bounds);
+      layerPaths.add(normalizedPath); layerDescriptions.add(descriptionKey);
       layerIds.add(id);
+    }
+    if (!subjectBounds.length || !subjectBounds.some(bounds => bounds.areaRatio >= 0.06 && bounds.areaRatio <= 0.78)) {
+      return "La toma " + (index + 1) + " no tiene un sujeto principal con tamaño legible: la silueta debe ocupar entre 6% y 78% del lienzo.";
     }
     if (!Array.isArray(shot.animation_steps) || shot.animation_steps.length < 2 || shot.animation_steps.length > 4) return "La toma " + (index + 1) + " necesita entre 2 y 4 acciones de animación.";
     const validTransform = value => value && ["x", "y", "rotation", "scale", "opacity"].every(key => Number.isFinite(Number(value[key]))) &&
