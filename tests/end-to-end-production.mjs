@@ -207,9 +207,27 @@ try {
       downloadHref: document.querySelector("#downloadVideo")?.getAttribute("href"),
       pipeline: document.querySelector("#pipelineStatus")?.innerText || "",
       ffmpegLastLog: window.jaiFfmpegLastLog || "",
-      ffmpegProgress: window.jaiFfmpegProgress ?? null
+      ffmpegProgress: window.jaiFfmpegProgress ?? null,
+      mp4Inspection: window.jaiMp4InspectionDiagnostic || null,
+      rejectedBlob: window.jaiMp4RejectedBlob instanceof Blob ? { size: window.jaiMp4RejectedBlob.size, type: window.jaiMp4RejectedBlob.type } : null
     })).catch(() => ({}));
     fs.mkdirSync(path.join(root, "artifacts"), { recursive: true });
+    if (diagnostic.rejectedBlob) {
+      const rejected = await page.evaluate(async () => {
+        const blob = window.jaiMp4RejectedBlob;
+        if (!(blob instanceof Blob)) return null;
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let binary = "";
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+        return { mime: blob.type, size: blob.size, base64: btoa(binary) };
+      }).catch(() => null);
+      if (rejected?.base64) {
+        fs.writeFileSync(path.join(root, "artifacts", "jai-rejected-export.mp4"), Buffer.from(rejected.base64, "base64"));
+        delete rejected.base64;
+        diagnostic.rejectedBlob = rejected;
+      }
+    }
+    fs.writeFileSync(path.join(root, "artifacts", "jai-browser-diagnostic.json"), JSON.stringify({ diagnostic, errors: errors.slice(-30) }, null, 2));
     await page.screenshot({ path: path.join(root, "artifacts", "jai-mp4-timeout.png"), fullPage: true }).catch(() => {});
     throw new Error("MP4 export timeout after 240s. Browser diagnostics: " + JSON.stringify({ diagnostic, errors: errors.slice(-30) }) + ". Original: " + error.message);
   }
