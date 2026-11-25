@@ -32,7 +32,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
           google-chrome --version
-          google-chrome --headless --no-sandbox --disable-gpu --dump-dom 'data:text/html,<video id="v"></video><script>document.title=document.querySelector("video").canPlayType("video/mp4; codecs=&quot;avc1.42E01E, mp4a.40.2&quot;")||"NO_H264_AAC"</script>' | grep -q '<title>probably</title>\|<title>maybe</title>'
+          google-chrome --headless --no-sandbox --disable-gpu --dump-dom 'data:text/html,<video id="v"></video><script>document.title=document.querySelector("video").canPlayType("video/mp4; codecs="+String.fromCharCode(34)+"avc1.42E01E, mp4a.40.2"+String.fromCharCode(34))||"NO_H264_AAC"</script>' | grep -q '<title>probably</title>\|<title>maybe</title>'
       - run: JAI_REQUIRE_FFPROBE=1 npm run test:e2e
       - name: Upload Chromium export and diagnostics
         if: always()
