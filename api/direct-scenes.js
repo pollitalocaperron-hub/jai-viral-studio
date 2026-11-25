@@ -124,7 +124,8 @@ function validateShots(shots, story) {
       if (layerPaths.has(normalizedPath)) return "La toma " + (index + 1) + " repite una ruta vectorial: sus capas no son ilustraciones independientes.";
       const descriptionKey = clean(layer.description, 260).toLowerCase();
       if (layerDescriptions.has(descriptionKey)) return "La toma " + (index + 1) + " repite descripciones de capas y no demuestra componentes visuales distintos.";
-      if (String(layer.role).toLowerCase() === "subject" || String(layer.role).toLowerCase() === "main_subject") subjectBounds.push(bounds);
+      const normalizedRole = String(layer.role).trim().toLowerCase().replace(/[\s-]+/g, "_");
+      if (["subject", "main_subject", "primary_subject"].includes(normalizedRole)) subjectBounds.push(bounds);
       layerPaths.add(normalizedPath); layerDescriptions.add(descriptionKey);
       layerIds.add(id);
     }
