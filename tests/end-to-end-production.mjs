@@ -210,6 +210,7 @@ try {
       ffmpegLastLog: window.jaiFfmpegLastLog || "",
       ffmpegProgress: window.jaiFfmpegProgress ?? null,
       mp4Inspection: window.jaiMp4InspectionDiagnostic || null,
+      mediaCapabilities: (() => { const video=document.createElement("video"); return { mp4AvcAac: video.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"'), mp4Avc: video.canPlayType('video/mp4; codecs="avc1.42E01E"'), mp4Generic: video.canPlayType("video/mp4"), mediaSourceAvcAac: !!window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') }; })(),
       rejectedBlob: window.jaiMp4RejectedBlob instanceof Blob ? { size: window.jaiMp4RejectedBlob.size, type: window.jaiMp4RejectedBlob.type } : null
     })).catch(() => ({}));
     fs.mkdirSync(path.join(root, "artifacts"), { recursive: true });
@@ -241,6 +242,7 @@ try {
       ffmpegLastLog: window.jaiFfmpegLastLog || "",
       ffmpegProgress: window.jaiFfmpegProgress ?? null,
       mp4Inspection: window.jaiMp4InspectionDiagnostic || null,
+      mediaCapabilities: (() => { const video=document.createElement("video"); return { mp4AvcAac: video.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"'), mp4Avc: video.canPlayType('video/mp4; codecs="avc1.42E01E"'), mp4Generic: video.canPlayType("video/mp4"), mediaSourceAvcAac: !!window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') }; })(),
       rejectedBlob: window.jaiMp4RejectedBlob instanceof Blob ? { size: window.jaiMp4RejectedBlob.size, type: window.jaiMp4RejectedBlob.type } : null
     }));
     fs.mkdirSync(path.join(root, "artifacts"), { recursive: true });
