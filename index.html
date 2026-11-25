@@ -981,7 +981,24 @@ function paintReferenceBackdrop(ctx,w,h,shot){
  const profile=String(shot?.style_profile_id||"paper-craft-explainer");
  const base=shot?.background_color||"#F2EEE4";
  ctx.save();
- if(profile==="cinematic-cartoon-story"){
+ if(profile==="jai-reference-motion-01"){
+  const room=ctx.createLinearGradient(0,0,0,h);room.addColorStop(0,"#071426");room.addColorStop(.58,"#10243B");room.addColorStop(.78,"#182B3D");room.addColorStop(1,"#241B18");
+  ctx.fillStyle=room;ctx.fillRect(0,0,w,h);
+  const cyanGlow=ctx.createRadialGradient(w*.5,h*.38,8,w*.5,h*.38,w*.62);cyanGlow.addColorStop(0,"rgba(27,220,247,.22)");cyanGlow.addColorStop(1,"rgba(27,220,247,0)");
+  ctx.fillStyle=cyanGlow;ctx.fillRect(0,0,w,h*.82);
+  ctx.save();ctx.globalAlpha=.42;ctx.strokeStyle="#36DDF4";ctx.lineWidth=Math.max(1,w*.004);
+  for(let i=0;i<5;i++){const inset=i*.075;ctx.beginPath();ctx.moveTo(w*(.06+inset),h*(.08+inset*.7));ctx.lineTo(w*(.94-inset),h*(.08+inset*.7));ctx.lineTo(w*(.66-inset*.55),h*(.68-inset*.35));ctx.lineTo(w*(.34+inset*.55),h*(.68-inset*.35));ctx.closePath();ctx.stroke();}
+  for(let i=0;i<7;i++){const y=h*(.18+i*.065);ctx.beginPath();ctx.moveTo(0,y);ctx.bezierCurveTo(w*.3,y-h*.12,w*.7,y-h*.12,w,y);ctx.stroke();}
+  ctx.restore();
+  const wood=ctx.createLinearGradient(0,h*.76,0,h);wood.addColorStop(0,"#5B3A2A");wood.addColorStop(.22,"#95613D");wood.addColorStop(.58,"#70472F");wood.addColorStop(1,"#38271F");
+  ctx.fillStyle=wood;ctx.fillRect(0,h*.76,w,h*.24);
+  ctx.save();ctx.globalAlpha=.28;ctx.strokeStyle="#D99A58";ctx.lineWidth=Math.max(1,w*.003);
+  for(let y=h*.79;y<h;y+=Math.max(12,h*.035)){ctx.beginPath();ctx.moveTo(0,y);ctx.bezierCurveTo(w*.28,y-h*.012,w*.68,y+h*.012,w,y);ctx.stroke();}
+  ctx.restore();
+  ctx.save();ctx.globalAlpha=.2;ctx.strokeStyle="#F5B65F";ctx.lineWidth=Math.max(2,w*.012);
+  for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(w*(.12+i*.18),h*.05);ctx.lineTo(w*(.3+i*.13),h*.76);ctx.stroke();}
+  ctx.restore();
+ }else if(profile==="cinematic-cartoon-story"){
   const sky=ctx.createLinearGradient(0,0,0,h);sky.addColorStop(0,"#101A3A");sky.addColorStop(.68,base);sky.addColorStop(1,"#211B2B");
   ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
   const glow=ctx.createRadialGradient(w*.76,h*.25,12,w*.76,h*.25,w*.58);glow.addColorStop(0,"rgba(255,190,91,.24)");glow.addColorStop(1,"rgba(255,190,91,0)");
