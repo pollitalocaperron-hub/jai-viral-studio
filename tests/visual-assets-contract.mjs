@@ -13,6 +13,8 @@ assert.match(renderer, /profile==="jai-reference-motion-01"/);
 assert.match(renderer, /#071426/);
 assert.match(renderer, /#36DDF4/);
 assert.match(renderer, /#95613D/);
+assert.match(renderer, /const orderedLayers=layers\.map\(\(layer,index\)=>\(\{layer,index\}\)\)/);
+assert.match(renderer, /role==="environment"\|\|role==="setting"/, "Environment layers must render behind the main subject");
 
 const direct = readFileSync(new URL("../api/direct-scenes.js", import.meta.url), "utf8");
 assert.match(direct, /function buildCharacterBible\(shots\)/);
