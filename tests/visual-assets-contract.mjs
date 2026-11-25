@@ -8,6 +8,12 @@ assert.deepEqual(getVisualStyleProfileIds(), ["jai-reference-motion-01"]);
 assert.match(locked.prompt, /fixed visual language/i);
 assert.match(locked.prompt, /Never switch to anime/i);
 
+const renderer = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+assert.match(renderer, /profile==="jai-reference-motion-01"/);
+assert.match(renderer, /#071426/);
+assert.match(renderer, /#36DDF4/);
+assert.match(renderer, /#95613D/);
+
 const direct = readFileSync(new URL("../api/direct-scenes.js", import.meta.url), "utf8");
 assert.match(direct, /function buildCharacterBible\(shots\)/);
 assert.match(direct, /const characterBible = buildCharacterBible\(normalized\)/);
