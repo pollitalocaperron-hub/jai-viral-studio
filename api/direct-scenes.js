@@ -13,7 +13,7 @@ function clean(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 function getVectorPathBounds(path) {
-  const values = (String(path || "").match(/[-+]?(?:\d*\\.)?\d+(?:e[-+]?\d+)?/gi) || []).map(Number);
+  const values = (String(path || "").match(/[-+]?(?:\d*\.)?\d+(?:e[-+]?\d+)?/gi) || []).map(Number);
   if (values.length < 6 || values.some(value => !Number.isFinite(value))) return null;
   const xs = [], ys = [];
   for (let index = 0; index + 1 < values.length; index += 2) {
