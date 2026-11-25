@@ -13,7 +13,7 @@ function clean(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 function getVectorPathBounds(path) {
-  const values = (String(path || "").match(/[-+]?(?:\\d*\\.)?\\d+(?:e[-+]?\\d+)?/gi) || []).map(Number);
+  const values = (String(path || "").match(/[-+]?(?:\d*\\.)?\d+(?:e[-+]?\d+)?/gi) || []).map(Number);
   if (values.length < 6 || values.some(value => !Number.isFinite(value))) return null;
   const xs = [], ys = [];
   for (let index = 0; index + 1 < values.length; index += 2) {
@@ -118,7 +118,7 @@ function validateShots(shots, story) {
       if (!/^#[0-9a-fA-F]{6}$/.test(fill) && fill !== "none") return "La capa " + id + " tiene un relleno no válido.";
       if (!/^#[0-9a-fA-F]{6}$/.test(stroke) && stroke !== "none") return "La capa " + id + " tiene un contorno no válido.";
       if (!Number.isFinite(strokeWidth) || strokeWidth < 0 || strokeWidth > 24 || !Number.isFinite(pivotX) || pivotX < 0 || pivotX > 720 || !Number.isFinite(pivotY) || pivotY < 0 || pivotY > 1280) return "La capa " + id + " tiene grosor o punto de pivote fuera del lienzo.";
-      const normalizedPath = path.replace(/\\s+/g, " ").trim();
+      const normalizedPath = path.replace(/\s+/g, " ").trim();
       const bounds = getVectorPathBounds(path);
       if (!bounds || bounds.width < 12 || bounds.height < 12 || bounds.areaRatio < 0.001) return "La capa " + id + " no contiene geometría vectorial visible suficiente.";
       if (layerPaths.has(normalizedPath)) return "La toma " + (index + 1) + " repite una ruta vectorial: sus capas no son ilustraciones independientes.";
