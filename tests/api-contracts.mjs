@@ -276,6 +276,19 @@ try {
     assert.equal(emptyBibleResponse.statusCode, 200);
     assert.deepEqual(emptyBibleResponse.body.character_bible, [], "No character bible entries may be invented when shot layers contain no characters.");
 
+    // Subject-role aliases emitted by the director must be normalized consistently.
+    const aliasedRolePlan = shots.map(shot => ({ ...shot, layers: shot.layers.map((layer, index) => index === 0 ? { ...layer, role: "main-subject" } : layer) }));
+    const aliasedRoleResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso con rol alternativo", script: "Narración de prueba.", story, shot_plan: aliasedRolePlan } }, aliasedRoleResponse);
+    assert.equal(aliasedRoleResponse.statusCode, 200, "main-subject must be recognized as the main subject role");
+
+    // A tiny subject cannot pass merely because the background/environment layer is large.
+    const tinySubjectPlan = shots.map(shot => ({ ...shot, layers: shot.layers.map((layer, index) => index === 0 ? { ...layer, path_d: "M 350 600 L 370 600 L 370 620 L 350 620 Z" } : layer) }));
+    const tinySubjectResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso con sujeto diminuto", script: "Narración de prueba.", story, shot_plan: tinySubjectPlan } }, tinySubjectResponse);
+    assert.equal(tinySubjectResponse.statusCode, 400);
+    assert.equal(tinySubjectResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+
     // A previously validated shot plan resumes locally without contacting any AI provider.
     globalThis.fetch = async () => { throw new Error("A saved shot plan must not call an AI provider"); };
     const resumed = mockResponse();
