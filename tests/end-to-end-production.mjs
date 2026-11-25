@@ -112,6 +112,7 @@ const server = http.createServer((req, res) => {
           shots.push({
             scene_index: sceneIndex, start_seconds: shotStart, end_seconds: shotEnd,
             shot_id: "shot-" + String(shots.length + 1).padStart(2, "0"),
+            style_profile_id: "jai-reference-motion-01",
             narration_segment: "La explicación muestra esta etapa del proceso.",
             subtitle: "Etapa " + (part + 1), subject: "El objeto principal del proceso",
             visual_state: "Estado " + (part + 1) + " del objeto",
@@ -124,7 +125,7 @@ const server = http.createServer((req, res) => {
           });
         }
       });
-      res.end(JSON.stringify({ shots, shot_count: shots.length, conceptual_scene_count: requestedStory.length, provider: "Mock free-tier", vector_preview_ready: true, animation_ready: false, cinematic_ready: false }));
+      res.end(JSON.stringify({ shots, shot_count: shots.length, conceptual_scene_count: requestedStory.length, provider: "Mock free-tier", style_profile_id: "jai-reference-motion-01", vector_preview_ready: true, animation_ready: false, cinematic_ready: false }));
       return;
     }
     if (req.url === "/api/narrate") {
