@@ -88,6 +88,15 @@ jobs:
         run: npx playwright install --with-deps chrome
       - name: Test IndexedDB persistence in Chromium
         run: npm run test:browser
+      - name: Install Google Chrome Stable with native media codecs
+        run: |
+          sudo install -d -m 0755 /etc/apt/keyrings
+          curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor --yes -o /etc/apt/keyrings/google-chrome.gpg
+          echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          google-chrome --version
+          google-chrome --headless --no-sandbox --disable-gpu --dump-dom 'data:text/html,<video id="v"></video><script>document.title=document.querySelector("video").canPlayType("video/mp4; codecs=&quot;avc1.42E01E, mp4a.40.2&quot;")||"NO_H264_AAC"</script>' | grep -q '<title>probably</title>\|<title>maybe</title>'
       - name: Test complete production flow in Chromium
         run: npm run test:e2e
       - name: Test real local media import and canvas rendering in Chromium
