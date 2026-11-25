@@ -234,6 +234,32 @@ try {
     await page.screenshot({ path: path.join(root, "artifacts", "jai-mp4-timeout.png"), fullPage: true }).catch(() => {});
     throw new Error("MP4 export did not pass QC. Browser and independent FFprobe diagnostics: " + JSON.stringify({ diagnostic, errors: errors.slice(-30) }) + ". Original: " + error.message);
   }
+  const downloadVisible = await page.locator("#downloadVideo").evaluate(link => !link.hidden && /^blob:/.test(link.href));
+  if (!downloadVisible) {
+    const diagnostic = await page.evaluate(() => ({
+      renderStatus: document.querySelector("#renderStatus")?.textContent || "",
+      ffmpegLastLog: window.jaiFfmpegLastLog || "",
+      ffmpegProgress: window.jaiFfmpegProgress ?? null,
+      mp4Inspection: window.jaiMp4InspectionDiagnostic || null,
+      rejectedBlob: window.jaiMp4RejectedBlob instanceof Blob ? { size: window.jaiMp4RejectedBlob.size, type: window.jaiMp4RejectedBlob.type } : null
+    }));
+    fs.mkdirSync(path.join(root, "artifacts"), { recursive: true });
+    if (diagnostic.rejectedBlob) {
+      const rejected = await page.evaluate(async () => {
+        const blob = window.jaiMp4RejectedBlob;
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let binary = "";
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+        return { mime: blob.type, size: blob.size, base64: btoa(binary) };
+      });
+      const rejectedPath = path.join(root, "artifacts", "jai-rejected-export.mp4");
+      fs.writeFileSync(rejectedPath, Buffer.from(rejected.base64, "base64"));
+      const probe = spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=format_name,duration:stream=codec_type,codec_name,width,height,sample_rate,channels", "-of", "json", rejectedPath], { encoding: "utf8" });
+      diagnostic.rejectedBlob = { mime: rejected.mime, size: rejected.size, ffprobeStatus: probe.status, ffprobeStdout: probe.stdout || "", ffprobeStderr: probe.stderr || "", ffprobeError: probe.error?.message || null };
+    }
+    fs.writeFileSync(path.join(root, "artifacts", "jai-browser-diagnostic.json"), JSON.stringify({ diagnostic, errors: errors.slice(-30) }, null, 2));
+    throw new Error("Application rejected final MP4; independent FFprobe diagnostics: " + JSON.stringify(diagnostic));
+  }
   const exported=await page.locator("#downloadVideo").evaluate(async link=>{
     const response=await fetch(link.href);
     const blob=await response.blob();
