@@ -133,7 +133,7 @@ const server = http.createServer((req, res) => {
 await new Promise(resolve => server.listen(4174, "127.0.0.1", resolve));
 let browser;
 try {
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, ...(process.env.JAI_BROWSER_CHANNEL ? { channel: process.env.JAI_BROWSER_CHANNEL } : {}) });
   const page = await browser.newPage();
   const errors = [];
   page.on("pageerror", error => errors.push("pageerror: " + error.message));
