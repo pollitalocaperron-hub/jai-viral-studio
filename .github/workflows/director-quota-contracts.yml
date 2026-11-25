@@ -13,13 +13,15 @@ jobs:
   api-contracts:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    env:
+      JAI_BROWSER_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chrome
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: npm run test:api
       - run: JAI_REQUIRE_FFPROBE=1 npm run test:e2e
