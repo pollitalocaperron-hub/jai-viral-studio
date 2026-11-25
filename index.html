@@ -1063,8 +1063,18 @@ function paintVectorShot(ctx,w,h,shot,progress){
   const px=Number(bone.pivot_x)||360,py=Number(bone.pivot_y)||640;
   ctx.translate(px+transform.x,py+transform.y);ctx.rotate(transform.rotation*Math.PI/180);ctx.scale(transform.scale,transform.scale);ctx.translate(-px,-py);
  };
- for(const layer of layers){
-  const path=paths[layers.indexOf(layer)],chain=[],seen=new Set([layer.id]);
+ const orderedLayers=layers.map((layer,index)=>({layer,index})).sort((a,b)=>{
+  const rank=layer=>{
+   const role=String(layer?.role||"").toLowerCase().replace(/[\\s-]+/g,"_");
+   if(role==="background"||role==="backdrop")return 0;
+   if(role==="environment"||role==="setting")return 1;
+   if(role==="detail"||role==="foreground"||role==="overlay")return 3;
+   return 2;
+  };
+  return rank(a.layer)-rank(b.layer)||a.index-b.index;
+ });
+ for(const entry of orderedLayers){
+  const layer=entry.layer,path=paths[entry.index],chain=[],seen=new Set([layer.id]);
   if(layer.character_id&&layer.part_id){
    let parentPart=partParents[normalizePart(layer.part_id)],depth=0;
    while(parentPart&&depth++<8){
