@@ -198,7 +198,8 @@ try {
   try {
     await page.waitForFunction(() => {
       const link=document.querySelector("#downloadVideo");
-      return !!link && !link.hidden && /^blob:/.test(link.href);
+      const status = document.querySelector("#renderStatus")?.textContent || "";
+      return (!!link && !link.hidden && /^blob:/.test(link.href)) || /Exportación rechazada por control de calidad|Conversión MP4 rechazada/.test(status);
     }, null, { timeout: 240000 });
   } catch (error) {
     const diagnostic = await page.evaluate(() => ({
@@ -222,14 +223,16 @@ try {
         return { mime: blob.type, size: blob.size, base64: btoa(binary) };
       }).catch(() => null);
       if (rejected?.base64) {
-        fs.writeFileSync(path.join(root, "artifacts", "jai-rejected-export.mp4"), Buffer.from(rejected.base64, "base64"));
-        delete rejected.base64;
-        diagnostic.rejectedBlob = rejected;
+        const rejectedPath = path.join(root, "artifacts", "jai-rejected-export.mp4");
+        fs.writeFileSync(rejectedPath, Buffer.from(rejected.base64, "base64"));
+        const rejectedProbe = spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=format_name,duration:stream=codec_type,codec_name,width,height,sample_rate,channels", "-of", "json", rejectedPath], { encoding: "utf8" });
+        diagnostic.rejectedBlob = { ...rejected, ffprobeStatus: rejectedProbe.status, ffprobeStdout: rejectedProbe.stdout || "", ffprobeStderr: rejectedProbe.stderr || "", ffprobeError: rejectedProbe.error?.message || null };
+        delete diagnostic.rejectedBlob.base64;
       }
     }
     fs.writeFileSync(path.join(root, "artifacts", "jai-browser-diagnostic.json"), JSON.stringify({ diagnostic, errors: errors.slice(-30) }, null, 2));
     await page.screenshot({ path: path.join(root, "artifacts", "jai-mp4-timeout.png"), fullPage: true }).catch(() => {});
-    throw new Error("MP4 export timeout after 240s. Browser diagnostics: " + JSON.stringify({ diagnostic, errors: errors.slice(-30) }) + ". Original: " + error.message);
+    throw new Error("MP4 export did not pass QC. Browser and independent FFprobe diagnostics: " + JSON.stringify({ diagnostic, errors: errors.slice(-30) }) + ". Original: " + error.message);
   }
   const exported=await page.locator("#downloadVideo").evaluate(async link=>{
     const response=await fetch(link.href);
