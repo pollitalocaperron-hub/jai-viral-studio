@@ -1429,7 +1429,7 @@ async function renderVideo(){
     $("renderStatus").textContent="Control técnico aprobado · "+qc.width+"×"+qc.height+" · "+qc.duration.toFixed(2)+" s · "+qc.distinctFrames+"/"+qc.sampledFrames+" muestras visuales distintas · pista de audio presente.";
    }catch(qcError){
     cleanup();setPipelineStage("render",0,"Control de calidad rechazado","error");$("downloadVideo").hidden=true;
-    $("renderStatus").textContent="Exportación rechazada por control de calidad: "+qcError.message+" No se ofrecerá un archivo que no haya superado la verificación.";window.jaiMp4InspectionDiagnostic=window.jaiMp4InspectionDiagnostic||{message:qcError.message,blobSize:blob?.size||0,blobType:blob?.type||null};
+    $("renderStatus").textContent="Exportación rechazada por control de calidad: "+qcError.message+" No se ofrecerá un archivo que no haya superado la verificación.";window.jaiMp4RejectedBlob=blob instanceof Blob?blob:null;window.jaiMp4InspectionDiagnostic=window.jaiMp4InspectionDiagnostic||{message:qcError.message,blobSize:blob?.size||0,blobType:blob?.type||null,ffmpegLastLog:window.jaiFfmpegLastLog||null,ffmpegProgress:Number.isFinite(window.jaiFfmpegProgress)?window.jaiFfmpegProgress:null};
     return;
    }
    cleanup();
