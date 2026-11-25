@@ -72,6 +72,21 @@ const server = http.createServer((req, res) => {
   if (req.url === "/" || req.url === "/index.html") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(html); return;
   }
+  if (req.method === "GET") {
+    const pathname = new URL(req.url, "http://127.0.0.1:4174").pathname;
+    if (pathname === "/favicon.ico") { res.writeHead(204); res.end(); return; }
+    const requestedPath = path.resolve(root, "." + decodeURIComponent(pathname));
+    if (requestedPath.startsWith(root + path.sep) && fs.existsSync(requestedPath) && fs.statSync(requestedPath).isFile()) {
+      const extension = path.extname(requestedPath).toLowerCase();
+      const contentType = extension === ".js" ? "text/javascript; charset=utf-8"
+        : extension === ".css" ? "text/css; charset=utf-8"
+        : extension === ".wasm" ? "application/wasm"
+        : "application/octet-stream";
+      res.writeHead(200, { "content-type": contentType });
+      fs.createReadStream(requestedPath).pipe(res);
+      return;
+    }
+  }
   const chunks = [];
   req.on("data", chunk => chunks.push(chunk));
   req.on("end", () => {
@@ -138,7 +153,13 @@ try {
   const errors = [];
   page.on("pageerror", error => errors.push("pageerror: " + error.message));
   page.on("console", message => { if (message.type() === "error") errors.push("console: " + message.text()); });
-  page.on("requestfailed", request => errors.push("requestfailed: " + request.url() + " :: " + (request.failure()?.errorText || "unknown")));
+  page.on("requestfailed", request => {
+    const failure = request.failure()?.errorText || "unknown";
+    // El enlace de descarga revoca su URL temporal después de leer el Blob; Chromium
+    // puede notificar ERR_ABORTED aunque la exportación y la lectura hayan terminado.
+    if (request.url().startsWith("blob:") && failure === "net::ERR_ABORTED") return;
+    errors.push("requestfailed: " + request.url() + " :: " + failure);
+  });
   await page.goto("http://127.0.0.1:4174/", { waitUntil: "domcontentloaded" });
   await page.locator("#topic").fill("Cómo se transforma el chocolate al calentarse");
   await page.route("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations", async route => {
