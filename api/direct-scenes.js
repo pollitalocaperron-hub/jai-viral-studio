@@ -14,10 +14,10 @@ function clean(value, max = 500) {
 }
 function getVectorPathBounds(path) {
   const source = String(path || "").trim();
-  const tokens = source.match(/[a-zA-Z]|[-+]?(?:\\d*\\.)?\\d+(?:e[-+]?\\d+)?/gi) || [];
+  const tokens = source.match(/[a-zA-Z]|[-+]?(?:\d*\.)?\d+(?:e[-+]?\d+)?/gi) || [];
   if (!tokens.length || tokens.join("").length === 0) return null;
   // Reject unparsed characters instead of silently measuring a partial path.
-  if (source.replace(/[\\s,]/g, "").toLowerCase() !== tokens.join("").toLowerCase()) return null;
+  if (source.replace(/[\s,]/g, "").toLowerCase() !== tokens.join("").toLowerCase()) return null;
   const arity = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7 };
   const points = [];
   let i = 0, command = "", x = 0, y = 0, startX = 0, startY = 0, firstMove = false;
