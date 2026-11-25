@@ -1301,7 +1301,9 @@ async function transcodeFinalMp4(inputBlob,inputMime){
   setPipelineStage("render",94,"Convirtiendo a MP4 H.264/AAC…","running");
   $("renderStatus").textContent="Convirtiendo el render intermedio a MP4 real con vídeo H.264 y audio AAC. La descarga permanece bloqueada hasta verificar el resultado.";
   await ffmpeg.writeFile(inputName,await fetchFile(inputBlob));
-  await ffmpeg.exec(["-i",inputName,"-map","0:v:0","-map","0:a:0","-vf","scale=720:1280:flags=lanczos","-c:v","libx264","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-movflags","+faststart",outputName]);
+  // Bound WebAssembly encoder/filter threads to avoid exhausting FFmpeg.wasm memory at flush.
+  const exitCode=await ffmpeg.exec(["-filter_threads","1","-threads","1","-i",inputName,"-map","0:v:0","-map","0:a:0","-vf","scale=720:1280:flags=lanczos","-c:v","libx264","-threads:v","1","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-threads:a","1","-b:a","128k","-movflags","+faststart",outputName]);
+  if(exitCode!==0)throw new Error("FFmpeg terminó con código "+exitCode+"; último registro: "+(window.jaiFfmpegLastLog||"sin registro"));
   const data=await ffmpeg.readFile(outputName),bytes=data instanceof Uint8Array?data:new Uint8Array(data);
   if(bytes.length<1024||String.fromCharCode(...bytes.subarray(4,8))!=="ftyp")throw new Error("FFmpeg no produjo una estructura MP4 válida (firma ftyp ausente).");
   return new Blob([bytes],{type:"video/mp4"});
