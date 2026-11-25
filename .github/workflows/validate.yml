@@ -85,7 +85,7 @@ jobs:
         run: npm run test:netlify
       - name: Install Chromium
         timeout-minutes: 10
-        run: npx playwright install --with-deps chrome
+        run: npx playwright install --with-deps chromium
       - name: Test IndexedDB persistence in Chromium
         run: npm run test:browser
       - name: Install Google Chrome Stable with native media codecs
