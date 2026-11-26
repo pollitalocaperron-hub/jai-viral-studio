@@ -511,7 +511,8 @@ async function inspectVisuals(){
    if(!response.ok)throw new Error(data.error||"No se pudo completar la inspección visual.");
    if(!Array.isArray(data.results)||data.results.length!==batch.length)throw new Error("El inspector no devolvió un resultado por cada toma del lote.");
    if(!data.results.every((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)))throw new Error("El inspector devolvió resultados desordenados o asociados a otra toma; la aprobación se descartó.");
-   data.results.forEach((item,index)=>{visualAuditResults[offset+index]={...item,scene_index:offset+index,conceptual_scene_index:batch[index].sceneIndex};});
+   const simulatedInspection=data.inspection_mode==="simulated";
+   data.results.forEach((item,index)=>{visualAuditResults[offset+index]={...item,scene_index:offset+index,conceptual_scene_index:batch[index].sceneIndex,...(simulatedInspection?{simulated:true}: {})};});
    const completed=offset+batch.length,percent=Math.round(completed/total*100);
    setTaskProgress("visualAuditStatus",percent,"Inspeccionadas "+completed+"/"+total+" tomas");
    setPipelineStage("audit",percent,"Inspección de tomas: "+completed+" de "+total,"running");
@@ -520,7 +521,7 @@ async function inspectVisuals(){
   const passed=visualAuditResults.filter(item=>item?.status==="pass").length,failed=total-passed;
   setPipelineStage("audit",100,"Inspección terminada: "+passed+"/"+total+" tomas aprobadas","done");
   updateRenderGate();
-  $("visualAuditStatus").textContent=failed===0?"Inspección completada: todas las escenas superaron la revisión visual de sus "+total+" tomas.": "Inspección completada: "+failed+" de "+total+" tomas necesitan revisión. Consulta cada escena y sus observaciones.";
+  const simulated=visualAuditResults.some(item=>item?.simulated);$("visualAuditStatus").textContent=(simulated?"PRUEBA SIMULADA · no acredita calidad artística real. ":"")+(failed===0?"Inspección completada: todas las escenas superaron la revisión visual de sus "+total+" tomas.": "Inspección completada: "+failed+" de "+total+" tomas necesitan revisión. Consulta cada escena y sus observaciones.");
  }catch(error){
   setPipelineStage("audit",0,"Inspección incompleta; requiere revisión manual","error");
   $("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Las tomas ya revisadas se conservaron; puedes aprobar manualmente las escenas tras revisarlas.";
