@@ -532,6 +532,7 @@ async function inspectVisuals(){
   updateRenderGate();
   const simulated=visualAuditResults.some(item=>item?.simulated);$("visualAuditStatus").textContent=(simulated?"PRUEBA SIMULADA · no acredita calidad artística real. ":"")+(failed===0?"Inspección completada: todas las escenas superaron la revisión visual de sus "+total+" tomas.": "Inspección completada: "+failed+" de "+total+" tomas necesitan revisión. Consulta cada escena y sus observaciones.");
  }catch(error){
+  jaiLastStageError={status:error?.status||error?.statusCode||null,retryAfterSeconds:error?.retryAfterSeconds||null,code:error?.code||null};
   setPipelineStage("audit",0,"Inspección incompleta; requiere revisión manual","error");
   $("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Las tomas ya revisadas se conservaron; puedes aprobar manualmente las escenas tras revisarlas.";
   setTaskProgress("visualAuditStatus",0,"Inspección incompleta; recursos conservados");
@@ -1931,7 +1932,7 @@ async function getJaiProductionOrchestrator(){
      visualAuditResults=Array.from({length:visualAuditUnitCount()},()=>null);
      await inspectVisuals();
     }
-    if(!visualAuditPassed())throw new Error($("visualAuditStatus").textContent||"La inspección visual no aprobó todas las tomas.");
+    if(!visualAuditPassed())throw Object.assign(new Error($("visualAuditStatus").textContent||"La inspección visual no aprobó todas las tomas."),jaiLastStageError||{});
     const simulated=visualAuditResults.some(item=>item?.simulated);
     return {ok:true,inspection_mode:simulated?"simulated":"real",output:{approved:visualAuditResults.length,manual:visualAuditResults.some(item=>item?.manual)}};
    }},
