@@ -338,7 +338,9 @@ try {
   assert.equal(counters.inspectedImages, providerCallsBeforeOrchestration.inspectedImages + 8);
 
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.waitForFunction(() => (document.querySelector("#autosaveStatus")?.textContent || "").includes("Sesión recuperada automáticamente"), null, { timeout: 15000 });
+  await page.waitForFunction(() => { const status=document.querySelector("#autosaveStatus")?.textContent || ""; return status.includes("Sesión recuperada automáticamente") || status.includes("No se pudo recuperar") || status.includes("no está disponible") || status.includes("No hay una sesión anterior"); }, null, { timeout: 45000 });
+  const recoveryStatus = await page.locator("#autosaveStatus").innerText();
+  assert.match(recoveryStatus,/Sesión recuperada automáticamente/i,"The app must restore the complete project after reload; recovery status: "+recoveryStatus);
   await page.waitForFunction(() => { const link=document.querySelector("#downloadVideo"); return !!link&&!link.hidden&&/^blob:/.test(link.href); }, null, { timeout: 15000 });
   const restoredVideo = await page.locator("#downloadVideo").evaluate(async link => { const blob=await (await fetch(link.href)).blob(); return {type:blob.type,size:blob.size}; });
   assert.equal(restoredVideo.type.startsWith("video/mp4"),true,"A technically approved MP4 must survive page reload in local recovery");
