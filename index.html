@@ -1631,7 +1631,7 @@ async function makePlan(){
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Perfil audiovisual · '+escapeHtml(visualStyleProfileLabel(currentVisualStyleProfileId))+'</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("seriesBridge").textContent=readable(data.series_bridge||"Sin continuidad de serie.");$("callToAction").textContent=readable(data.call_to_action||"Sin llamada a la acción.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];currentShotPlan=[];currentCharacterBible=[];$("exportCharacterLayers").disabled=true;$("characterLayerExports").replaceChildren();$("directScenes").disabled=!currentScenes.length;$("directScenesOutput").replaceChildren();$("directScenesStatus").textContent="Plan nuevo: diseña ahora las tomas y acciones animables.";jaiSceneImages=[];visualAuditResults=[];$("inspectVisuals").disabled=true;$("visualAuditStatus").textContent="La inspección visual independiente estará disponible cuando todas las escenas tengan imagen.";$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma educativo por escena, con la representación apropiada al tema.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
-  setPipelineStage("plan",100,data.clarification_required?"Aclaración necesaria":"Plan editorial y storyboard listos",data.clarification_required?"warning":"done");rememberGeneratedPlan(topic,data);currentTopic=topic;jaiRenderedVideoBlob=null;await deleteJaiRecoveryKey("latest-render").catch(()=>{});jaiSceneImages=[];currentPlanData=data;currentPlan=[
+  setPipelineStage("plan",100,data.clarification_required?"Aclaración necesaria":"Plan editorial y storyboard listos",data.clarification_required?"warning":"done");rememberGeneratedPlan(topic,data);currentTopic=topic;jaiRenderedVideoBlob=null;const oldVideoUrl=$("downloadVideo").dataset.objectUrl;if(oldVideoUrl)URL.revokeObjectURL(oldVideoUrl);$("downloadVideo").hidden=true;$("downloadVideo").removeAttribute("href");await deleteJaiRecoveryKey("latest-render").catch(()=>{});jaiSceneImages=[];currentPlanData=data;currentPlan=[
    "J.A.I. VIRAL STUDIO",
    "Tema: "+topic,
    "Categoría: "+readable(data.category),
@@ -1904,7 +1904,8 @@ async function getJaiProductionOrchestrator(){
  jaiProductionOrchestrator=module.createProductionOrchestrator({
   stages:[
    {name:"plan",run:async()=>{
-    if(!currentPlanData||!currentScenes.length){jaiLastStageError=null;await makePlan();}
+    const requestedTopic=$("topic").value.trim();
+    if(!currentPlanData||!currentScenes.length||currentTopic!==requestedTopic){jaiLastStageError=null;await makePlan();}
     if(!currentPlanData||!currentScenes.length||currentPlanData.clarification_required)throw Object.assign(new Error(currentPlanData?.clarification_question||$("status").textContent||"El plan editorial no quedó listo."),jaiLastStageError||{});
     return {ok:true,output:{topic:currentTopic,sceneCount:currentScenes.length}};
    }},
@@ -1945,6 +1946,8 @@ async function getJaiProductionOrchestrator(){
    {name:"render",run:async()=>{
     if(!$("downloadVideo").hidden&&$("downloadVideo").href)return {ok:true,output:{download:$("downloadVideo").download,reused:true}};
     $("renderVideo").click();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    if(!renderRecording&&pipelineState.render.status!=="done")throw new Error($("renderStatus").textContent||"El render no pudo iniciarse.");
     for(let i=0;i<900;i++){
      if(!renderRecording&&pipelineState.render.status==="done"&&!$("downloadVideo").hidden&&$("downloadVideo").href)return {ok:true,output:{download:$("downloadVideo").download,reused:false}};
      if(!renderRecording&&pipelineState.render.status==="error")throw new Error($("renderStatus").textContent||"Falló el render.");
