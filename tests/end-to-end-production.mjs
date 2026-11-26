@@ -332,6 +332,10 @@ try {
   assert.equal(firstCheckpoint.status, "failed");
   assert.equal(firstCheckpoint.error.code, "SIMULATED_INSPECTION");
   assert.equal(counters.narrate, providerCallsBeforeOrchestration.narrate, "Already generated narration must not be requested again by orchestration");
+  assert.equal(counters.generate, providerCallsBeforeOrchestration.generate, "A completed editorial plan must not be generated again");
+  assert.equal(counters.directScenes, providerCallsBeforeOrchestration.directScenes, "A completed direction plan must not be requested again");
+  assert.equal(counters.inspect, providerCallsBeforeOrchestration.inspect + 2, "A simulated audit is retried only because the user explicitly started orchestration");
+  assert.equal(counters.inspectedImages, providerCallsBeforeOrchestration.inspectedImages + 8);
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => (document.querySelector("#autosaveStatus")?.textContent || "").includes("Sesión recuperada automáticamente"), null, { timeout: 15000 });
@@ -339,7 +343,11 @@ try {
   assert.deepEqual(recoveredCheckpoint.completed, firstCheckpoint.completed, "Reload must restore the same completed production stages");
   await page.locator("#runProduction").click();
   await page.waitForFunction(() => (document.querySelector("#status")?.textContent || "").includes("inspección simulada"), null, { timeout: 20000 });
-  assert.deepEqual(counters, providerCallsBeforeOrchestration, "Resuming after reload must not repeat already completed provider calls or trust simulated inspection");
+  assert.equal(counters.generate, providerCallsBeforeOrchestration.generate, "Reload resume must not repeat completed plan generation");
+  assert.equal(counters.directScenes, providerCallsBeforeOrchestration.directScenes, "Reload resume must not repeat completed direction generation");
+  assert.equal(counters.narrate, providerCallsBeforeOrchestration.narrate, "Reload resume must not repeat completed narration generation");
+  assert.equal(counters.inspect, providerCallsBeforeOrchestration.inspect + 4, "Each explicit resume retries the incomplete simulated inspection only");
+  assert.equal(counters.inspectedImages, providerCallsBeforeOrchestration.inspectedImages + 16);
   const resumedCheckpoint = await page.evaluate(async () => (await readJaiRecovery("latest"))?.productionRun || null);
   assert.deepEqual(resumedCheckpoint.completed, firstCheckpoint.completed, "The resumed app must preserve all prior completed stages");
   assert.equal(resumedCheckpoint.error.code, "SIMULATED_INSPECTION");
