@@ -1453,6 +1453,7 @@ async function renderVideo(){
    finished=true;
    if(renderCancelRequested){cleanup();setPipelineStage("render",0,"Render cancelado por el usuario","idle");$("renderStatus").textContent="Render cancelado. No se generó ningún archivo; puedes ajustar el montaje y volver a intentarlo.";return;}
    const actualMime=renderRecorder?.mimeType||mime;
+   window.jaiRenderSourceMime=actualMime;
    const expectedDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
    const audioTrackCount=stream?.getAudioTracks?.().length||0;
    let blob;
