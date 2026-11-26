@@ -1241,6 +1241,18 @@ document.addEventListener("jai:visual-asset-ready",event=>{
  const detail=event.detail||{},asset=detail.asset,prepared=detail.prepared;
  if(!asset||!prepared||!Array.isArray(currentShotPlan)||!currentShotPlan.length)return;
  const host=$("visualScenes");if(!host)return;
+ if(detail.autoAssignShotId){
+  const shotId=String(detail.autoAssignShotId),shot=currentShotPlan.find(item=>String(item.shot_id)===shotId);
+  if(!shot)return;
+  window.jaiVisualAssignments[shotId]={asset,prepared};
+  shot.visual_asset_id=asset.asset_id;shot.visual_source_type=prepared.source_type;
+  if(Array.isArray(timelineState.items))timelineState.items.forEach(item=>{if(String(item.shot_id)===shotId)item.mediaAsset=prepared;});
+  if(typeof stopTimelinePreview==="function")stopTimelinePreview("");
+  if(typeof renderTimeline==="function")renderTimeline();
+  if(typeof updateRenderGate==="function")updateRenderGate();
+  if(typeof scheduleJaiAutosave==="function")scheduleJaiAutosave();
+  return;
+ }
  let panel=$("jaiAssetAssignmentPanel");if(panel)panel.remove();
  panel=document.createElement("section");panel.id="jaiAssetAssignmentPanel";panel.className="scene";
  const title=document.createElement("b");title.textContent="Asignar recurso importado a una toma";
