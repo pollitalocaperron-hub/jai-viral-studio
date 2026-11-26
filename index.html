@@ -1917,7 +1917,10 @@ async function getJaiProductionOrchestrator(){
     return {ok:true,output:{duration:kokoroAudioDuration,sampleRate:kokoroSampleRate}};
    }},
    {name:"inspection",run:async()=>{
-    if(!visualAuditPassed())await inspectVisuals();
+    if(!visualAuditPassed()||visualAuditResults.some(item=>item?.simulated)){
+     visualAuditResults=Array.from({length:visualAuditUnitCount()},()=>null);
+     await inspectVisuals();
+    }
     if(!visualAuditPassed())throw new Error($("visualAuditStatus").textContent||"La inspección visual no aprobó todas las tomas.");
     const simulated=visualAuditResults.some(item=>item?.simulated);
     return {ok:true,inspection_mode:simulated?"simulated":"real",output:{approved:visualAuditResults.length,manual:visualAuditResults.some(item=>item?.manual)}};
@@ -1952,8 +1955,10 @@ async function runJaiProduction(){
  if(jaiProductionRunning||projectRecoveryInProgress||planningInProgress||shotPlanningInProgress||visualGenerationRunning||narrationGenerating||renderRecording)return;
  if(!$("topic").value.trim()&&!currentPlanData){$("topic").focus();$("status").textContent="Escribe el tema antes de crear el vídeo.";return;}
  jaiProductionRunning=true;$("runProduction").disabled=true;$("create").disabled=true;
+ let audioActivation=Promise.resolve();try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(AudioCtx){kokoroAudioContext=kokoroAudioContext||new AudioCtx();audioActivation=kokoroAudioContext.resume();}}catch{}
  $("status").textContent="Producción automática iniciada. J.A.I. guardará cada etapa y podrá reanudarla.";
  try{
+  await audioActivation;
   const orchestrator=await getJaiProductionOrchestrator();
   const result=await orchestrator.run({resume:true,context:{topic:$("topic").value.trim()||currentTopic}});
   if(result.ok){
