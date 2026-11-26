@@ -49,7 +49,7 @@ async function getOpenverseToken() {
   if (!response.ok) throw new Error("Openverse token HTTP " + response.status);
   const data = await response.json();
   cachedOpenverseToken = text(data.access_token, 4000);
-  cachedOpenverseTokenExpiresAt = Date.now() + Math.max(60, Number(data.expires_in) || 3600) * 1000;
+  cachedOpenverseTokenExpiresAt = Date.now() + Math.max(0, (Number(data.expires_in) || 3600) - 60) * 1000;
   return cachedOpenverseToken;
 }
 
