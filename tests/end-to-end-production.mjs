@@ -339,9 +339,9 @@ try {
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForTimeout(3000);
-  const recoveryStatus = await page.locator("#autosaveStatus").innerText();
-  const recoveryDiagnostics = await page.evaluate(() => ({topic:document.querySelector("#topic")?.value||"",status:document.querySelector("#status")?.textContent||"",savedRenderKeyPresent:!!document.querySelector("#downloadVideo")&&!document.querySelector("#downloadVideo").hidden}));
-  assert.match(recoveryStatus,/Sesión recuperada automáticamente/i,"The app must restore the complete project after reload; recovery status: "+recoveryStatus+"; diagnostics: "+JSON.stringify(recoveryDiagnostics)+"; page errors: "+JSON.stringify(errors.slice(-10)));
+  const recoveryStatus = await page.locator("#status").innerText();
+  const recoveryDiagnostics = await page.evaluate(async () => { const saved=await readJaiRecovery("latest-render"); return {topic:document.querySelector("#topic")?.value||"",status:document.querySelector("#status")?.textContent||"",autosave:document.querySelector("#autosaveStatus")?.textContent||"",renderKey:!!saved,renderMime:saved?.blob?.type||null,renderSize:saved?.blob?.size||0,downloadVisible:!!document.querySelector("#downloadVideo")&&!document.querySelector("#downloadVideo").hidden}; });
+  assert.match(recoveryStatus,/J\.A\.I\. recuperó tu último proyecto/i,"The app must restore the complete project after reload; diagnostics: "+JSON.stringify(recoveryDiagnostics)+"; page errors: "+JSON.stringify(errors.slice(-10)));
   await page.waitForFunction(() => { const link=document.querySelector("#downloadVideo"); return !!link&&!link.hidden&&/^blob:/.test(link.href); }, null, { timeout: 15000 });
   const restoredVideo = await page.locator("#downloadVideo").evaluate(async link => { const blob=await (await fetch(link.href)).blob(); return {type:blob.type,size:blob.size}; });
   assert.equal(restoredVideo.type.startsWith("video/mp4"),true,"A technically approved MP4 must survive page reload in local recovery");
