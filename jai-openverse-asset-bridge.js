@@ -53,15 +53,11 @@ async function autoAssignShotAssets(shots) {
         const overlap=titleTerms.filter(term=>shotSet.has(term)).length;
         return {asset,score:overlap/Math.max(1,Math.min(5,shotSet.size))};
       }).sort((a,b)=>b.score-a.score);
-      const match=ranked.find(item=>item.score>=0.2);
+      const match=ranked.find(item=>item.score>=0.35 && ["cc0","pdm","by"].includes(String(item.asset.license||"").toLowerCase()));
       if(!match){report.skipped++;continue;}
       const stored=await importOpenverseAsset(match.asset);
       const prepared=await prepareVisualAsset(stored);
-      window.jaiVisualAssignments=window.jaiVisualAssignments||Object.create(null);
-      window.jaiVisualAssignments[shotId]={asset:stored,prepared};
-      shot.visual_asset_id=stored.asset_id;
-      shot.visual_source_type=prepared.source_type;
-      if(Array.isArray(window.timelineState?.items))window.timelineState.items.forEach(item=>{if(String(item.shot_id)===shotId)item.mediaAsset=prepared;});
+      document.dispatchEvent(new CustomEvent("jai:visual-asset-ready",{detail:{asset:stored,prepared,autoAssignShotId:shotId}}));
       const library=readLibrary();
       if(!library.some(item=>item.id===match.asset.id))library.unshift(match.asset);
       saveLibrary(library);
