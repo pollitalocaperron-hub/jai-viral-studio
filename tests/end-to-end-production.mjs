@@ -157,7 +157,7 @@ try {
     const nativeSupport = MediaRecorder.isTypeSupported.bind(MediaRecorder);
     Object.defineProperty(MediaRecorder, "isTypeSupported", {
       configurable: true,
-      value: type => /^video\\/webm(?:;|$)/i.test(String(type)) && nativeSupport(type)
+      value: type => String(type).toLowerCase().startsWith("video/webm") && nativeSupport(type)
     });
     window.jaiForcedWebmFallbackTest = true;
   });
@@ -301,10 +301,11 @@ try {
     const bytes=new Uint8Array(await blob.arrayBuffer());
     let binary="";
     for(let offset=0;offset<bytes.length;offset+=0x8000)binary+=String.fromCharCode(...bytes.subarray(offset,offset+0x8000));
-    return {mime:blob.type,size:blob.size,extension:link.download.split(".").pop(),base64:btoa(binary),status:document.querySelector("#renderStatus")?.textContent||""};
+    return {mime:blob.type,sourceMime:window.jaiRenderSourceMime||null,size:blob.size,extension:link.download.split(".").pop(),base64:btoa(binary),status:document.querySelector("#renderStatus")?.textContent||""};
   });
   assert.ok(exported.size>20000,"The production button must create a non-trivial video Blob.");
   assert.match(exported.mime,/^video\/mp4(?:;|$)/i,"The production button must create an actual MP4 Blob, never WebM.");
+  assert.ok(String(exported.sourceMime||"").toLowerCase().startsWith("video/webm"),"This run must exercise the forced WebM recording fallback before MP4 transcoding.");
   assert.equal(exported.extension,"mp4","The downloadable filename must use the .mp4 extension.");
   assert.match(exported.status,/Vídeo exportado y control técnico aprobado/,"The download must appear only after the app's own audiovisual QC passes.");
   fs.mkdirSync(path.join(root,"artifacts"),{recursive:true});
