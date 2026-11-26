@@ -39,7 +39,7 @@ export function createProductionOrchestrator({ stages, loadCheckpoint, saveCheck
       } else {
         state.context = { ...(state.context || {}), ...context };
       }
-      if (wasWaitingRetry && Number(previousError?.retryAtMs) > nowMs()) {
+      if (!topicChanged && wasWaitingRetry && Number(previousError?.retryAtMs) > nowMs()) {
         const remaining = Math.ceil((Number(previousError.retryAtMs) - nowMs()) / 1000);
         const error = Object.assign(new Error("El proveedor pidió esperar "+remaining+" segundos antes de reintentar. No se realizó ninguna llamada."), { status: 429, retryAfterSeconds: remaining });
         return { ok: false, state: structuredClone(state), error };
