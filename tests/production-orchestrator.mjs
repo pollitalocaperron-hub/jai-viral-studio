@@ -9,7 +9,7 @@ const memory = () => {
   let value = null;
   return { load: async () => value && structuredClone(value), save: async next => { value = structuredClone(next); }, get: () => structuredClone(value) };
 };
-const build = (handlers, calls, store) => createProductionOrchestrator({ stages: makeStages(handlers, calls), loadCheckpoint: store.load, saveCheckpoint: store.save });
+const build = (handlers, calls, store, options = {}) => createProductionOrchestrator({ stages: makeStages(handlers, calls), loadCheckpoint: store.load, saveCheckpoint: store.save, ...options });
 
 // 1. Simulated full flow completes and checkpoints every stage.
 {
@@ -46,11 +46,18 @@ const build = (handlers, calls, store) => createProductionOrchestrator({ stages:
 // 4. HTTP 429 stops immediately; a later explicit resume makes exactly one new attempt.
 {
   const calls = {}, store = memory();
-  const limited = await build({ director: () => { throw Object.assign(new Error("rate limit"), { status: 429, retryAfterSeconds: 30 }); } }, calls, store).run({ resume: false });
+  let clock = 1000;
+  const options = { nowMs: () => clock };
+  const limited = await build({ director: () => { throw Object.assign(new Error("rate limit"), { status: 429, retryAfterSeconds: 30 }); } }, calls, store, options).run({ resume: false });
   assert.equal(limited.state.status, "waiting_retry");
   assert.equal(calls.director, 1);
   assert.equal(calls.visuals || 0, 0);
-  const resumed = await build({}, calls, store).run({ resume: true });
+  const tooEarly = await build({}, calls, store, options).run({ resume: true });
+  assert.equal(tooEarly.state.status, "waiting_retry");
+  assert.match(tooEarly.error.message, /No se realizó ninguna llamada/);
+  assert.equal(calls.director, 1, "Resume before Retry-After must not repeat the provider call");
+  clock += 30000;
+  const resumed = await build({}, calls, store, options).run({ resume: true });
   assert.equal(resumed.ok, true);
   assert.equal(calls.plan, 1);
   assert.equal(calls.director, 2);
