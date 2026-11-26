@@ -1621,7 +1621,7 @@ async function makePlan(){
  $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";setPipelineStage("plan",5,"Analizando tema y preparando el plan…","running");
  try{
   const response=await fetch(jaiApiUrl("/api/generate"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,format_mode:$("contentMode").value,cta_goal:$("ctaGoal").value,cta_custom:$("ctaCustom").value,learning_memory:buildLearningMemoryContext(),series_bible:prepareSeriesBible(topic)}),signal:AbortSignal.timeout(65000)});
-  const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;throw failure;}
+  const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;failure.status=response.status;failure.retryAfterSeconds=Number(response.headers.get("Retry-After"))||null;throw failure;}
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
   kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;audioEdit={trimStart:0,trimEnd:0,gain:1};audioTrackOffset=0;subtitleTrackOffset=0;captionCues=[];syncAudioEditControls();
   $("kokoroAudio").pause();$("kokoroAudio").removeAttribute("src");$("kokoroAudio").style.display="none";
@@ -1681,7 +1681,7 @@ async function makePlan(){
   renderRetentionMap(normalizedRetention);
   currentPlan=currentPlan.replace(readable(data.retention_map),readable(normalizedRetention));
   $("output").classList.add("show");scheduleJaiAutosave();const durationOk=!!(data.duration_validation&&data.duration_validation.within_tolerance);$("status").textContent=data.clarification_required?("J.A.I. necesita una aclaración antes de producir: "+(data.clarification_question||"añade contexto al tema y vuelve a intentarlo.")):durationOk?"¡Plan generado! Revisa las escenas, verificaciones y control de calidad antes de producir.":"Plan generado, pero la validación editorial detectó problemas de duración o cronología. Corrige el guion y los tiempos antes de producir."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
- }catch(error){setPipelineStage("plan",0,"No se pudo completar el plan","error");const timedOut=error&&(error.name==="TimeoutError"||error.name==="AbortError");const networkFailure=error&&((error.name==="TypeError")||/failed to fetch|networkerror|load failed/i.test(error.message||""));$("status").textContent=timedOut?"La generación superó el tiempo de espera. El motor pudo quedar saturado; inténtalo una vez más.":networkFailure?"No se pudo conectar con el motor de generación de J.A.I. La solicitud no devolvió el guion. Recarga la página e inténtalo una vez más; si persiste, revisaremos el servicio de Vercel.":(error.message||"Ocurrió un error al generar el plan.");if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{planningInProgress=false;$("create").disabled=false;}
+ }catch(error){jaiLastStageError={status:error?.status||error?.statusCode||null,retryAfterSeconds:error?.retryAfterSeconds||null,code:error?.code||null};setPipelineStage("plan",0,"No se pudo completar el plan","error");const timedOut=error&&(error.name==="TimeoutError"||error.name==="AbortError");const networkFailure=error&&((error.name==="TypeError")||/failed to fetch|networkerror|load failed/i.test(error.message||""));$("status").textContent=timedOut?"La generación superó el tiempo de espera. El motor pudo quedar saturado; inténtalo una vez más.":networkFailure?"No se pudo conectar con el motor de generación de J.A.I. La solicitud no devolvió el guion. Recarga la página e inténtalo una vez más; si persiste, revisaremos el servicio de Vercel.":(error.message||"Ocurrió un error al generar el plan.");if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{planningInProgress=false;$("create").disabled=false;}
 }
 
 let kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioDuration=0,kokoroSampleRate=24000,kokoroSource=null,kokoroAudioContext=null;
@@ -1905,7 +1905,7 @@ async function getJaiProductionOrchestrator(){
   stages:[
    {name:"plan",run:async()=>{
     if(!currentPlanData||!currentScenes.length)await makePlan();
-    if(!currentPlanData||!currentScenes.length||currentPlanData.clarification_required)throw new Error(currentPlanData?.clarification_question||$("status").textContent||"El plan editorial no quedó listo.");
+    if(!currentPlanData||!currentScenes.length||currentPlanData.clarification_required)throw Object.assign(new Error(currentPlanData?.clarification_question||$("status").textContent||"El plan editorial no quedó listo."),jaiLastStageError||{});
     return {ok:true,output:{topic:currentTopic,sceneCount:currentScenes.length}};
    }},
    {name:"director",run:async()=>{
