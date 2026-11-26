@@ -9,7 +9,7 @@ export const PRODUCTION_STAGES = Object.freeze([
   "plan", "director", "visuals", "inspection", "narration", "timeline", "render"
 ]);
 
-export function createProductionOrchestrator({ stages, loadCheckpoint, saveCheckpoint, now = () => new Date().toISOString() }) {
+export function createProductionOrchestrator({ stages, loadCheckpoint, saveCheckpoint, now = () => new Date().toISOString(), nowMs = () => Date.now() }) {
   if (!Array.isArray(stages) || !stages.length) throw new TypeError("Se requiere una lista de etapas.");
   if (typeof loadCheckpoint !== "function" || typeof saveCheckpoint !== "function") {
     throw new TypeError("Se requieren funciones de lectura y guardado de checkpoints.");
@@ -39,6 +39,11 @@ export function createProductionOrchestrator({ stages, loadCheckpoint, saveCheck
         state.status = "running";
         state.error = null;
       }
+      if (state.status === "waiting_retry" && Number(state.error?.retryAtMs) > nowMs()) {
+        const remaining = Math.ceil((Number(state.error.retryAtMs) - nowMs()) / 1000);
+        const error = Object.assign(new Error("El proveedor pidió esperar "+remaining+" segundos antes de reintentar. No se realizó ninguna llamada."), { status: 429, retryAfterSeconds: remaining });
+        return { ok: false, state: structuredClone(state), error };
+      }
       await persist(state);
 
       for (const stage of stages) {
@@ -59,7 +64,8 @@ export function createProductionOrchestrator({ stages, loadCheckpoint, saveCheck
         } catch (error) {
           const rateLimited = error?.status === 429 || error?.statusCode === 429 || error?.code === 429;
           state.status = rateLimited ? "waiting_retry" : "failed";
-          state.error = { stage: stage.name, code: error?.code || (rateLimited ? "HTTP_429" : "STAGE_FAILED"), message: String(error?.message || error), retryAfterSeconds: Number(error?.retryAfterSeconds) || null };
+          const retryAfterSeconds = Number(error?.retryAfterSeconds) || (rateLimited ? 30 : null);
+          state.error = { stage: stage.name, code: error?.code || (rateLimited ? "HTTP_429" : "STAGE_FAILED"), message: String(error?.message || error), retryAfterSeconds, retryAtMs: rateLimited ? nowMs() + retryAfterSeconds * 1000 : null };
           await persist(state);
           return { ok: false, state: structuredClone(state), error };
         }
