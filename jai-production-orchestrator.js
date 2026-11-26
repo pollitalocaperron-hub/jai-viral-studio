@@ -32,18 +32,20 @@ export function createProductionOrchestrator({ stages, loadCheckpoint, saveCheck
     try {
       let state = resume ? await loadCheckpoint() : null;
       const topicChanged = state?.context?.topic && context?.topic && state.context.topic !== context.topic;
+      const wasWaitingRetry = state?.status === "waiting_retry";
+      const previousError = state?.error;
       if (!state || state.version !== 1 || !Array.isArray(state.completed) || topicChanged) {
         state = { version: 1, runId: "jai-" + Date.now() + "-" + (++productionRunSequence), status: "running", currentStage: null, completed: [], outputs: {}, attempts: {}, error: null, context: { ...context }, updatedAt: now() };
       } else {
         state.context = { ...(state.context || {}), ...context };
-        state.status = "running";
-        state.error = null;
       }
-      if (state.status === "waiting_retry" && Number(state.error?.retryAtMs) > nowMs()) {
-        const remaining = Math.ceil((Number(state.error.retryAtMs) - nowMs()) / 1000);
+      if (wasWaitingRetry && Number(previousError?.retryAtMs) > nowMs()) {
+        const remaining = Math.ceil((Number(previousError.retryAtMs) - nowMs()) / 1000);
         const error = Object.assign(new Error("El proveedor pidió esperar "+remaining+" segundos antes de reintentar. No se realizó ninguna llamada."), { status: 429, retryAfterSeconds: remaining });
         return { ok: false, state: structuredClone(state), error };
       }
+      state.status = "running";
+      state.error = null;
       await persist(state);
 
       for (const stage of stages) {
