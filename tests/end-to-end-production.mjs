@@ -328,7 +328,7 @@ try {
     return saved?.productionRun || null;
   });
   assert.ok(firstCheckpoint, "The app must persist the orchestration checkpoint alongside the recoverable project");
-  assert.deepEqual(firstCheckpoint.completed, ["plan", "director", "visuals", "narration"], "Completed app stages must be checkpointed before the simulated inspector blocks the run");
+  assert.deepEqual(firstCheckpoint.completed, ["plan", "director", "visuals"], "Completed app stages must be checkpointed before the simulated inspector blocks the run; narration must not start before visual approval");
   assert.equal(firstCheckpoint.status, "failed");
   assert.equal(firstCheckpoint.error.code, "SIMULATED_INSPECTION");
   assert.equal(counters.narrate, providerCallsBeforeOrchestration.narrate, "Already generated narration must not be requested again by orchestration");
