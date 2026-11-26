@@ -151,6 +151,16 @@ let browser;
 try {
   browser = await chromium.launch({ headless: true, ...(process.env.JAI_BROWSER_CHANNEL ? { channel: process.env.JAI_BROWSER_CHANNEL } : {}) });
   const page = await browser.newPage();
+  // Fuerza el camino de compatibilidad WebM aunque Chromium admita MP4 nativo.
+  // La aplicación debe transcodificar ese intermedio a MP4 H.264/AAC antes de ofrecer descarga.
+  await page.addInitScript(() => {
+    const nativeSupport = MediaRecorder.isTypeSupported.bind(MediaRecorder);
+    Object.defineProperty(MediaRecorder, "isTypeSupported", {
+      configurable: true,
+      value: type => /^video\\/webm(?:;|$)/i.test(String(type)) && nativeSupport(type)
+    });
+    window.jaiForcedWebmFallbackTest = true;
+  });
   const errors = [];
   page.on("pageerror", error => errors.push("pageerror: " + error.message));
   page.on("console", message => { if (message.type() === "error") errors.push("console: " + message.text()); });
