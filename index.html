@@ -1926,7 +1926,14 @@ async function getJaiProductionOrchestrator(){
     const ready=jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);
     if(!ready)await generateAIVisuals();
     if(jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image))throw new Error($("visualStatus").textContent||"No se generaron todas las ilustraciones.");
-    return {ok:true,output:{sceneImages:jaiSceneImages.length,renderer:"vector-2d"}};
+    let assetReport={attempted:0,assigned:0,skipped:currentShotPlan.length,errors:[]};
+    for(let wait=0;wait<40&&!window.JAIAutoVisualAssets;wait++)await new Promise(resolve=>setTimeout(resolve,100));
+    if(window.JAIAutoVisualAssets?.assignShotAssets){
+     assetReport=await window.JAIAutoVisualAssets.assignShotAssets(currentShotPlan);
+     if(assetReport.assigned) $("visualStatus").textContent="Ilustraciones base listas; "+assetReport.assigned+" recurso(s) Openverse con licencia y archivo original verificados se asignaron automáticamente a sus tomas.";
+     else $("visualStatus").textContent="Ilustraciones base listas. Openverse no encontró coincidencias suficientemente pertinentes; se conservan los fotogramas 2D generados.";
+    }
+    return {ok:true,output:{sceneImages:jaiSceneImages.length,renderer:"vector-2d",openverse:assetReport}};
    }},
    {name:"inspection",run:async()=>{
     if(!visualAuditPassed()||visualAuditResults.some(item=>item?.simulated)){
