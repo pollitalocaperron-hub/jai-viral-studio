@@ -39,7 +39,7 @@ async function autoAssignShotAssets(shots) {
   for(let index=0;index<list.length;index++){
     const shot=list[index],shotId=String(shot?.shot_id||"");
     if(!shotId||window.jaiVisualAssignments?.[shotId]?.prepared){report.skipped++;continue;}
-    const concepts=[shot.subject,shot.visual_action,shot.setting,shot.environment,shot.background,shot.location,shot.on_screen_text].filter(Boolean).join(" ");
+    const concepts=[shot.subject,shot.visual_subject,shot.visual_state,shot.visual_action,shot.visual_composition,shot.setting,shot.environment,shot.background,shot.location,shot.on_screen_text,shot.continuity_anchor,shot.visual_prompt_en].filter(Boolean).join(" ");
     const terms=[...new Set(visualTerms(concepts))];
     const query=terms.slice(0,7).join(" ");
     if(query.length<3){report.skipped++;continue;}
