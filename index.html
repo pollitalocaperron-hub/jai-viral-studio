@@ -1904,7 +1904,7 @@ async function getJaiProductionOrchestrator(){
  jaiProductionOrchestrator=module.createProductionOrchestrator({
   stages:[
    {name:"plan",run:async()=>{
-    if(!currentPlanData||!currentScenes.length)await makePlan();
+    if(!currentPlanData||!currentScenes.length){jaiLastStageError=null;await makePlan();}
     if(!currentPlanData||!currentScenes.length||currentPlanData.clarification_required)throw Object.assign(new Error(currentPlanData?.clarification_question||$("status").textContent||"El plan editorial no quedó listo."),jaiLastStageError||{});
     return {ok:true,output:{topic:currentTopic,sceneCount:currentScenes.length}};
    }},
