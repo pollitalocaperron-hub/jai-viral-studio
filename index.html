@@ -212,7 +212,7 @@ async function restoreJaiProjectRecord(project){
   jaiSceneImages.forEach((item,sceneIndex)=>{if(!item?.image){if(currentShotPlan.length)currentShotPlan.forEach((shot,shotIndex)=>{if(Number(shot.scene_index)===sceneIndex)visualAuditResults[shotIndex]=null;});else visualAuditResults[sceneIndex]=null;}});
   if(snapshot.audio instanceof Blob){kokoroAudioBlob=snapshot.audio;kokoroAudioDuration=Number(snapshot.audioDuration)||0;kokoroSampleRate=Number(snapshot.audioSampleRate)||24000;kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);$("kokoroAudio").src=kokoroAudioUrl;$("kokoroAudio").style.display="block";$("downloadNarration").href=kokoroAudioUrl;$("downloadNarration").hidden=false;}
   const savedRender=await readJaiRecovery("latest-render");
-  if(savedRender?.topic===snapshot.topic&&savedRender.blob instanceof Blob&&/^video\\/mp4/i.test(savedRender.blob.type)){
+  if(savedRender?.topic===snapshot.topic&&savedRender.blob instanceof Blob&&savedRender.blob.type.startsWith("video/mp4")){
    jaiRenderedVideoBlob=savedRender.blob;
    const oldUrl=$("downloadVideo").dataset.objectUrl;if(oldUrl)URL.revokeObjectURL(oldUrl);
    const videoUrl=URL.createObjectURL(savedRender.blob);$("downloadVideo").dataset.objectUrl=videoUrl;$("downloadVideo").href=videoUrl;$("downloadVideo").download=savedRender.filename||"jai-viral-studio.mp4";$("downloadVideo").textContent="Descargar video MP4";$("downloadVideo").hidden=false;
