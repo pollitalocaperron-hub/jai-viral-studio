@@ -9,7 +9,8 @@ import { resolveVisualStyleProfile } from "../api/visual-style-profiles.js";
 // Guard the worst-case provider + retry + repair path against Vercel's 60s function limit.
 const generationSource = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
 const frontendSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
-assert.match(frontendSource, /const transformChain=\[\.\.\.chain,layer\]/, "Character rendering must apply parent-bone transforms before the child part.");
+assert.match(frontendSource, /motionEngine\?\.resolveLayerMotionChain/, "Character rendering must delegate hierarchical bone transforms to the shared 2D motion engine.");
+assert.match(frontendSource, /motionEngine\.resolveLayerMotionChain\(layer,layers,shot\.animation_steps,p,partParents\)/, "Each character layer must receive the shot keyframes and normalized parent-bone hierarchy.");
 assert.match(frontendSource, /exportedParts\.has\(reusableKey\)/, "PNG export must deduplicate recurring character parts across shots.");
 assert.match(frontendSource, /canvas\.toDataURL\("image\/png"\)/, "Character layer export must encode transparent canvas output as PNG.");
 assert.match(frontendSource, /currentDurationValidation\?\.within_tolerance&&timelineState\.items\.length&&auditReady&&imagesReady&&hasVoice&&animationRendererReady\(\)/, "Final 2D export must require a validated timeline, approved visuals, narration, scene images and animation-ready vector layers.");
