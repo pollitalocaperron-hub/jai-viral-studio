@@ -211,6 +211,13 @@ async function restoreJaiProjectRecord(project){
   const expectedAuditCount=visualAuditUnitCount();if(visualAuditResults.length!==expectedAuditCount)visualAuditResults=Array.from({length:expectedAuditCount},(_,index)=>visualAuditResults[index]||null);
   jaiSceneImages.forEach((item,sceneIndex)=>{if(!item?.image){if(currentShotPlan.length)currentShotPlan.forEach((shot,shotIndex)=>{if(Number(shot.scene_index)===sceneIndex)visualAuditResults[shotIndex]=null;});else visualAuditResults[sceneIndex]=null;}});
   if(snapshot.audio instanceof Blob){kokoroAudioBlob=snapshot.audio;kokoroAudioDuration=Number(snapshot.audioDuration)||0;kokoroSampleRate=Number(snapshot.audioSampleRate)||24000;kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);$("kokoroAudio").src=kokoroAudioUrl;$("kokoroAudio").style.display="block";$("downloadNarration").href=kokoroAudioUrl;$("downloadNarration").hidden=false;}
+  const savedRender=await readJaiRecovery("latest-render");
+  if(savedRender?.topic===snapshot.topic&&savedRender.blob instanceof Blob&&/^video\\/mp4/i.test(savedRender.blob.type)){
+   jaiRenderedVideoBlob=savedRender.blob;
+   const oldUrl=$("downloadVideo").dataset.objectUrl;if(oldUrl)URL.revokeObjectURL(oldUrl);
+   const videoUrl=URL.createObjectURL(savedRender.blob);$("downloadVideo").dataset.objectUrl=videoUrl;$("downloadVideo").href=videoUrl;$("downloadVideo").download=savedRender.filename||"jai-viral-studio.mp4";$("downloadVideo").textContent="Descargar video MP4";$("downloadVideo").hidden=false;
+   $("renderStatus").textContent="MP4 recuperado desde el almacenamiento local · "+(savedRender.blob.size/1048576).toFixed(1)+" MB.";
+  }
   audioEdit=snapshot.audioEdit||{trimStart:0,trimEnd:kokoroAudioDuration,gain:1};audioTrackOffset=Number(snapshot.audioTrackOffset)||0;subtitleTrackOffset=Number(snapshot.subtitleTrackOffset)||0;
   captionCues=Array.isArray(snapshot.captions)?snapshot.captions.map(cue=>({...cue})):[];
   if(Array.isArray(snapshot.timeline)&&snapshot.timeline.length&&(!currentShotPlan.length||snapshot.timeline.every(item=>item.directedShot)))timelineState.items=snapshot.timeline.map(item=>({...item}));
@@ -348,7 +355,7 @@ function renderStory(value){
 }
 
 let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,currentShotPlan=[],currentSceneContracts=[],currentCinematicReady=false,currentCharacterBible=[],currentReusableRigs=[],currentVisualStyleProfileId="",currentSeriesBible=null;
-let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
+let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false,jaiRenderedVideoBlob=null;
 function visualStyleProfileLabel(id){
  return ({
   "cinematic-cartoon-story":"Narrativa animada cinematográfica",
@@ -1464,6 +1471,7 @@ async function renderVideo(){
    cleanup();
    if(!blob.size){setPipelineStage("render",0,"El navegador no entregó datos de vídeo","error");$("renderStatus").textContent="El navegador terminó la grabación sin generar datos. No se creó un archivo descargable. Prueba Chrome actualizado, mantén esta pestaña visible y vuelve a renderizar.";return;}
    const previous=$("downloadVideo").dataset.objectUrl;if(previous)URL.revokeObjectURL(previous);
+   jaiRenderedVideoBlob=blob;
    const url=URL.createObjectURL(blob);$("downloadVideo").dataset.objectUrl=url;
    const extension="mp4";
    $("downloadVideo").href=url;$("downloadVideo").download="jai-viral-studio."+extension;$("downloadVideo").textContent="Descargar video "+extension.toUpperCase();$("downloadVideo").hidden=false;
@@ -1620,7 +1628,7 @@ async function makePlan(){
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Perfil audiovisual · '+escapeHtml(visualStyleProfileLabel(currentVisualStyleProfileId))+'</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("seriesBridge").textContent=readable(data.series_bridge||"Sin continuidad de serie.");$("callToAction").textContent=readable(data.call_to_action||"Sin llamada a la acción.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];currentShotPlan=[];currentCharacterBible=[];$("exportCharacterLayers").disabled=true;$("characterLayerExports").replaceChildren();$("directScenes").disabled=!currentScenes.length;$("directScenesOutput").replaceChildren();$("directScenesStatus").textContent="Plan nuevo: diseña ahora las tomas y acciones animables.";jaiSceneImages=[];visualAuditResults=[];$("inspectVisuals").disabled=true;$("visualAuditStatus").textContent="La inspección visual independiente estará disponible cuando todas las escenas tengan imagen.";$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma educativo por escena, con la representación apropiada al tema.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
-  setPipelineStage("plan",100,data.clarification_required?"Aclaración necesaria":"Plan editorial y storyboard listos",data.clarification_required?"warning":"done");rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan=[
+  setPipelineStage("plan",100,data.clarification_required?"Aclaración necesaria":"Plan editorial y storyboard listos",data.clarification_required?"warning":"done");rememberGeneratedPlan(topic,data);currentTopic=topic;jaiRenderedVideoBlob=null;await deleteJaiRecoveryKey("latest-render").catch(()=>{});jaiSceneImages=[];currentPlanData=data;currentPlan=[
    "J.A.I. VIRAL STUDIO",
    "Tema: "+topic,
    "Categoría: "+readable(data.category),
@@ -1947,6 +1955,7 @@ async function getJaiProductionOrchestrator(){
    jaiProductionRunState=state;
    const snapshot=jaiRecoverySnapshot();
    if(snapshot)await writeJaiRecoveryKey(JAI_AUTOSAVE_KEY,{...snapshot,productionRun:state});
+   if(state.completed.includes("render")&&jaiRenderedVideoBlob)await writeJaiRecoveryKey("latest-render",{topic:currentTopic,savedAt:Date.now(),filename:$("downloadVideo").download,blob:jaiRenderedVideoBlob});
   }
  });
  return jaiProductionOrchestrator;
@@ -1982,6 +1991,7 @@ $("newProject").addEventListener("click",async()=>{
   await new Promise((resolve,reject)=>{
    const tx=db.transaction(JAI_AUTOSAVE_STORE,"readwrite");
    tx.objectStore(JAI_AUTOSAVE_STORE).delete(JAI_AUTOSAVE_KEY);
+   tx.objectStore(JAI_AUTOSAVE_STORE).delete("latest-render");
    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("No se pudo limpiar la recuperación"));
   });
   db.close();
