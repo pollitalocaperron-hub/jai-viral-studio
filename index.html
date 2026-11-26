@@ -517,7 +517,7 @@ async function inspectVisuals(){
    });
    const response=await fetch(jaiApiUrl("/api/inspect-visual"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images,style_profile_id:currentVisualStyleProfileId,topic:currentTopic,script:currentPlanData?.script||""}),signal:AbortSignal.timeout(45000)});
    const data=await readJsonResponse(response,"Inspector visual");
-   if(!response.ok)throw new Error(data.error||"No se pudo completar la inspección visual.");
+   if(!response.ok)throw Object.assign(new Error(data.error||"No se pudo completar la inspección visual."),{status:response.status,retryAfterSeconds:Number(response.headers.get("Retry-After"))||null});
    if(!Array.isArray(data.results)||data.results.length!==batch.length)throw new Error("El inspector no devolvió un resultado por cada toma del lote.");
    if(!data.results.every((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)))throw new Error("El inspector devolvió resultados desordenados o asociados a otra toma; la aprobación se descartó.");
    const simulatedInspection=data.inspection_mode==="simulated";
