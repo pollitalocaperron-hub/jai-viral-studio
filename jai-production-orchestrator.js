@@ -29,9 +29,11 @@ export function createProductionOrchestrator({ stages, loadCheckpoint, saveCheck
     running = true;
     try {
       let state = resume ? await loadCheckpoint() : null;
-      if (!state || state.version !== 1 || !Array.isArray(state.completed)) {
-        state = { version: 1, runId: "jai-" + Date.now(), status: "running", currentStage: null, completed: [], outputs: {}, attempts: {}, error: null, updatedAt: now() };
+      const topicChanged = state?.context?.topic && context?.topic && state.context.topic !== context.topic;
+      if (!state || state.version !== 1 || !Array.isArray(state.completed) || topicChanged) {
+        state = { version: 1, runId: "jai-" + Date.now(), status: "running", currentStage: null, completed: [], outputs: {}, attempts: {}, error: null, context: { ...context }, updatedAt: now() };
       } else {
+        state.context = { ...(state.context || {}), ...context };
         state.status = "running";
         state.error = null;
       }
