@@ -37,9 +37,11 @@ jobs:
           node --check --input-type=module < api/direct-scenes.js
           node --check --input-type=module < api/visual-style-profiles.js
           node --check --input-type=module < api/search-visual-assets.js
+          node --check --input-type=module < jai-2d-motion-engine.js
           node --check --input-type=module < jai-openverse-asset-bridge.js
           node --check --input-type=module < jai-visual-asset-store.js
           node --check --input-type=module < jai-media-renderer.js
+          node --check tests/2d-motion-engine.mjs
           node --check tests/media-renderer-contract.mjs
           node --check tests/visual-assets-contract.mjs
           node --check --input-type=module < worker.js
@@ -77,6 +79,8 @@ jobs:
         run: npm run test:scene-contract
       - name: Test locked visual style and asset library
         run: npm run test:visual-assets
+      - name: Test keyframed 2D motion and character rig propagation
+        run: npm run test:2d-motion
       - name: Test local media import and renderer contracts
         run: npm run test:media-renderer
       - name: Test Cloudflare Worker adapter and shared limiter
