@@ -8,7 +8,7 @@ import { chromium } from "playwright";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const html = fs.readFileSync(path.join(root, "index.html"));
-const counters = { generate: 0, directScenes: 0, narrate: 0, inspect: 0, inspectedImages: 0, images: 0 };
+const counters = { generate: 0, directScenes: 0, narrate: 0, inspect: 0, inspectedImages: 0, images: 0, assetSearch: 0 };
 const sceneTimes = Array.from({ length: 4 }, (_, i) => {
   const start = i * 9, end = start + 9;
   return "0:" + String(start).padStart(2, "0") + " - 0:" + String(end).padStart(2, "0");
@@ -93,6 +93,11 @@ const server = http.createServer((req, res) => {
     let body = {};
     try { body = JSON.parse(Buffer.concat(chunks).toString() || "{}"); } catch {}
     res.setHeader("content-type", "application/json");
+    if (req.url === "/api/search-visual-assets") {
+      counters.assetSearch++;
+      res.end(JSON.stringify({ provider: "Openverse fixture", query: String(body.query || ""), assets: [], total_available: 0, storage: "metadata_only" }));
+      return;
+    }
     if (req.url === "/api/generate") {
       counters.generate++;
       res.end(JSON.stringify(plan)); return;
@@ -181,6 +186,7 @@ try {
   await page.locator("#create").click();
   await page.waitForFunction(() => (document.querySelector("#status")?.textContent || "").includes("Plan generado"), null, { timeout: 15000 });
   assert.equal(counters.generate, 1, "The user action must reach the editorial API exactly once");
+  assert.ok(counters.assetSearch > 0, "The visual production stage must invoke automatic per-shot Openverse search through the local fixture");
   assert.equal(await page.locator("#story .story-card, #story article").count() > 0, true, "The generated storyboard must populate the UI");
 
   // La producción visual debe invocar automáticamente al director de tomas.
