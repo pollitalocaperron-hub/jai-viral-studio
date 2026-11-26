@@ -13,10 +13,11 @@
     "test:scene-contract": "node tests/scene-contract.mjs",
     "test:visual-assets": "node tests/visual-assets-contract.mjs",
     "test:media-renderer": "node tests/media-renderer-contract.mjs",
-    "test:branch": "npm run test:api && npm run test:scene-contract && npm run test:worker && npm run test:netlify && npm run test:visual-assets && npm run test:media-renderer && npm run test:media-browser && npm run test:orchestrator",
+    "test:branch": "npm run test:api && npm run test:scene-contract && npm run test:worker && npm run test:netlify && npm run test:visual-assets && npm run test:2d-motion && npm run test:media-renderer && npm run test:media-browser && npm run test:orchestrator",
     "test:preview": "node tests/deployed-preview.mjs",
     "test:media-browser": "node tests/media-renderer-browser.mjs",
-    "test:orchestrator": "node tests/production-orchestrator.mjs"
+    "test:orchestrator": "node tests/production-orchestrator.mjs",
+    "test:2d-motion": "node tests/2d-motion-engine.mjs"
   },
   "devDependencies": {
     "playwright": "1.56.1"
