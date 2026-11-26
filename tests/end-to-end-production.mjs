@@ -136,9 +136,9 @@ const server = http.createServer((req, res) => {
       counters.inspect++;
       const images = Array.isArray(body.images) ? body.images : [];
       counters.inspectedImages += images.length;
-      res.end(JSON.stringify({ results: images.map((_, scene_index) => ({
+      res.end(JSON.stringify({ inspection_mode: "simulated", results: images.map((_, scene_index) => ({
         scene_index, status: "pass", score: 96,
-        reason: "El fotograma representa el sujeto y la acción solicitados.",
+        reason: "Resultado sintético de fixture; no analiza píxeles ni acredita calidad artística.",
         issues: []
       })) })); return;
     }
@@ -211,6 +211,7 @@ try {
   await page.waitForFunction(() => (document.querySelector("#visualAuditStatus")?.textContent || "").includes("todas las escenas superaron"), null, { timeout: 20000 });
   assert.equal(counters.inspect, 2, "Eight directed shots must be split into two batches of four, matching the inspector API limit");
   assert.equal(counters.inspectedImages, 8, "Every directed shot must be independently inspected before export");
+  assert.match(await page.locator("#visualAuditStatus").innerText(), /PRUEBA SIMULADA.*no acredita calidad artística real/i, "Fixture inspection must be visibly distinguished from real visual quality approval");
   assert.equal(await page.locator("#renderVideo").isEnabled(), true, "An audited 2D motion-graphics timeline with narration must unlock final export");
   assert.equal(await page.locator("#downloadVideo").isVisible(), false, "The download link appears only after render and technical QC complete");
   assert.match(await page.locator("#renderStatus").innerText(), /Control de calidad aprobado|puede exportarse/i, "The UI confirms the audited 2D render is ready");
