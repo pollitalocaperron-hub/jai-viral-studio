@@ -1064,19 +1064,10 @@ function paintVectorShot(ctx,w,h,shot,progress){
  ctx.scale(w/720,h/1280);
  const partParents={head:"torso",hair:"head",eyes:"head",mouth:"head",face:"head",upper_arm:"torso",arm_upper:"torso",forearm:"upper_arm",lower_arm:"upper_arm",hand:"forearm",upper_leg:"torso",thigh:"torso",lower_leg:"upper_leg",shin:"upper_leg",foot:"lower_leg"};
  const normalizePart=value=>String(value||"").toLowerCase().replace(/[ -]/g,"_");
- const transformFor=layer=>{
-  let transform={x:0,y:0,rotation:0,scale:1,opacity:1};
-  const steps=(Array.isArray(shot.animation_steps)?shot.animation_steps:[]).filter(step=>step.target_id===layer.id).sort((a,b)=>Number(a.start_progress)-Number(b.start_progress));
-  if(!steps.length)return transform;
-  let selected=steps.find(step=>p>=Number(step.start_progress)&&p<=Number(step.end_progress));
-  if(!selected){const completed=steps.filter(step=>p>Number(step.end_progress));selected=p<Number(steps[0].start_progress)?steps[0]:(completed[completed.length-1]||steps[0]);}
-  const a=selected.from_transform||transform,b=selected.to_transform||a;
-  const raw=Math.max(0,Math.min(1,(p-Number(selected.start_progress))/Math.max(.001,Number(selected.end_progress)-Number(selected.start_progress))));
-  const t=raw*raw*(3-2*raw);
-  transform={x:interpolateNumber(a.x,b.x,t),y:interpolateNumber(a.y,b.y,t),rotation:interpolateNumber(a.rotation,b.rotation,t),scale:interpolateNumber(a.scale,b.scale,t),opacity:interpolateNumber(a.opacity,b.opacity,t)};
-  if(p<Number(selected.start_progress))transform={...a};if(p>Number(selected.end_progress))transform={...b};
-  return transform;
- };
+ const motionEngine=window.JAI2DMotionEngine;
+ const transformFor=layer=>motionEngine?.resolveMotionTransform
+  ?motionEngine.resolveMotionTransform((Array.isArray(shot.animation_steps)?shot.animation_steps:[]).filter(step=>step.target_id===layer.id),p)
+  :{x:0,y:0,rotation:0,scale:1,opacity:1};
  const applyBoneTransform=(bone,transform)=>{
   const px=Number(bone.pivot_x)||360,py=Number(bone.pivot_y)||640;
   ctx.translate(px+transform.x,py+transform.y);ctx.rotate(transform.rotation*Math.PI/180);ctx.scale(transform.scale,transform.scale);ctx.translate(-px,-py);
@@ -1092,15 +1083,10 @@ function paintVectorShot(ctx,w,h,shot,progress){
   return rank(a.layer)-rank(b.layer)||a.index-b.index;
  });
  for(const entry of orderedLayers){
-  const layer=entry.layer,path=paths[entry.index],chain=[],seen=new Set([layer.id]);
-  if(layer.character_id&&layer.part_id){
-   let parentPart=partParents[normalizePart(layer.part_id)],depth=0;
-   while(parentPart&&depth++<8){
-    const parent=layers.find(candidate=>candidate.character_id===layer.character_id&&normalizePart(candidate.part_id)===parentPart&&!seen.has(candidate.id));
-    if(!parent)break;chain.unshift(parent);seen.add(parent.id);parentPart=partParents[normalizePart(parent.part_id)];
-   }
-  }
-  const transformChain=[...chain,layer].map(bone=>({bone,transform:transformFor(bone)}));
+  const layer=entry.layer,path=paths[entry.index];
+  const transformChain=motionEngine?.resolveLayerMotionChain
+   ?motionEngine.resolveLayerMotionChain(layer,layers,shot.animation_steps,p,partParents)
+   :[{bone:layer,transform:transformFor(layer)}];
   ctx.save();for(const entry of transformChain)applyBoneTransform(entry.bone,entry.transform);
   ctx.globalAlpha=Math.max(0,Math.min(1,transformChain.reduce((alpha,entry)=>alpha*Number(entry.transform.opacity),1)));ctx.lineJoin="round";ctx.lineCap="round";
   ctx.shadowColor="rgba(24,38,54,.16)";ctx.shadowBlur=8;ctx.shadowOffsetY=5;
