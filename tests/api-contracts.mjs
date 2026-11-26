@@ -4,6 +4,7 @@ import generateHandler from "../api/generate.js";
 import narrateHandler from "../api/narrate.js";
 import inspectVisualHandler from "../api/inspect-visual.js";
 import directScenesHandler from "../api/direct-scenes.js";
+import { resolveLayerMotionChain, resolveMotionTransform } from "../jai-2d-motion-engine.js";
 import { resolveVisualStyleProfile } from "../api/visual-style-profiles.js";
 
 // Guard the worst-case provider + retry + repair path against Vercel's 60s function limit.
@@ -259,6 +260,22 @@ try {
     assert.equal(res.body.scene_contracts[0].visual.source_type, "vector_scene");
     assert.equal(res.body.shots[0].shot_id, "shot-01");
     assert.equal(res.body.shots[0].layers.length, 3, "Each shot must contain multiple independently rendered vector layers");
+    // Exercise the real director response through the exact shared transform resolver used by the canvas renderer.
+    const directedShot = res.body.shots[0];
+    const characterHead = directedShot.layers.find(layer => layer.part_id === "head");
+    const characterTorso = directedShot.layers.find(layer => layer.part_id === "torso");
+    assert.ok(characterHead && characterTorso, "The director must preserve character part IDs through normalization");
+    assert.equal(directedShot.animation_steps.find(step => step.target_id === characterHead.id).to_transform.opacity, 1,
+      "Normalized keyframes must retain numeric transform values for the renderer");
+    const rigChain = resolveLayerMotionChain(characterHead, directedShot.layers, directedShot.animation_steps, 0.5,
+      { head: "torso", hair: "head", eyes: "head", mouth: "head", face: "head", upper_arm: "torso", arm_upper: "torso", forearm: "upper_arm", lower_arm: "upper_arm", hand: "forearm", upper_leg: "torso", thigh: "torso", lower_leg: "upper_leg", shin: "upper_leg", foot: "lower_leg" });
+    assert.deepEqual(rigChain.map(item => item.bone.id), [characterTorso.id, characterHead.id],
+      "A director-generated head layer must inherit its matching character torso before rendering");
+    assert.equal(rigChain[0].transform.y, -70, "The parent bone must receive its own director keyframe");
+    assert.equal(rigChain[1].transform.opacity, 1, "The child layer must receive its own director keyframe");
+    assert.deepEqual(resolveMotionTransform(directedShot.animation_steps.filter(step => step.target_id === characterHead.id), 0.5),
+      { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 },
+      "The director's reveal keyframe must resolve to the renderer's numeric transform contract");
     assert.equal(res.body.reusable_rigs.length, 1, "Repeated character parts must be consolidated into one reusable rig");
     assert.equal(res.body.character_bible.length, 1, "The character bible must only contain characters present in actual shot layers");
     assert.equal(res.body.character_bible[0].character_id, "hero");
