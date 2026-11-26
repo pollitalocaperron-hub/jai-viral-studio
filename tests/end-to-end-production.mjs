@@ -341,7 +341,7 @@ try {
   await page.waitForFunction(() => (document.querySelector("#autosaveStatus")?.textContent || "").includes("Sesión recuperada automáticamente"), null, { timeout: 15000 });
   await page.waitForFunction(() => { const link=document.querySelector("#downloadVideo"); return !!link&&!link.hidden&&/^blob:/.test(link.href); }, null, { timeout: 15000 });
   const restoredVideo = await page.locator("#downloadVideo").evaluate(async link => { const blob=await (await fetch(link.href)).blob(); return {type:blob.type,size:blob.size}; });
-  assert.match(restoredVideo.type,/^video\\/mp4/i,"A technically approved MP4 must survive page reload in local recovery");
+  assert.equal(restoredVideo.type.startsWith("video/mp4"),true,"A technically approved MP4 must survive page reload in local recovery");
   assert.ok(restoredVideo.size>20000,"Recovered MP4 must retain its actual binary data");
   const recoveredCheckpoint = await page.evaluate(async () => (await readJaiRecovery("latest"))?.productionRun || null);
   assert.deepEqual(recoveredCheckpoint.completed, firstCheckpoint.completed, "Reload must restore the same completed production stages");
