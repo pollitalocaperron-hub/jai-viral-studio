@@ -148,7 +148,7 @@ function validateShots(shots, story) {
     for (const key of required) if (!clean(shot[key], key === "visual_prompt_en" ? 1800 : 700)) return "La toma " + (index + 1) + " no incluye " + key + ".";
     if (clean(shot.visual_prompt_en, 1800).split(/\s+/).length < 25) return "El prompt de la toma " + (index + 1) + " necesita describir un fotograma concreto con mayor precisión.";
     if (!/^#[0-9a-fA-F]{6}$/.test(clean(shot.background_color, 16))) return "La toma " + (index + 1) + " necesita un color de fondo hexadecimal válido.";
-    if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 10) return "La toma " + (index + 1) + " necesita entre 3 y 6 capas vectoriales independientes.";
+    if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 6) return "La toma " + (index + 1) + " necesita entre 3 y 6 capas vectoriales independientes.";
     const layerIds = new Set(), layerPaths = new Set(), layerDescriptions = new Set(), subjectBounds = [];
     for (const [layerIndex, layer] of shot.layers.entries()) {
       const id = clean(layer?.id, 60), path = typeof layer?.path_d === "string" ? layer.path_d.trim() : "";
@@ -175,7 +175,7 @@ function validateShots(shots, story) {
     if (!subjectBounds.length || !subjectBounds.some(bounds => bounds.areaRatio >= 0.06 && bounds.areaRatio <= 0.78)) {
       return "La toma " + (index + 1) + " no tiene un sujeto principal con tamaño legible: la silueta debe ocupar entre 6% y 78% del lienzo.";
     }
-    if (!Array.isArray(shot.animation_steps) || shot.animation_steps.length < 2 || shot.animation_steps.length > 4) return "La toma " + (index + 1) + " necesita entre 2 y 4 acciones de animación.";
+    if (!Array.isArray(shot.animation_steps) || shot.animation_steps.length < 2 || shot.animation_steps.length > 3) return "La toma " + (index + 1) + " necesita entre 2 y 3 acciones de animación.";
     const validTransform = value => value && ["x", "y", "rotation", "scale", "opacity"].every(key => Number.isFinite(Number(value[key]))) &&
       Number(value.x) >= -300 && Number(value.x) <= 300 && Number(value.y) >= -300 && Number(value.y) <= 300 &&
       Number(value.rotation) >= -360 && Number(value.rotation) <= 360 && Number(value.scale) >= 0.2 && Number(value.scale) <= 3 &&
