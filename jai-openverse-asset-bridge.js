@@ -1,4 +1,6 @@
 import { importOpenverseAsset, importLocalMediaFile } from "./jai-visual-asset-store.js";
+import { easeMotionProgress, interpolateMotionTransform, resolveMotionTransform, resolveLayerMotionChain } from "./jai-2d-motion-engine.js";
+window.JAI2DMotionEngine = { easeMotionProgress, interpolateMotionTransform, resolveMotionTransform, resolveLayerMotionChain };
 import { prepareVisualAsset, prepareVisualSequence, drawPreparedVisualNow, awaitPreparedVisualFrame } from "./jai-media-renderer.js";
 window.JAIMediaRenderer = { prepareVisualAsset, prepareVisualSequence, drawPreparedVisualNow, awaitPreparedVisualFrame };
 const API_BASE = location.hostname === "pollitalocaperron-hub.github.io" ? "https://jai-viral-studio.vercel.app" : "";
