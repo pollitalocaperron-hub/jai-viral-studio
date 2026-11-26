@@ -1472,6 +1472,7 @@ async function renderVideo(){
    if(!blob.size){setPipelineStage("render",0,"El navegador no entregó datos de vídeo","error");$("renderStatus").textContent="El navegador terminó la grabación sin generar datos. No se creó un archivo descargable. Prueba Chrome actualizado, mantén esta pestaña visible y vuelve a renderizar.";return;}
    const previous=$("downloadVideo").dataset.objectUrl;if(previous)URL.revokeObjectURL(previous);
    jaiRenderedVideoBlob=blob;
+   try{await writeJaiRecoveryKey("latest-render",{topic:currentTopic,savedAt:Date.now(),filename:"jai-viral-studio.mp4",blob});}catch(storageError){$("renderStatus").textContent+=" El MP4 no pudo guardarse para recuperación local: "+(storageError?.message||"almacenamiento no disponible")+". La descarga actual sigue disponible.";}
    const url=URL.createObjectURL(blob);$("downloadVideo").dataset.objectUrl=url;
    const extension="mp4";
    $("downloadVideo").href=url;$("downloadVideo").download="jai-viral-studio."+extension;$("downloadVideo").textContent="Descargar video "+extension.toUpperCase();$("downloadVideo").hidden=false;
