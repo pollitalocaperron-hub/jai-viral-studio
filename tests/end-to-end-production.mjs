@@ -319,8 +319,32 @@ try {
     assert.ok(Number(probeData.format?.duration)>1,"FFprobe must report a valid media duration");
   }
   fs.writeFileSync(path.join(root,"artifacts","jai-production-export.json"),JSON.stringify({mime:exported.mime,size:exported.size,status:exported.status,ffprobe:probeData},null,2));
+  // Exercise the app-integrated orchestrator and durable resume after a simulated QA rejection.
+  const providerCallsBeforeOrchestration = { ...counters };
+  await page.locator("#runProduction").click();
+  await page.waitForFunction(() => (document.querySelector("#status")?.textContent || "").includes("inspección simulada"), null, { timeout: 20000 });
+  const firstCheckpoint = await page.evaluate(async () => {
+    const saved = await readJaiRecovery("latest");
+    return saved?.productionRun || null;
+  });
+  assert.ok(firstCheckpoint, "The app must persist the orchestration checkpoint alongside the recoverable project");
+  assert.deepEqual(firstCheckpoint.completed, ["plan", "director", "visuals", "narration"], "Completed app stages must be checkpointed before the simulated inspector blocks the run");
+  assert.equal(firstCheckpoint.status, "failed");
+  assert.equal(firstCheckpoint.error.code, "SIMULATED_INSPECTION");
+  assert.equal(counters.narrate, providerCallsBeforeOrchestration.narrate, "Already generated narration must not be requested again by orchestration");
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => (document.querySelector("#autosaveStatus")?.textContent || "").includes("Sesión recuperada automáticamente"), null, { timeout: 15000 });
+  const recoveredCheckpoint = await page.evaluate(async () => (await readJaiRecovery("latest"))?.productionRun || null);
+  assert.deepEqual(recoveredCheckpoint.completed, firstCheckpoint.completed, "Reload must restore the same completed production stages");
+  await page.locator("#runProduction").click();
+  await page.waitForFunction(() => (document.querySelector("#status")?.textContent || "").includes("inspección simulada"), null, { timeout: 20000 });
+  assert.deepEqual(counters, providerCallsBeforeOrchestration, "Resuming after reload must not repeat already completed provider calls or trust simulated inspection");
+  const resumedCheckpoint = await page.evaluate(async () => (await readJaiRecovery("latest"))?.productionRun || null);
+  assert.deepEqual(resumedCheckpoint.completed, firstCheckpoint.completed, "The resumed app must preserve all prior completed stages");
+  assert.equal(resumedCheckpoint.error.code, "SIMULATED_INSPECTION");
   assert.deepEqual(errors, [], "The integrated browser flow must not produce uncaught JavaScript errors");
-  console.log("PASS: complete browser production flow, in-app audiovisual QC and FFprobe stream/dimension/duration validation.");
+  console.log("PASS: full browser production, MP4/FFprobe QC, app-level checkpoint persistence, reload recovery, no duplicate completed calls, and simulated-inspection rejection.");
 } finally {
   if (browser) await browser.close();
   await new Promise(resolve => server.close(resolve));
