@@ -1981,7 +1981,7 @@ async function runJaiProduction(){
    $("renderStatus").scrollIntoView?.({behavior:"smooth",block:"center"});
   }else{
    const error=result.state.error;
-   $("status").textContent=(result.state.status==="waiting_retry"?"Producción pausada por límite temporal (429). ":"Producción detenida y guardada. ")+(error?.message||"Error en "+error?.stage)+". Pulsa «Crear vídeo automáticamente / Reanudar» para continuar desde el checkpoint.";
+   $("status").textContent=(result.state.status==="waiting_retry"?"Producción pausada por límite temporal (429). ":"Producción detenida y guardada. ")+(result.error?.message||error?.message||"Error en "+error?.stage)+". Pulsa «Crear vídeo automáticamente / Reanudar» para continuar desde el checkpoint.";
   }
  }catch(error){$("status").textContent="No se pudo iniciar el orquestador: "+(error?.message||String(error));}
  finally{jaiProductionRunning=false;$("runProduction").disabled=false;$("create").disabled=false;}
