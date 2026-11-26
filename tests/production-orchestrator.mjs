@@ -67,4 +67,16 @@ const build = (handlers, calls, store) => createProductionOrchestrator({ stages:
   assert.equal(calls.narration || 0, 0);
 }
 
-console.log("Production orchestrator contract: 5 scenarios passed.");
+// 6. A different requested topic must not inherit another project's completed stages.
+{
+  const calls = {}, store = memory(), orchestrator = build({}, calls, store);
+  const first = await orchestrator.run({ resume: false, context: { topic: "Tema A" } });
+  assert.equal(first.ok, true);
+  const second = await orchestrator.run({ resume: true, context: { topic: "Tema B" } });
+  assert.equal(second.ok, true);
+  assert.notEqual(second.state.runId, first.state.runId);
+  for (const name of PRODUCTION_STAGES) assert.equal(calls[name], 2, name + " must run for the new topic");
+  assert.equal(second.state.context.topic, "Tema B");
+}
+
+console.log("Production orchestrator contract: 6 scenarios passed.");
