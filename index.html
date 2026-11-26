@@ -266,6 +266,13 @@ async function restoreJaiRecovery(){
    $("downloadNarration").href=kokoroAudioUrl;
    $("downloadNarration").hidden=false;
   }
+  const savedRender=await readJaiRecovery("latest-render");
+  if(savedRender?.topic===snapshot.topic&&savedRender.blob instanceof Blob&&savedRender.blob.type.startsWith("video/mp4")){
+   jaiRenderedVideoBlob=savedRender.blob;
+   const oldUrl=$("downloadVideo").dataset.objectUrl;if(oldUrl)URL.revokeObjectURL(oldUrl);
+   const videoUrl=URL.createObjectURL(savedRender.blob);$("downloadVideo").dataset.objectUrl=videoUrl;$("downloadVideo").href=videoUrl;$("downloadVideo").download=savedRender.filename||"jai-viral-studio.mp4";$("downloadVideo").textContent="Descargar video MP4";$("downloadVideo").hidden=false;
+   $("renderStatus").textContent="MP4 recuperado desde el almacenamiento local · "+(savedRender.blob.size/1048576).toFixed(1)+" MB.";
+  }
   audioEdit=snapshot.audioEdit||{trimStart:0,trimEnd:kokoroAudioDuration,gain:1};
   audioTrackOffset=Number(snapshot.audioTrackOffset)||0;
   subtitleTrackOffset=Number(snapshot.subtitleTrackOffset)||0;
