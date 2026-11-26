@@ -1919,14 +1919,6 @@ async function getJaiProductionOrchestrator(){
     if(jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image))throw new Error($("visualStatus").textContent||"No se generaron todas las ilustraciones.");
     return {ok:true,output:{sceneImages:jaiSceneImages.length,renderer:"vector-2d"}};
    }},
-   {name:"narration",run:async()=>{
-    if(!(kokoroAudioBlob&&kokoroAudioDuration>0)){
-     jaiLastStageError=null;$("generateNarration").click();
-     for(let i=0;i<240&&narrationGenerating;i++)await new Promise(resolve=>setTimeout(resolve,500));
-    }
-    if(!(kokoroAudioBlob&&kokoroAudioDuration>0))throw Object.assign(new Error($("kokoroStatus").textContent||"La narración no se completó."),jaiLastStageError||{});
-    return {ok:true,output:{duration:kokoroAudioDuration,sampleRate:kokoroSampleRate}};
-   }},
    {name:"inspection",run:async()=>{
     if(!visualAuditPassed()||visualAuditResults.some(item=>item?.simulated)){
      visualAuditResults=Array.from({length:visualAuditUnitCount()},()=>null);
@@ -1935,6 +1927,14 @@ async function getJaiProductionOrchestrator(){
     if(!visualAuditPassed())throw Object.assign(new Error($("visualAuditStatus").textContent||"La inspección visual no aprobó todas las tomas."),jaiLastStageError||{});
     const simulated=visualAuditResults.some(item=>item?.simulated);
     return {ok:true,inspection_mode:simulated?"simulated":"real",output:{approved:visualAuditResults.length,manual:visualAuditResults.some(item=>item?.manual)}};
+   }},
+   {name:"narration",run:async()=>{
+    if(!(kokoroAudioBlob&&kokoroAudioDuration>0)){
+     jaiLastStageError=null;$("generateNarration").click();
+     for(let i=0;i<240&&narrationGenerating;i++)await new Promise(resolve=>setTimeout(resolve,500));
+    }
+    if(!(kokoroAudioBlob&&kokoroAudioDuration>0))throw Object.assign(new Error($("kokoroStatus").textContent||"La narración no se completó."),jaiLastStageError||{});
+    return {ok:true,output:{duration:kokoroAudioDuration,sampleRate:kokoroSampleRate}};
    }},
    {name:"timeline",run:async()=>{
     if(!timelineState.items.length)buildTimeline();
