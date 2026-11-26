@@ -22,6 +22,9 @@ assert.match(direct, /const characterBible = buildCharacterBible\(normalized\)/)
 assert.match(direct, /character_bible: characterBible/);
 assert.match(direct, /CALIDAD DE ILUSTRACIÓN OBLIGATORIA/);
 assert.match(direct, /No uses un rectángulo, círculo, cápsula o polígono genérico/);
+assert.match(direct, /shot\.layers\.length > 6/, "The director contract must reject more than six vector layers");
+assert.match(direct, /shot\.animation_steps\.length > 3/, "The director contract must reject more than three animation steps");
+assert.match(direct, /entre 2 y 3 acciones de animación/);
 assert.match(direct, /Cada toma debe ser visualmente distinta según el avance narrativo/);
 assert.doesNotMatch(direct, /const characterBible\s*=\s*parsed\?\.character_bible/);
 
