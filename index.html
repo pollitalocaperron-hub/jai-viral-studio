@@ -355,7 +355,7 @@ function renderStory(value){
 }
 
 let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,currentShotPlan=[],currentSceneContracts=[],currentCinematicReady=false,currentCharacterBible=[],currentReusableRigs=[],currentVisualStyleProfileId="",currentSeriesBible=null;
-let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false,jaiRenderedVideoBlob=null;
+let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false,jaiRenderedVideoBlob=null,jaiLastStageError=null;
 function visualStyleProfileLabel(id){
  return ({
   "cinematic-cartoon-story":"Narrativa animada cinematográfica",
@@ -399,7 +399,7 @@ async function designAnimationShots(){
  try{
   const response=await fetch(jaiApiUrl("/api/direct-scenes"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:currentTopic,script:currentPlanData.script,story:currentScenes,retention_map:currentRetentionMap,style_profile_id:currentVisualStyleProfileId,shot_plan:Array.isArray(currentShotPlan)&&currentShotPlan.length?currentShotPlan:null}),signal:AbortSignal.timeout(55000)});
   const data=await readJsonResponse(response,"Director vectorial de escenas");
-  if(!response.ok){if(response.status===429){const wait=Math.max(5,Math.min(90,Number(data.retryAfterSeconds)||30));$("directScenesStatus").textContent="Límite temporal del motor gratuito. Proyecto guardado. Esperando "+wait+" segundos sin repetir llamadas…";for(let remaining=wait;remaining>0;remaining--){$("directScenesStatus").textContent="Límite temporal del motor gratuito. Proyecto guardado. Puedes reintentar el director en "+remaining+" s; no se regenerará el guion ni se llamará a otro proveedor.";await new Promise(resolve=>setTimeout(resolve,1000));}throw new Error("La espera terminó. Puedes reintentar únicamente el director; el guion y storyboard se conservaron.");}throw new Error(data.error||"No se pudo diseñar la secuencia de tomas.");}
+  if(!response.ok){if(response.status===429){const retryAfterSeconds=Math.max(5,Math.min(90,Number(data.retryAfterSeconds)||Number(response.headers.get("Retry-After"))||30));throw Object.assign(new Error("Límite temporal del motor gratuito (429). Proyecto guardado; reanuda en aproximadamente "+retryAfterSeconds+" segundos. No se repetirá la llamada automáticamente."),{status:429,retryAfterSeconds});}throw Object.assign(new Error(data.error||"No se pudo diseñar la secuencia de tomas."),{status:response.status});}
   if(data.vector_preview_ready!==true||!Array.isArray(data.shots)||data.shots.length<currentScenes.length*2)throw new Error("El motor activo no devolvió un plan completo de capas vectoriales independientes.");
   const validShots=data.shots.every(shot=>
    Array.isArray(shot.layers)&&shot.layers.length>=3&&
@@ -430,6 +430,7 @@ async function designAnimationShots(){
   scheduleJaiAutosave();
   return true;
  }catch(error){
+  jaiLastStageError={status:error?.status||error?.statusCode||null,retryAfterSeconds:error?.retryAfterSeconds||null,code:error?.code||null};
   $("directScenesStatus").textContent="No se pudo completar el diseño vectorial: "+error.message;
   return false;
  }finally{shotPlanningInProgress=false;button.disabled=false;$("makeVisuals").disabled=false;}
@@ -1808,7 +1809,7 @@ $("generateNarration").addEventListener("click",async()=>{
   $("kokoroStatus").textContent="Generando narración con Gemini TTS gratuito. Si alcanza su cuota, se conservará el proyecto y se podrá reintentar más tarde; no se activará otro proveedor.";setTaskProgress("kokoroStatus",0,"Generando voz neuronal…","indeterminate");
   const response=await fetch(jaiApiUrl("/api/narrate"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voice:$("kokoroVoice").value}),signal:AbortSignal.timeout(58000)});
   const data=await readJsonResponse(response,"Generador de voz Gemini");
-  if(!response.ok)throw new Error(data.error||"No se pudo generar la narración.");
+  if(!response.ok)throw Object.assign(new Error(data.error||"No se pudo generar la narración."),{status:response.status,retryAfterSeconds:Number(response.headers.get("Retry-After"))||null});
   if(!data.audioBase64)throw new Error("El servicio no devolvió audio.");
   kokoroSampleRate=data.sampleRate||24000;
   kokoroAudioBlob=makePcmWavBlob(data.audioBase64,kokoroSampleRate);
@@ -1821,7 +1822,7 @@ $("generateNarration").addEventListener("click",async()=>{
   $("kokoroAudio").src=kokoroAudioUrl;$("kokoroAudio").style.display="block";syncAudioEditControls();
   $("downloadNarration").href=kokoroAudioUrl;$("downloadNarration").hidden=false;scheduleJaiAutosave();
   setPipelineStage("voice",100,"Narración lista · "+kokoroAudioDuration.toFixed(1)+" s","done");$("kokoroStatus").textContent="Narración lista: "+kokoroAudioDuration.toFixed(1)+" segundos · "+(data.provider||"motor gratuito")+". Ya puedes escucharla, descargarla e integrarla en el video final.";setTaskProgress("kokoroStatus",100,"Narración completada · "+kokoroAudioDuration.toFixed(1)+" s");
- }catch(error){$("kokoroStatus").textContent="No se pudo generar la voz: "+(error.message||"error desconocido");setTaskProgress("kokoroStatus",0,"Generación de voz fallida");}
+ }catch(error){jaiLastStageError={status:error?.status||error?.statusCode||null,retryAfterSeconds:error?.retryAfterSeconds||null,code:error?.code||null};$("kokoroStatus").textContent="No se pudo generar la voz: "+(error.message||"error desconocido");setTaskProgress("kokoroStatus",0,"Generación de voz fallida");}
  finally{narrationGenerating=false;button.disabled=false;}
 });
 $("audioTrimStart").addEventListener("change",()=>{audioEdit.trimStart=Number($("audioTrimStart").value)||0;if(audioEdit.trimEnd>0&&audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();updateRenderGate();scheduleJaiAutosave();});
@@ -1907,7 +1908,7 @@ async function getJaiProductionOrchestrator(){
     return {ok:true,output:{topic:currentTopic,sceneCount:currentScenes.length}};
    }},
    {name:"director",run:async()=>{
-    if(!currentShotPlan.length){const ok=await designAnimationShots();if(!ok)throw new Error($("directScenesStatus").textContent||"El director no completó las tomas.");}
+    if(!currentShotPlan.length){jaiLastStageError=null;const ok=await designAnimationShots();if(!ok)throw Object.assign(new Error($("directScenesStatus").textContent||"El director no completó las tomas."),jaiLastStageError||{});}
     if(!currentShotPlan.length)throw new Error("El director no produjo tomas utilizables.");
     return {ok:true,output:{shotCount:currentShotPlan.length,style:currentVisualStyleProfileId}};
    }},
@@ -1919,10 +1920,10 @@ async function getJaiProductionOrchestrator(){
    }},
    {name:"narration",run:async()=>{
     if(!(kokoroAudioBlob&&kokoroAudioDuration>0)){
-     $("generateNarration").click();
+     jaiLastStageError=null;$("generateNarration").click();
      for(let i=0;i<240&&narrationGenerating;i++)await new Promise(resolve=>setTimeout(resolve,500));
     }
-    if(!(kokoroAudioBlob&&kokoroAudioDuration>0))throw new Error($("kokoroStatus").textContent||"La narración no se completó.");
+    if(!(kokoroAudioBlob&&kokoroAudioDuration>0))throw Object.assign(new Error($("kokoroStatus").textContent||"La narración no se completó."),jaiLastStageError||{});
     return {ok:true,output:{duration:kokoroAudioDuration,sampleRate:kokoroSampleRate}};
    }},
    {name:"inspection",run:async()=>{
