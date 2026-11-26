@@ -186,13 +186,20 @@ try {
   await page.locator("#create").click();
   await page.waitForFunction(() => (document.querySelector("#status")?.textContent || "").includes("Plan generado"), null, { timeout: 15000 });
   assert.equal(counters.generate, 1, "The user action must reach the editorial API exactly once");
-  assert.ok(counters.assetSearch > 0, "The visual production stage must invoke automatic per-shot Openverse search through the local fixture");
   assert.equal(await page.locator("#story .story-card, #story article").count() > 0, true, "The generated storyboard must populate the UI");
 
   // La producción visual debe invocar automáticamente al director de tomas.
   await page.locator("#makeVisuals").click();
   await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Ilustraciones 2D listas para animación"), null, { timeout: 30000 });
   assert.equal(counters.directScenes, 1, "Visual production must automatically request and validate the directed shot plan");
+  // El puente de recursos se prueba después de que existe el plan real de tomas;
+  // la acción inicial #create solo genera el guion y no debe iniciar búsquedas visuales.
+  const assetBridgeReport = await page.evaluate(async () => window.JAIAutoVisualAssets.assignShotAssets([
+    { shot_id: "asset-fixture-01", subject: "chocolate melting", visual_prompt_en: "Chocolate melting in a warm bowl" },
+    { shot_id: "asset-fixture-02", subject: "cocoa butter", visual_prompt_en: "Cocoa butter separating during heating" }
+  ]));
+  assert.ok(assetBridgeReport.attempted > 0, "The automatic visual asset bridge must search once directed shots exist");
+  assert.ok(counters.assetSearch > 0, "The automatic visual asset bridge must reach the local Openverse fixture");
   assert.equal(await page.locator("#timelineTracks .scene").count(), 8, "The editable timeline must use the eight directed shots, not repeat four conceptual stills.");
   assert.ok((await page.locator("#timelineTracks").innerText()).includes("SHOT-01"), "Directed shot IDs must be carried into the editable timeline");
   assert.equal(counters.images, 0, "The vector illustration pipeline must not call external image-generation APIs or consume image credits");
