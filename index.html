@@ -54,7 +54,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <label for="research">Tu investigación o indicaciones (opcional)</label><textarea id="research" placeholder="Pega aquí tus notas, fuentes, datos que quieras incluir o el enfoque que imaginas..."></textarea><div class="hint">Tus notas se enviarán al motor editorial de J.A.I. para preparar el plan. No incluyas información sensible.</div><div style="height:16px"></div>
 <div class="grid"><div><label for="duration">Duración objetivo</label><select id="duration"><option>30–45 segundos</option><option>45–60 segundos</option><option>60–90 segundos</option></select></div><div><label for="platform">Destino principal</label><select id="platform"><option>Reels</option><option>YouTube Shorts</option><option>TikTok</option><option>Multiplataforma</option></select></div></div>
 <div class="grid" style="margin-top:12px"><div><label for="contentMode">Estilo de producción</label><select id="contentMode"><option value="serie-viral" selected>Serie viral · historia y retención</option><option value="educativo">Educativo · explicación clara</option></select><div class="hint">Gancho inmediato, progresión y un nuevo avance de interés cada 3 segundos.</div></div><div><label for="ctaGoal">Interacción que buscamos</label><select id="ctaGoal"><option value="follow">Síguenos para la siguiente parte</option><option value="share">Comparte este video</option><option value="comment">Comenta tu opinión</option><option value="save">Guarda este video</option><option value="custom">Llamada personalizada</option></select><input id="ctaCustom" maxlength="120" placeholder="Escribe tu llamada a la acción" style="margin-top:8px;display:none"></div></div>
-<div class="grid" id="seriesControls" style="margin-top:12px"><div><label for="seriesLength">Duración de la temporada</label><select id="seriesLength"><option value="10" selected>10 episodios</option><option value="20">20 episodios</option></select></div><div><label>Continuidad automática</label><div class="hint" id="seriesProgress">Temporada nueva · episodio 1</div></div></div><div class="row" style="gap:8px;flex-wrap:wrap"><button class="primary" id="create">Crear plan de producción con IA</button><button class="secondary" id="newProject" type="button">Nuevo proyecto</button></div><div class="hint status" id="status">Sesión nueva · Tus proyectos solo se guardan cuando pulsas «Guardar proyecto».</div><div class="hint" id="memoryStatus">Memoria editorial: preparando historial de aprendizaje…</div></section>
+<div class="grid" id="seriesControls" style="margin-top:12px"><div><label for="seriesLength">Duración de la temporada</label><select id="seriesLength"><option value="10" selected>10 episodios</option><option value="20">20 episodios</option></select></div><div><label>Continuidad automática</label><div class="hint" id="seriesProgress">Temporada nueva · episodio 1</div></div></div><div class="row" style="gap:8px;flex-wrap:wrap"><button class="primary" id="create">Crear plan de producción con IA</button><button class="secondary" id="runProduction" type="button">Crear vídeo automáticamente / Reanudar</button><button class="secondary" id="newProject" type="button">Nuevo proyecto</button></div><div class="hint status" id="status">Sesión nueva · Tus proyectos solo se guardan cuando pulsas «Guardar proyecto».</div><div class="hint" id="memoryStatus">Memoria editorial: preparando historial de aprendizaje…</div></section>
 <section class="card output" id="output"><div class="row" style="justify-content:space-between"><h3 class="section-title">Plan de producción</h3><span class="tag">9:16 · 720 × 1280</span></div><div id="category" style="margin-bottom:10px"></div>
 <div class="jai-pipeline" id="pipelineProgress" aria-live="polite">
  <div class="row" style="justify-content:space-between"><b>Progreso de producción</b><span class="tag" id="pipelineOverall">0 de 6 etapas</span></div>
@@ -152,9 +152,9 @@ function updateRenderGate(){
  }else if(ready)$("renderStatus").textContent="Control de calidad aprobado. El vídeo puede exportarse.";
 }
 const JAI_AUTOSAVE_DB="jai-viral-studio-recovery",JAI_AUTOSAVE_STORE="sessions",JAI_AUTOSAVE_KEY="latest";
-let jaiAutosaveTimer=null,jaiAutosaveBusy=false,jaiAutosavePending=false,projectRecoveryInProgress=false,jaiAutosaveRevision=0;
+let jaiAutosaveTimer=null,jaiAutosaveBusy=false,jaiAutosavePending=false,projectRecoveryInProgress=false,jaiAutosaveRevision=0,jaiProductionOrchestrator=null,jaiProductionRunState=null,jaiProductionRunning=false;
 function openJaiRecoveryDB(){return new Promise((resolve,reject)=>{if(!("indexedDB" in window)){reject(new Error("IndexedDB no disponible"));return;}const request=indexedDB.open(JAI_AUTOSAVE_DB,1);request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(JAI_AUTOSAVE_STORE))db.createObjectStore(JAI_AUTOSAVE_STORE);};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error("No se pudo abrir el almacenamiento local"));});}
-function jaiRecoverySnapshot(){if(!currentPlanData||!currentTopic)return null;return {savedAt:Date.now(),topic:currentTopic,notes:$("research").value,plan:currentPlan,data:currentPlanData,retentionMap:currentRetentionMap,shotPlan:currentShotPlan,characterBible:currentCharacterBible,reusableRigs:currentReusableRigs,seriesBible:currentSeriesBible,images:jaiSceneImages.map(item=>item&&item.src?{src:item.src,shot:item.shot,time:item.time,sceneIndex:item.sceneIndex,prompt:item.prompt}:null),audit:visualAuditResults,timeline:timelineState.items.map(item=>({...item})),audio:kokoroAudioBlob,audioDuration:kokoroAudioDuration,audioSampleRate:kokoroSampleRate,audioEdit:{...audioEdit},audioTrackOffset,subtitleTrackOffset,captions:captionCues.map(cue=>({...cue}))};}
+function jaiRecoverySnapshot(){if(!currentPlanData||!currentTopic)return null;return {savedAt:Date.now(),topic:currentTopic,notes:$("research").value,plan:currentPlan,data:currentPlanData,retentionMap:currentRetentionMap,shotPlan:currentShotPlan,characterBible:currentCharacterBible,reusableRigs:currentReusableRigs,seriesBible:currentSeriesBible,images:jaiSceneImages.map(item=>item&&item.src?{src:item.src,shot:item.shot,time:item.time,sceneIndex:item.sceneIndex,prompt:item.prompt}:null),audit:visualAuditResults,timeline:timelineState.items.map(item=>({...item})),audio:kokoroAudioBlob,audioDuration:kokoroAudioDuration,audioSampleRate:kokoroSampleRate,audioEdit:{...audioEdit},audioTrackOffset,subtitleTrackOffset,captions:captionCues.map(cue=>({...cue})),productionRun:jaiProductionRunState};}
 async function writeJaiRecovery(){if(jaiAutosaveBusy){jaiAutosavePending=true;return;}const snapshot=jaiRecoverySnapshot();if(!snapshot)return;const revision=jaiAutosaveRevision;jaiAutosaveBusy=true;let db=null;try{db=await openJaiRecoveryDB();if(revision!==jaiAutosaveRevision)return;await new Promise((resolve,reject)=>{const tx=db.transaction(JAI_AUTOSAVE_STORE,"readwrite");tx.objectStore(JAI_AUTOSAVE_STORE).put(snapshot,JAI_AUTOSAVE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Guardado cancelado"));});const status=$("autosaveStatus");if(status)status.textContent="Recuperación automática guardada · "+new Date(snapshot.savedAt).toLocaleTimeString("es-MX");}catch(error){const status=$("autosaveStatus");if(status)status.textContent="No se pudo guardar automáticamente: "+(error?.name==="QuotaExceededError"?"almacenamiento del dispositivo lleno":error.message);}finally{if(db)db.close();jaiAutosaveBusy=false;if(jaiAutosavePending){jaiAutosavePending=false;writeJaiRecovery();}}}
 function scheduleJaiAutosave(){if(!currentPlanData||!currentTopic)return;if(jaiAutosaveTimer)clearTimeout(jaiAutosaveTimer);const status=$("autosaveStatus");if(status)status.textContent="Guardando cambios de recuperación…";jaiAutosaveTimer=setTimeout(writeJaiRecovery,900);}
 function syncRecoveredPipeline(){
@@ -206,6 +206,7 @@ async function restoreJaiProjectRecord(project){
   const prepared=await prepareJaiRecoveryMedia(snapshot,Array.isArray(snapshot.data.story)?snapshot.data.story:[]);
   if(currentPlanData!==stateAtRequest||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="La sesión cambió durante la validación; no se reemplazó el trabajo actual.";return;}
   loadSavedProject(project,{recovery:true});currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;currentShotPlan=prepared.shotPlan;currentCharacterBible=Array.isArray(snapshot.characterBible)?snapshot.characterBible:[];currentReusableRigs=Array.isArray(snapshot.reusableRigs)?snapshot.reusableRigs:[];currentSeriesBible=snapshot.seriesBible&&typeof snapshot.seriesBible==="object"?snapshot.seriesBible:null;updateSeriesProgress();jaiSceneImages=prepared.images;
+  jaiProductionRunState=snapshot.productionRun&&snapshot.productionRun.version===1?snapshot.productionRun:null;
   visualAuditResults=Array.isArray(snapshot.audit)?snapshot.audit.map((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)?item:null):[];
   const expectedAuditCount=visualAuditUnitCount();if(visualAuditResults.length!==expectedAuditCount)visualAuditResults=Array.from({length:expectedAuditCount},(_,index)=>visualAuditResults[index]||null);
   jaiSceneImages.forEach((item,sceneIndex)=>{if(!item?.image){if(currentShotPlan.length)currentShotPlan.forEach((shot,shotIndex)=>{if(Number(shot.scene_index)===sceneIndex)visualAuditResults[shotIndex]=null;});else visualAuditResults[sceneIndex]=null;}});
@@ -1884,6 +1885,88 @@ $("useTopicSuggestion").addEventListener("click",()=>{const field=$("topic");if(
 setInterval(advanceTopicSuggestion,6500);
 $("topic").addEventListener("input",()=>{if($("topic").value.trim())$("status").textContent="Tema propio listo. J.A.I. trabajará sobre lo que escribiste.";});
 $("create").addEventListener("click",makePlan);
+$("runProduction").addEventListener("click",runJaiProduction);
+
+async function getJaiProductionOrchestrator(){
+ if(jaiProductionOrchestrator)return jaiProductionOrchestrator;
+ const module=await import("./jai-production-orchestrator.js");
+ jaiProductionOrchestrator=module.createProductionOrchestrator({
+  stages:[
+   {name:"plan",run:async()=>{
+    if(!currentPlanData||!currentScenes.length)await makePlan();
+    if(!currentPlanData||!currentScenes.length||currentPlanData.clarification_required)throw new Error(currentPlanData?.clarification_question||$("status").textContent||"El plan editorial no quedó listo.");
+    return {ok:true,output:{topic:currentTopic,sceneCount:currentScenes.length}};
+   }},
+   {name:"director",run:async()=>{
+    if(!currentShotPlan.length){const ok=await designAnimationShots();if(!ok)throw new Error($("directScenesStatus").textContent||"El director no completó las tomas.");}
+    if(!currentShotPlan.length)throw new Error("El director no produjo tomas utilizables.");
+    return {ok:true,output:{shotCount:currentShotPlan.length,style:currentVisualStyleProfileId}};
+   }},
+   {name:"visuals",run:async()=>{
+    const ready=jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);
+    if(!ready)await generateAIVisuals();
+    if(jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image))throw new Error($("visualStatus").textContent||"No se generaron todas las ilustraciones.");
+    return {ok:true,output:{sceneImages:jaiSceneImages.length,renderer:"vector-2d"}};
+   }},
+   {name:"narration",run:async()=>{
+    if(!(kokoroAudioBlob&&kokoroAudioDuration>0)){
+     $("generateNarration").click();
+     for(let i=0;i<240&&narrationGenerating;i++)await new Promise(resolve=>setTimeout(resolve,500));
+    }
+    if(!(kokoroAudioBlob&&kokoroAudioDuration>0))throw new Error($("kokoroStatus").textContent||"La narración no se completó.");
+    return {ok:true,output:{duration:kokoroAudioDuration,sampleRate:kokoroSampleRate}};
+   }},
+   {name:"inspection",run:async()=>{
+    if(!visualAuditPassed())await inspectVisuals();
+    if(!visualAuditPassed())throw new Error($("visualAuditStatus").textContent||"La inspección visual no aprobó todas las tomas.");
+    const simulated=visualAuditResults.some(item=>item?.simulated);
+    return {ok:true,inspection_mode:simulated?"simulated":"real",output:{approved:visualAuditResults.length,manual:visualAuditResults.some(item=>item?.manual)}};
+   }},
+   {name:"timeline",run:async()=>{
+    if(!timelineState.items.length)buildTimeline();
+    if(!timelineState.items.length)throw new Error($("timelineStatus").textContent||"No se pudo construir la línea de tiempo.");
+    if(!currentDurationValidation?.within_tolerance)throw new Error("La duración del storyboard no está validada.");
+    return {ok:true,output:{items:timelineState.items.length,duration:timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0)}};
+   }},
+   {name:"render",run:async()=>{
+    if(!$("downloadVideo").hidden&&$("downloadVideo").href)return {ok:true,output:{download:$("downloadVideo").download,reused:true}};
+    $("renderVideo").click();
+    for(let i=0;i<900;i++){
+     if(!renderRecording&&pipelineState.render.status==="done"&&!$("downloadVideo").hidden&&$("downloadVideo").href)return {ok:true,output:{download:$("downloadVideo").download,reused:false}};
+     if(!renderRecording&&pipelineState.render.status==="error")throw new Error($("renderStatus").textContent||"Falló el render.");
+     await new Promise(resolve=>setTimeout(resolve,500));
+    }
+    throw new Error("El render sigue sin finalizar. El checkpoint conserva las etapas anteriores; puedes reanudar sin repetirlas.");
+   }}
+  ],
+  loadCheckpoint:async()=>{const snapshot=await readJaiRecovery(JAI_AUTOSAVE_KEY);return snapshot?.productionRun||jaiProductionRunState||null;},
+  saveCheckpoint:async state=>{
+   jaiProductionRunState=state;
+   const snapshot=jaiRecoverySnapshot();
+   if(snapshot)await writeJaiRecoveryKey(JAI_AUTOSAVE_KEY,{...snapshot,productionRun:state});
+  }
+ });
+ return jaiProductionOrchestrator;
+}
+async function runJaiProduction(){
+ if(jaiProductionRunning||projectRecoveryInProgress||planningInProgress||shotPlanningInProgress||visualGenerationRunning||narrationGenerating||renderRecording)return;
+ if(!$("topic").value.trim()&&!currentPlanData){$("topic").focus();$("status").textContent="Escribe el tema antes de crear el vídeo.";return;}
+ jaiProductionRunning=true;$("runProduction").disabled=true;$("create").disabled=true;
+ $("status").textContent="Producción automática iniciada. J.A.I. guardará cada etapa y podrá reanudarla.";
+ try{
+  const orchestrator=await getJaiProductionOrchestrator();
+  const result=await orchestrator.run({resume:true,context:{topic:$("topic").value.trim()||currentTopic}});
+  if(result.ok){
+   $("status").textContent="Producción completada. El MP4 superó el control técnico y está listo para descargar.";
+   $("renderStatus").scrollIntoView?.({behavior:"smooth",block:"center"});
+  }else{
+   const error=result.state.error;
+   $("status").textContent=(result.state.status==="waiting_retry"?"Producción pausada por límite temporal (429). ":"Producción detenida y guardada. ")+(error?.message||"Error en "+error?.stage)+". Pulsa «Crear vídeo automáticamente / Reanudar» para continuar desde el checkpoint.";
+  }
+ }catch(error){$("status").textContent="No se pudo iniciar el orquestador: "+(error?.message||String(error));}
+ finally{jaiProductionRunning=false;$("runProduction").disabled=false;$("create").disabled=false;}
+}
+
 $("newProject").addEventListener("click",async()=>{
  if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual o la recuperación antes de iniciar otro proyecto.";return;}
  if(!window.confirm("¿Iniciar un proyecto nuevo? Se borrará la recuperación automática de la sesión actual. Los proyectos guardados manualmente no se eliminarán."))return;
