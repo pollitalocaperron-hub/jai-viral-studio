@@ -271,11 +271,11 @@ try {
       { head: "torso", hair: "head", eyes: "head", mouth: "head", face: "head", upper_arm: "torso", arm_upper: "torso", forearm: "upper_arm", lower_arm: "upper_arm", hand: "forearm", upper_leg: "torso", thigh: "torso", lower_leg: "upper_leg", shin: "upper_leg", foot: "lower_leg" });
     assert.deepEqual(rigChain.map(item => item.bone.id), [characterTorso.id, characterHead.id],
       "A director-generated head layer must inherit its matching character torso before rendering");
-    assert.equal(rigChain[0].transform.y, -70, "The parent bone must receive its own director keyframe");
-    assert.equal(rigChain[1].transform.opacity, 1, "The child layer must receive its own director keyframe");
+    assert.equal(rigChain[0].transform.y, -35, "The parent bone must interpolate its own director keyframe at the requested progress");
+    assert.equal(rigChain[1].transform.opacity, 0.5, "The child layer must interpolate its own reveal keyframe");
     assert.deepEqual(resolveMotionTransform(directedShot.animation_steps.filter(step => step.target_id === characterHead.id), 0.5),
-      { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1 },
-      "The director's reveal keyframe must resolve to the renderer's numeric transform contract");
+      { x: 0, y: 10, rotation: 0, scale: 0.925, opacity: 0.5 },
+      "The director's reveal keyframe must resolve to the renderer's interpolated numeric transform contract");
     assert.equal(res.body.reusable_rigs.length, 1, "Repeated character parts must be consolidated into one reusable rig");
     assert.equal(res.body.character_bible.length, 1, "The character bible must only contain characters present in actual shot layers");
     assert.equal(res.body.character_bible[0].character_id, "hero");
