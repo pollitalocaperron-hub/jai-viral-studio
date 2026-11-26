@@ -1906,7 +1906,7 @@ async function getJaiProductionOrchestrator(){
    {name:"plan",run:async()=>{
     const requestedTopic=$("topic").value.trim();
     if(!currentPlanData||!currentScenes.length||currentTopic!==requestedTopic){jaiLastStageError=null;await makePlan();}
-    if(!currentPlanData||!currentScenes.length||currentPlanData.clarification_required)throw Object.assign(new Error(currentPlanData?.clarification_question||$("status").textContent||"El plan editorial no quedó listo."),jaiLastStageError||{});
+    if(!currentPlanData||!currentScenes.length||currentTopic!==requestedTopic||currentPlanData.clarification_required)throw Object.assign(new Error(currentPlanData?.clarification_question||$("status").textContent||"El plan editorial no quedó listo para el tema solicitado."),jaiLastStageError||{});
     return {ok:true,output:{topic:currentTopic,sceneCount:currentScenes.length}};
    }},
    {name:"director",run:async()=>{
