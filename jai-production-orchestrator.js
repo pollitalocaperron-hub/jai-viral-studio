@@ -3,6 +3,8 @@
  * Provider calls are made only by injected stage handlers; this module never
  * selects or retries a provider automatically.
  */
+let productionRunSequence = 0;
+
 export const PRODUCTION_STAGES = Object.freeze([
   "plan", "director", "visuals", "inspection", "narration", "timeline", "render"
 ]);
@@ -31,7 +33,7 @@ export function createProductionOrchestrator({ stages, loadCheckpoint, saveCheck
       let state = resume ? await loadCheckpoint() : null;
       const topicChanged = state?.context?.topic && context?.topic && state.context.topic !== context.topic;
       if (!state || state.version !== 1 || !Array.isArray(state.completed) || topicChanged) {
-        state = { version: 1, runId: "jai-" + Date.now(), status: "running", currentStage: null, completed: [], outputs: {}, attempts: {}, error: null, context: { ...context }, updatedAt: now() };
+        state = { version: 1, runId: "jai-" + Date.now() + "-" + (++productionRunSequence), status: "running", currentStage: null, completed: [], outputs: {}, attempts: {}, error: null, context: { ...context }, updatedAt: now() };
       } else {
         state.context = { ...(state.context || {}), ...context };
         state.status = "running";
