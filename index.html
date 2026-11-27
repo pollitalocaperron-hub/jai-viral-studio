@@ -1072,7 +1072,7 @@ function paintVectorShot(ctx,w,h,shot,progress){
   ?motionEngine.resolveMotionTransform((Array.isArray(shot.animation_steps)?shot.animation_steps:[]).filter(step=>step.target_id===layer.id),p)
   :{x:0,y:0,rotation:0,scale:1,opacity:1};
  const applyBoneTransform=(bone,transform)=>{
-  const px=Number(bone.pivot_x)||360,py=Number(bone.pivot_y)||640;
+  const rawX=Number(bone.pivot_x),rawY=Number(bone.pivot_y);const px=Number.isFinite(rawX)?rawX:360,py=Number.isFinite(rawY)?rawY:640;
   ctx.translate(px+transform.x,py+transform.y);ctx.rotate(transform.rotation*Math.PI/180);ctx.scale(transform.scale,transform.scale);ctx.translate(-px,-py);
  };
  const orderedLayers=layers.map((layer,index)=>({layer,index})).sort((a,b)=>{
