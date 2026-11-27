@@ -373,6 +373,14 @@ try {
     assert.equal(tinySubjectResponse.statusCode, 400);
     assert.equal(tinySubjectResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
 
+    // A geometrically valid subject positioned outside the 9:16 canvas must fail closed.
+    const offCanvasPlan = shots.map(shot => ({ ...shot, layers: shot.layers.map((layer, index) => index === 0 ? { ...layer, path_d: "M 920 420 L 1120 420 L 1120 760 L 920 760 Z" } : layer) }));
+    const offCanvasResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso fuera del lienzo", script: "Narración de prueba.", story, shot_plan: offCanvasPlan } }, offCanvasResponse);
+    assert.equal(offCanvasResponse.statusCode, 400);
+    assert.equal(offCanvasResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+    assert.match(offCanvasResponse.body.error, /fuera del lienzo vertical/);
+
     // A previously validated shot plan resumes locally without contacting any AI provider.
     globalThis.fetch = async () => { throw new Error("A saved shot plan must not call an AI provider"); };
     const resumed = mockResponse();
