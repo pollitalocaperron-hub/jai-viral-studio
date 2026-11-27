@@ -45,7 +45,8 @@ export function resolveMotionTransform(steps,progress=0){
 export function resolveLayerMotionChain(layer,layers,steps,progress,partParents){
   const chain=[],seen=new Set([layer?.id]);
   if(layer?.character_id&&layer?.part_id){
-    let parentPart=partParents?.[String(layer.part_id).toLowerCase().replace(/[ -]/g,"_")],depth=0;
+    const parentsFor=(bone)=>typeof partParents==="function"?partParents(bone?.character_id):partParents;
+    let parentPart=parentsFor(layer)?.[String(layer.part_id).toLowerCase().replace(/[ -]/g,"_")],depth=0;
     while(parentPart&&depth++<8){
       const parent=(Array.isArray(layers)?layers:[]).find(candidate=>
         candidate?.character_id===layer.character_id&&
@@ -53,7 +54,7 @@ export function resolveLayerMotionChain(layer,layers,steps,progress,partParents)
         !seen.has(candidate?.id));
       if(!parent)break;
       chain.unshift(parent);seen.add(parent.id);
-      parentPart=partParents?.[String(parent.part_id).toLowerCase().replace(/[ -]/g,"_")];
+      parentPart=parentsFor(parent)?.[String(parent.part_id).toLowerCase().replace(/[ -]/g,"_")];
     }
   }
   return [...chain,layer].filter(Boolean).map(bone=>({
