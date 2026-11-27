@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { easeMotionProgress, interpolateMotionTransform, resolveMotionTransform, resolveLayerMotionChain } from "../jai-2d-motion-engine.js";
+import { easeMotionProgress, interpolateMotionTransform, resolveMotionTransform, resolveLayerMotionChain, resolvePartParentsFromRigs } from "../jai-2d-motion-engine.js";
 
 assert.equal(easeMotionProgress(0),0);
 assert.equal(easeMotionProgress(1),1);
@@ -34,3 +34,16 @@ assert.equal(chain[1].transform.y,-4);
 assert.equal(chain[2].transform.y,-1);
 
 console.log("2D motion engine easing, keyframe continuity and parent rig propagation: PASS");
+
+const generatedRigParents=resolvePartParentsFromRigs([{character_id:"hero",bones:[
+ {part_id:"torso",parent_bone_id:null},{part_id:"head",parent_bone_id:"torso"},{part_id:"eyes",parent_bone_id:"head"}
+]}],"hero",{head:"neck"});
+assert.deepEqual(generatedRigParents,{head:"torso",eyes:"head"});
+const customRigLayers=[
+ {id:"body",character_id:"hero",part_id:"torso"},
+ {id:"skull",character_id:"hero",part_id:"head"},
+ {id:"iris",character_id:"hero",part_id:"eyes"}
+];
+const customRigChain=resolveLayerMotionChain(customRigLayers[2],customRigLayers,[],.5,generatedRigParents);
+assert.deepEqual(customRigChain.map(item=>item.bone.id),["body","skull","iris"],
+ "Renderer hierarchy must follow the director-generated reusable rig, including non-default parent links");
