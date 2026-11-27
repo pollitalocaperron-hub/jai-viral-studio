@@ -108,4 +108,24 @@ const build = (handlers, calls, store, options = {}) => createProductionOrchestr
   assert.equal(completed.state.status, "completed");
 }
 
-console.log("Production orchestrator contract: 7 scenarios passed.");
+
+
+// 8. Resume without re-supplying context keeps the original production inputs.
+{
+  const calls = {}, store = memory();
+  let receivedContext = null;
+  const failed = await build({
+    narration: () => { throw new Error("temporary"); }
+  }, calls, store).run({ resume: false, context: { topic: "Historia del océano", language: "es-MX", format: "vertical" } });
+  assert.equal(failed.ok, false);
+  const stages = makeStages({}, calls).map(stage => stage.name === "narration"
+    ? { ...stage, run: async args => { receivedContext = args.context; return { ok: true, output: "narration-output" }; } }
+    : stage);
+  const resumed = await createProductionOrchestrator({
+    stages, loadCheckpoint: store.load, saveCheckpoint: store.save
+  }).run({ resume: true });
+  assert.equal(resumed.ok, true);
+  assert.deepEqual(receivedContext, { topic: "Historia del océano", language: "es-MX", format: "vertical" });
+}
+
+console.log("Production orchestrator contract: 8 scenarios passed.");
