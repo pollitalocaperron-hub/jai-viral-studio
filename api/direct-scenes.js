@@ -1,7 +1,7 @@
 import { applyApiCors } from "../cors.js";
 import { resolveVisualStyleProfile } from "./visual-style-profiles.js";
 import { normalizeLegacyShot, getSceneReadiness } from "./jai-scene-contract.js";
-import { validateCharacterRigContinuity } from "../jai-2d-motion-engine.js";
+import { validateCharacterRigContinuity, validateMotionStepContinuity } from "../jai-2d-motion-engine.js";
 
 function parseRange(value) {
   const match = String(value || "").replace(/[–—]/g, "-").match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
@@ -190,6 +190,8 @@ function validateShots(shots, story) {
         return "La acción " + (stepIndex + 1) + " de la toma " + (index + 1) + " no apunta a una capa válida o tiene una transformación/progresión incorrecta.";
       }
     }
+    const motionContinuityError = validateMotionStepContinuity([shot]);
+    if (motionContinuityError) return motionContinuityError;
     const list = byScene.get(sceneIndex) || [];
     list.push({ start, end }); byScene.set(sceneIndex, list);
   }
