@@ -54,7 +54,7 @@ export function createProductionOrchestrator({ stages, loadCheckpoint, saveCheck
         state.attempts[stage.name] = (state.attempts[stage.name] || 0) + 1;
         await persist(state);
         try {
-          const result = await stage.run({ context, outputs: structuredClone(state.outputs), checkpoint: structuredClone(state) });
+          const result = await stage.run({ context: structuredClone(state.context), outputs: structuredClone(state.outputs), checkpoint: structuredClone(state) });
           if (!result || result.ok !== true) throw new Error(result?.error || "La etapa no confirmó un resultado válido.");
           if (stage.name === "inspection" && result.inspection_mode === "simulated") {
             throw Object.assign(new Error("La inspección simulada no acredita calidad visual real."), { code: "SIMULATED_INSPECTION" });
