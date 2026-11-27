@@ -254,6 +254,23 @@ try {
     assert.equal(res.body.animation_plan_validated, true);
     assert.equal(res.body.vector_preview_ready, true, "Validated independent vector layers and transforms must be renderable as a vector preview");
     assert.equal(res.body.animation_ready, false, "Vector layer transforms must not be advertised as cinematic animation readiness");
+
+    const overlappingMotionPlan = res.body.shots.map((shot, index) => index === 0 ? ({
+      ...shot,
+      animation_steps: shot.animation_steps.map((step, stepIndex) => stepIndex === 0
+        ? { ...step, end_progress: 0.65 }
+        : stepIndex === 1
+          ? { ...step, target_id: "component", start_progress: 0.6, end_progress: 1 }
+          : step)
+    }) : shot);
+    const overlappingMotionResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: {
+      topic: "Animación con solapamiento", script: "Narración de prueba.", story, shot_plan: overlappingMotionPlan
+    } }, overlappingMotionResponse);
+    assert.equal(overlappingMotionResponse.statusCode, 400,
+      "A saved shot plan with overlapping actions on the same layer must be rejected before rendering.");
+    assert.equal(overlappingMotionResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+    assert.match(overlappingMotionResponse.body.error, /solapadas/);
     assert.equal(res.body.visual_engine_status, "vector_preview_only");
     assert.equal(res.body.cinematic_ready, false, "Vector-only scene direction must never claim cinematic readiness.");
     assert.equal(res.body.scene_contracts.length, res.body.shots.length);
