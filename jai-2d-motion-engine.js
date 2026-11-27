@@ -114,3 +114,39 @@ export function validateCharacterRigContinuity(shots){
   }
   return null;
 }
+
+
+/**
+ * Prevents abrupt jumps or ambiguous overlap when one layer has multiple
+ * sequential animation segments within the same shot.
+ */
+export function validateMotionStepContinuity(shots){
+  const keys=["x","y","rotation","scale","opacity"];
+  const close=(a,b)=>keys.every(key=>{
+    const left=Number(a?.[key]),right=Number(b?.[key]);
+    return Number.isFinite(left)&&Number.isFinite(right)&&Math.abs(left-right)<=0.001;
+  });
+  for(const [shotIndex,shot] of (Array.isArray(shots)?shots:[]).entries()){
+    const targets=new Map();
+    for(const step of Array.isArray(shot?.animation_steps)?shot.animation_steps:[]){
+      const target=String(step?.target_id||"");
+      if(!target)continue;
+      if(!targets.has(target))targets.set(target,[]);
+      targets.get(target).push(step);
+    }
+    for(const [target,steps] of targets){
+      if(steps.length<2)continue;
+      const ordered=steps.slice().sort((a,b)=>Number(a.start_progress)-Number(b.start_progress));
+      for(let index=1;index<ordered.length;index++){
+        const previous=ordered[index-1],next=ordered[index];
+        if(Number(next.start_progress)<Number(previous.end_progress)-0.0001){
+          return "La capa "+target+" de la toma "+(shotIndex+1)+" tiene acciones de animación solapadas.";
+        }
+        if(!close(previous.to_transform,next.from_transform)){
+          return "La animación de la capa "+target+" de la toma "+(shotIndex+1)+" presenta un salto entre acciones consecutivas.";
+        }
+      }
+    }
+  }
+  return null;
+}
