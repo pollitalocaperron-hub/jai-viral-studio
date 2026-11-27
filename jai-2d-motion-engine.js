@@ -114,6 +114,9 @@ export function validateCharacterRigContinuity(shots){
       if(!characterId||!partId)continue;
       const rig=characters.get(characterId);
       const explicitParent=normalize(layer?.parent_part_id);
+      if(explicitParent&&!rig?.parts.has(explicitParent)){
+        return "El rig del personaje "+characterId+" enlaza "+partId+" con el padre inexistente "+explicitParent+".";
+      }
       const inferredParent=inferredParents[partId];
       const parentId=explicitParent||(inferredParent&&rig?.parts.has(inferredParent)?inferredParent:"");
       if(parentId&&!shotParts.get(characterId)?.has(parentId)){
