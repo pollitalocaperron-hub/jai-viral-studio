@@ -81,6 +81,10 @@ assert.equal(validateCharacterRigContinuity([
  {layers:[{character_id:"hero",part_id:"head",parent_part_id:"torso"}]}
 ])?.includes("padre inexistente"),true,"Explicit parent links must resolve to a real part in the character bible");
 assert.equal(validateCharacterRigContinuity([
+ {layers:[{character_id:"hero",part_id:"torso"},{character_id:"hero",part_id:"head",parent_part_id:"torso"}]},
+ {layers:[{character_id:"hero",part_id:"head",parent_part_id:"torso"}]}
+])?.includes("no aparece junto"),true,"A parent bone must be present in the same shot because the renderer can only inherit transforms from current-shot layers");
+assert.equal(validateCharacterRigContinuity([
  {layers:[{character_id:"hero",part_id:"torso",parent_part_id:"head"},{character_id:"hero",part_id:"head",parent_part_id:"torso"}]}
 ])?.includes("ciclo"),true,"Cyclic bone hierarchies must be rejected");
 assert.equal(validateCharacterRigContinuity([
