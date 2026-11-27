@@ -33,6 +33,25 @@ assert.equal(chain[0].transform.x,20);
 assert.equal(chain[1].transform.y,-4);
 assert.equal(chain[2].transform.y,-1);
 
+
+const multiCharacterLayers=[
+ {id:"hero-body",character_id:"hero",part_id:"torso"},
+ {id:"hero-head",character_id:"hero",part_id:"head"},
+ {id:"robot-body",character_id:"robot",part_id:"body"},
+ {id:"robot-head",character_id:"robot",part_id:"head"}
+];
+const parentsByCharacter={
+ hero:{head:"torso"},
+ robot:{head:"body"}
+};
+const resolveParentsForCharacter=characterId=>parentsByCharacter[characterId]||{};
+const heroChain=resolveLayerMotionChain(multiCharacterLayers[1],multiCharacterLayers,[],.5,resolveParentsForCharacter);
+const robotChain=resolveLayerMotionChain(multiCharacterLayers[3],multiCharacterLayers,[],.5,resolveParentsForCharacter);
+assert.deepEqual(heroChain.map(item=>item.bone.id),["hero-body","hero-head"],
+ "Each character must inherit only its own director-generated bone hierarchy");
+assert.deepEqual(robotChain.map(item=>item.bone.id),["robot-body","robot-head"],
+ "A second character with the same part IDs must use its own reusable rig, not the first character's rig");
+
 console.log("2D motion engine easing, keyframe continuity and parent rig propagation: PASS");
 
 const generatedRigParents=resolvePartParentsFromRigs([{character_id:"hero",bones:[
