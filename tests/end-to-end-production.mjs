@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import http from "node:http";
 import fs from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const html = fs.readFileSync(path.join(root, "index.html"));
-const counters = { generate: 0, directScenes: 0, narrate: 0, inspect: 0, inspectedImages: 0, images: 0 };
+const counters = { generate: 0, directScenes: 0, narrate: 0, inspect: 0, inspectedImages: 0, images: 0, assetSearch: 0 };
 const sceneTimes = Array.from({ length: 4 }, (_, i) => {
   const start = i * 9, end = start + 9;
   return "0:" + String(start).padStart(2, "0") + " - 0:" + String(end).padStart(2, "0");
@@ -71,12 +72,32 @@ const server = http.createServer((req, res) => {
   if (req.url === "/" || req.url === "/index.html") {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" }); res.end(html); return;
   }
+  if (req.method === "GET") {
+    const pathname = new URL(req.url, "http://127.0.0.1:4174").pathname;
+    if (pathname === "/favicon.ico") { res.writeHead(204); res.end(); return; }
+    const requestedPath = path.resolve(root, "." + decodeURIComponent(pathname));
+    if (requestedPath.startsWith(root + path.sep) && fs.existsSync(requestedPath) && fs.statSync(requestedPath).isFile()) {
+      const extension = path.extname(requestedPath).toLowerCase();
+      const contentType = extension === ".js" ? "text/javascript; charset=utf-8"
+        : extension === ".css" ? "text/css; charset=utf-8"
+        : extension === ".wasm" ? "application/wasm"
+        : "application/octet-stream";
+      res.writeHead(200, { "content-type": contentType });
+      fs.createReadStream(requestedPath).pipe(res);
+      return;
+    }
+  }
   const chunks = [];
   req.on("data", chunk => chunks.push(chunk));
   req.on("end", () => {
     let body = {};
     try { body = JSON.parse(Buffer.concat(chunks).toString() || "{}"); } catch {}
     res.setHeader("content-type", "application/json");
+    if (req.url === "/api/search-visual-assets") {
+      counters.assetSearch++;
+      res.end(JSON.stringify({ provider: "Openverse fixture", query: String(body.query || ""), assets: [], total_available: 0, storage: "metadata_only" }));
+      return;
+    }
     if (req.url === "/api/generate") {
       counters.generate++;
       res.end(JSON.stringify(plan)); return;
@@ -96,6 +117,7 @@ const server = http.createServer((req, res) => {
           shots.push({
             scene_index: sceneIndex, start_seconds: shotStart, end_seconds: shotEnd,
             shot_id: "shot-" + String(shots.length + 1).padStart(2, "0"),
+            style_profile_id: "jai-reference-motion-01",
             narration_segment: "La explicación muestra esta etapa del proceso.",
             subtitle: "Etapa " + (part + 1), subject: "El objeto principal del proceso",
             visual_state: "Estado " + (part + 1) + " del objeto",
@@ -108,7 +130,7 @@ const server = http.createServer((req, res) => {
           });
         }
       });
-      res.end(JSON.stringify({ shots, shot_count: shots.length, conceptual_scene_count: requestedStory.length, provider: "Mock free-tier", vector_preview_ready: true, animation_ready: false, cinematic_ready: false }));
+      res.end(JSON.stringify({ shots, shot_count: shots.length, conceptual_scene_count: requestedStory.length, provider: "Mock free-tier", style_profile_id: "jai-reference-motion-01", vector_preview_ready: true, animation_ready: false, cinematic_ready: false }));
       return;
     }
     if (req.url === "/api/narrate") {
@@ -119,9 +141,9 @@ const server = http.createServer((req, res) => {
       counters.inspect++;
       const images = Array.isArray(body.images) ? body.images : [];
       counters.inspectedImages += images.length;
-      res.end(JSON.stringify({ results: images.map((_, scene_index) => ({
+      res.end(JSON.stringify({ inspection_mode: "simulated", results: images.map((_, scene_index) => ({
         scene_index, status: "pass", score: 96,
-        reason: "El fotograma representa el sujeto y la acción solicitados.",
+        reason: "Resultado sintético de fixture; no analiza píxeles ni acredita calidad artística.",
         issues: []
       })) })); return;
     }
@@ -132,10 +154,28 @@ const server = http.createServer((req, res) => {
 await new Promise(resolve => server.listen(4174, "127.0.0.1", resolve));
 let browser;
 try {
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, ...(process.env.JAI_BROWSER_CHANNEL ? { channel: process.env.JAI_BROWSER_CHANNEL } : {}) });
   const page = await browser.newPage();
+  // Fuerza el camino de compatibilidad WebM aunque Chromium admita MP4 nativo.
+  // La aplicación debe transcodificar ese intermedio a MP4 H.264/AAC antes de ofrecer descarga.
+  await page.addInitScript(() => {
+    const nativeSupport = MediaRecorder.isTypeSupported.bind(MediaRecorder);
+    Object.defineProperty(MediaRecorder, "isTypeSupported", {
+      configurable: true,
+      value: type => String(type).toLowerCase().startsWith("video/webm") && nativeSupport(type)
+    });
+    window.jaiForcedWebmFallbackTest = true;
+  });
   const errors = [];
-  page.on("pageerror", error => errors.push(error.message));
+  page.on("pageerror", error => errors.push("pageerror: " + error.message));
+  page.on("console", message => { if (message.type() === "error") errors.push("console: " + message.text()); });
+  page.on("requestfailed", request => {
+    const failure = request.failure()?.errorText || "unknown";
+    // El enlace de descarga revoca su URL temporal después de leer el Blob; Chromium
+    // puede notificar ERR_ABORTED aunque la exportación y la lectura hayan terminado.
+    if (request.url().startsWith("blob:") && failure === "net::ERR_ABORTED") return;
+    errors.push("requestfailed: " + request.url() + " :: " + failure);
+  });
   await page.goto("http://127.0.0.1:4174/", { waitUntil: "domcontentloaded" });
   await page.locator("#topic").fill("Cómo se transforma el chocolate al calentarse");
   await page.route("https://oai.endpoints.kepler.ai.cloud.ovh.net/v1/images/generations", async route => {
@@ -152,6 +192,14 @@ try {
   await page.locator("#makeVisuals").click();
   await page.waitForFunction(() => (document.querySelector("#visualStatus")?.textContent || "").includes("Ilustraciones 2D listas para animación"), null, { timeout: 30000 });
   assert.equal(counters.directScenes, 1, "Visual production must automatically request and validate the directed shot plan");
+  // El puente de recursos se prueba después de que existe el plan real de tomas;
+  // la acción inicial #create solo genera el guion y no debe iniciar búsquedas visuales.
+  const assetBridgeReport = await page.evaluate(async () => window.JAIAutoVisualAssets.assignShotAssets([
+    { shot_id: "asset-fixture-01", subject: "chocolate melting", visual_prompt_en: "Chocolate melting in a warm bowl" },
+    { shot_id: "asset-fixture-02", subject: "cocoa butter", visual_prompt_en: "Cocoa butter separating during heating" }
+  ]));
+  assert.ok(assetBridgeReport.attempted > 0, "The automatic visual asset bridge must search once directed shots exist");
+  assert.ok(counters.assetSearch > 0, "The automatic visual asset bridge must reach the local Openverse fixture");
   assert.equal(await page.locator("#timelineTracks .scene").count(), 8, "The editable timeline must use the eight directed shots, not repeat four conceptual stills.");
   assert.ok((await page.locator("#timelineTracks").innerText()).includes("SHOT-01"), "Directed shot IDs must be carried into the editable timeline");
   assert.equal(counters.images, 0, "The vector illustration pipeline must not call external image-generation APIs or consume image credits");
@@ -186,32 +234,156 @@ try {
   await page.waitForFunction(() => (document.querySelector("#visualAuditStatus")?.textContent || "").includes("todas las escenas superaron"), null, { timeout: 20000 });
   assert.equal(counters.inspect, 2, "Eight directed shots must be split into two batches of four, matching the inspector API limit");
   assert.equal(counters.inspectedImages, 8, "Every directed shot must be independently inspected before export");
+  assert.match(await page.locator("#visualAuditStatus").innerText(), /PRUEBA SIMULADA.*no acredita calidad artística real/i, "Fixture inspection must be visibly distinguished from real visual quality approval");
   assert.equal(await page.locator("#renderVideo").isEnabled(), true, "An audited 2D motion-graphics timeline with narration must unlock final export");
   assert.equal(await page.locator("#downloadVideo").isVisible(), false, "The download link appears only after render and technical QC complete");
   assert.match(await page.locator("#renderStatus").innerText(), /Control de calidad aprobado|puede exportarse/i, "The UI confirms the audited 2D render is ready");
 
   // Exercise the real export button; save its generated Blob for independent FFprobe inspection.
   await page.locator("#renderVideo").click();
-  await page.waitForFunction(() => {
-    const link=document.querySelector("#downloadVideo");
-    return !!link && !link.hidden && /^blob:/.test(link.href);
-  }, null, { timeout: 90000 });
+  try {
+    await page.waitForFunction(() => {
+      const link=document.querySelector("#downloadVideo");
+      const status = document.querySelector("#renderStatus")?.textContent || "";
+      return (!!link && !link.hidden && /^blob:/.test(link.href)) || /Exportación rechazada por control de calidad|Conversión MP4 rechazada/.test(status);
+    }, null, { timeout: 240000 });
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => ({
+      renderStatus: document.querySelector("#renderStatus")?.textContent || "",
+      downloadHidden: document.querySelector("#downloadVideo")?.hidden,
+      downloadHref: document.querySelector("#downloadVideo")?.getAttribute("href"),
+      pipeline: document.querySelector("#pipelineStatus")?.innerText || "",
+      ffmpegLastLog: window.jaiFfmpegLastLog || "",
+      ffmpegProgress: window.jaiFfmpegProgress ?? null,
+      mp4Inspection: window.jaiMp4InspectionDiagnostic || null,
+      mediaCapabilities: (() => { const video=document.createElement("video"); return { mp4AvcAac: video.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"'), mp4Avc: video.canPlayType('video/mp4; codecs="avc1.42E01E"'), mp4Generic: video.canPlayType("video/mp4"), mediaSourceAvcAac: !!window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') }; })(),
+      rejectedBlob: window.jaiMp4RejectedBlob instanceof Blob ? { size: window.jaiMp4RejectedBlob.size, type: window.jaiMp4RejectedBlob.type } : null
+    })).catch(() => ({}));
+    fs.mkdirSync(path.join(root, "artifacts"), { recursive: true });
+    if (diagnostic.rejectedBlob) {
+      const rejected = await page.evaluate(async () => {
+        const blob = window.jaiMp4RejectedBlob;
+        if (!(blob instanceof Blob)) return null;
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let binary = "";
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+        return { mime: blob.type, size: blob.size, base64: btoa(binary) };
+      }).catch(() => null);
+      if (rejected?.base64) {
+        const rejectedPath = path.join(root, "artifacts", "jai-rejected-export.mp4");
+        fs.writeFileSync(rejectedPath, Buffer.from(rejected.base64, "base64"));
+        const rejectedProbe = spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=format_name,duration:stream=codec_type,codec_name,width,height,sample_rate,channels", "-of", "json", rejectedPath], { encoding: "utf8" });
+        diagnostic.rejectedBlob = { ...rejected, ffprobeStatus: rejectedProbe.status, ffprobeStdout: rejectedProbe.stdout || "", ffprobeStderr: rejectedProbe.stderr || "", ffprobeError: rejectedProbe.error?.message || null };
+        delete diagnostic.rejectedBlob.base64;
+      }
+    }
+    fs.writeFileSync(path.join(root, "artifacts", "jai-browser-diagnostic.json"), JSON.stringify({ diagnostic, errors: errors.slice(-30) }, null, 2));
+    await page.screenshot({ path: path.join(root, "artifacts", "jai-mp4-timeout.png"), fullPage: true }).catch(() => {});
+    throw new Error("MP4 export did not pass QC. Browser and independent FFprobe diagnostics: " + JSON.stringify({ diagnostic, errors: errors.slice(-30) }) + ". Original: " + error.message);
+  }
+  const downloadVisible = await page.locator("#downloadVideo").evaluate(link => !link.hidden && /^blob:/.test(link.href));
+  if (!downloadVisible) {
+    const diagnostic = await page.evaluate(() => ({
+      renderStatus: document.querySelector("#renderStatus")?.textContent || "",
+      ffmpegLastLog: window.jaiFfmpegLastLog || "",
+      ffmpegProgress: window.jaiFfmpegProgress ?? null,
+      mp4Inspection: window.jaiMp4InspectionDiagnostic || null,
+      mediaCapabilities: (() => { const video=document.createElement("video"); return { mp4AvcAac: video.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"'), mp4Avc: video.canPlayType('video/mp4; codecs="avc1.42E01E"'), mp4Generic: video.canPlayType("video/mp4"), mediaSourceAvcAac: !!window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') }; })(),
+      rejectedBlob: window.jaiMp4RejectedBlob instanceof Blob ? { size: window.jaiMp4RejectedBlob.size, type: window.jaiMp4RejectedBlob.type } : null
+    }));
+    fs.mkdirSync(path.join(root, "artifacts"), { recursive: true });
+    if (diagnostic.rejectedBlob) {
+      const rejected = await page.evaluate(async () => {
+        const blob = window.jaiMp4RejectedBlob;
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let binary = "";
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+        return { mime: blob.type, size: blob.size, base64: btoa(binary) };
+      });
+      const rejectedPath = path.join(root, "artifacts", "jai-rejected-export.mp4");
+      fs.writeFileSync(rejectedPath, Buffer.from(rejected.base64, "base64"));
+      const probe = spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=format_name,duration:stream=codec_type,codec_name,width,height,sample_rate,channels", "-of", "json", rejectedPath], { encoding: "utf8" });
+      diagnostic.rejectedBlob = { mime: rejected.mime, size: rejected.size, ffprobeStatus: probe.status, ffprobeStdout: probe.stdout || "", ffprobeStderr: probe.stderr || "", ffprobeError: probe.error?.message || null };
+    }
+    fs.writeFileSync(path.join(root, "artifacts", "jai-browser-diagnostic.json"), JSON.stringify({ diagnostic, errors: errors.slice(-30) }, null, 2));
+    throw new Error("Application rejected final MP4; independent FFprobe diagnostics: " + JSON.stringify(diagnostic));
+  }
   const exported=await page.locator("#downloadVideo").evaluate(async link=>{
     const response=await fetch(link.href);
     const blob=await response.blob();
     const bytes=new Uint8Array(await blob.arrayBuffer());
     let binary="";
     for(let offset=0;offset<bytes.length;offset+=0x8000)binary+=String.fromCharCode(...bytes.subarray(offset,offset+0x8000));
-    return {mime:blob.type,size:blob.size,extension:link.download.split(".").pop(),base64:btoa(binary),status:document.querySelector("#renderStatus")?.textContent||""};
+    return {mime:blob.type,sourceMime:window.jaiRenderSourceMime||null,size:blob.size,extension:link.download.split(".").pop(),base64:btoa(binary),status:document.querySelector("#renderStatus")?.textContent||""};
   });
   assert.ok(exported.size>20000,"The production button must create a non-trivial video Blob.");
-  assert.match(exported.mime,/^video\/(webm|mp4)/,"The production button must create a playable WebM or MP4 Blob.");
+  assert.match(exported.mime,/^video\/mp4(?:;|$)/i,"The production button must create an actual MP4 Blob, never WebM.");
+  assert.ok(String(exported.sourceMime||"").toLowerCase().startsWith("video/webm"),"This run must exercise the forced WebM recording fallback before MP4 transcoding.");
+  assert.equal(exported.extension,"mp4","The downloadable filename must use the .mp4 extension.");
   assert.match(exported.status,/Vídeo exportado y control técnico aprobado/,"The download must appear only after the app's own audiovisual QC passes.");
   fs.mkdirSync(path.join(root,"artifacts"),{recursive:true});
   fs.writeFileSync(path.join(root,"artifacts","jai-production-export."+exported.extension),Buffer.from(exported.base64,"base64"));
-  fs.writeFileSync(path.join(root,"artifacts","jai-production-export.json"),JSON.stringify({mime:exported.mime,size:exported.size,status:exported.status},null,2));
+  const exportPath=path.join(root,"artifacts","jai-production-export."+exported.extension);
+  fs.writeFileSync(exportPath,Buffer.from(exported.base64,"base64"));
+  const probe=spawnSync("ffprobe",["-v","error","-show_entries","format=format_name,duration:stream=codec_type,codec_name,width,height,sample_rate,channels","-of","json",exportPath],{encoding:"utf8"});
+  if(process.env.JAI_REQUIRE_FFPROBE==="1")assert.equal(probe.status,0,"FFprobe must be installed and decode the exported media: "+(probe.stderr||probe.error?.message||"unknown error"));
+  let probeData=null;
+  if(probe.status===0){
+    probeData=JSON.parse(probe.stdout);
+    const streams=probeData.streams||[];
+    const video=streams.find(stream=>stream.codec_type==="video");
+    const audio=streams.find(stream=>stream.codec_type==="audio");
+    assert.ok(video,"FFprobe must detect a video stream");
+    assert.ok(audio,"FFprobe must detect the narration/audio stream");
+    assert.match(String(probeData.format?.format_name||""),/mp4|mov/i,"FFprobe must identify an MP4 container.");
+    assert.equal(video.codec_name,"h264","FFprobe must confirm H.264 video.");
+    assert.equal(audio.codec_name,"aac","FFprobe must confirm AAC audio.");
+    assert.equal(Number(video.width),720,"Exported video width must be 720");
+    assert.equal(Number(video.height),1280,"Exported video height must be 1280");
+    assert.ok(Number(probeData.format?.duration)>1,"FFprobe must report a valid media duration");
+  }
+  fs.writeFileSync(path.join(root,"artifacts","jai-production-export.json"),JSON.stringify({mime:exported.mime,size:exported.size,status:exported.status,ffprobe:probeData},null,2));
+  // Exercise the app-integrated orchestrator and durable resume after a simulated QA rejection.
+  const providerCallsBeforeOrchestration = { ...counters };
+  await page.locator("#runProduction").click();
+  await page.waitForFunction(() => (document.querySelector("#status")?.textContent || "").includes("inspección simulada"), null, { timeout: 20000 });
+  const firstCheckpoint = await page.evaluate(async () => {
+    const saved = await readJaiRecovery("latest");
+    return saved?.productionRun || null;
+  });
+  assert.ok(firstCheckpoint, "The app must persist the orchestration checkpoint alongside the recoverable project");
+  assert.deepEqual(firstCheckpoint.completed, ["plan", "director", "visuals"], "Completed app stages must be checkpointed before the simulated inspector blocks the run; narration must not start before visual approval");
+  assert.equal(firstCheckpoint.status, "failed");
+  assert.equal(firstCheckpoint.error.code, "SIMULATED_INSPECTION");
+  assert.equal(counters.narrate, providerCallsBeforeOrchestration.narrate, "Already generated narration must not be requested again by orchestration");
+  assert.equal(counters.generate, providerCallsBeforeOrchestration.generate, "A completed editorial plan must not be generated again");
+  assert.equal(counters.directScenes, providerCallsBeforeOrchestration.directScenes, "A completed direction plan must not be requested again");
+  assert.equal(counters.inspect, providerCallsBeforeOrchestration.inspect + 2, "A simulated audit is retried only because the user explicitly started orchestration");
+  assert.equal(counters.inspectedImages, providerCallsBeforeOrchestration.inspectedImages + 8);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(3000);
+  const recoveryStatus = await page.locator("#status").innerText();
+  const recoveryDiagnostics = await page.evaluate(async () => { const saved=await readJaiRecovery("latest-render"); return {topic:document.querySelector("#topic")?.value||"",status:document.querySelector("#status")?.textContent||"",autosave:document.querySelector("#autosaveStatus")?.textContent||"",renderKey:!!saved,renderMime:saved?.blob?.type||null,renderSize:saved?.blob?.size||0,downloadVisible:!!document.querySelector("#downloadVideo")&&!document.querySelector("#downloadVideo").hidden}; });
+  assert.match(recoveryStatus,/J\.A\.I\. recuperó tu último proyecto/i,"The app must restore the complete project after reload; diagnostics: "+JSON.stringify(recoveryDiagnostics)+"; page errors: "+JSON.stringify(errors.slice(-10)));
+  await page.waitForFunction(() => { const link=document.querySelector("#downloadVideo"); return !!link&&!link.hidden&&/^blob:/.test(link.href); }, null, { timeout: 15000 });
+  const restoredVideo = await page.locator("#downloadVideo").evaluate(async link => { const blob=await (await fetch(link.href)).blob(); return {type:blob.type,size:blob.size}; });
+  assert.equal(restoredVideo.type.startsWith("video/mp4"),true,"A technically approved MP4 must survive page reload in local recovery");
+  assert.ok(restoredVideo.size>20000,"Recovered MP4 must retain its actual binary data");
+  const recoveredCheckpoint = await page.evaluate(async () => (await readJaiRecovery("latest"))?.productionRun || null);
+  assert.deepEqual(recoveredCheckpoint.completed, firstCheckpoint.completed, "Reload must restore the same completed production stages");
+  await page.locator("#runProduction").click();
+  await page.waitForFunction(() => (document.querySelector("#status")?.textContent || "").includes("inspección simulada"), null, { timeout: 20000 });
+  assert.equal(counters.generate, providerCallsBeforeOrchestration.generate, "Reload resume must not repeat completed plan generation");
+  assert.equal(counters.directScenes, providerCallsBeforeOrchestration.directScenes, "Reload resume must not repeat completed direction generation");
+  assert.equal(counters.narrate, providerCallsBeforeOrchestration.narrate, "Reload resume must not repeat completed narration generation");
+  assert.equal(counters.inspect, providerCallsBeforeOrchestration.inspect + 4, "Each explicit resume retries the incomplete simulated inspection only");
+  assert.equal(counters.inspectedImages, providerCallsBeforeOrchestration.inspectedImages + 16);
+  const resumedCheckpoint = await page.evaluate(async () => (await readJaiRecovery("latest"))?.productionRun || null);
+  assert.deepEqual(resumedCheckpoint.completed, firstCheckpoint.completed, "The resumed app must preserve all prior completed stages");
+  assert.equal(resumedCheckpoint.error.code, "SIMULATED_INSPECTION");
   assert.deepEqual(errors, [], "The integrated browser flow must not produce uncaught JavaScript errors");
-  console.log("PASS: complete browser production flow including real renderVideo button, downloadable video Blob and in-app audiovisual QC.");
+  console.log("PASS: full browser production, MP4/FFprobe QC, app-level checkpoint persistence, reload recovery, no duplicate completed calls, and simulated-inspection rejection.");
 } finally {
   if (browser) await browser.close();
   await new Promise(resolve => server.close(resolve));

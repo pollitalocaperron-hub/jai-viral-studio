@@ -1,6 +1,7 @@
 import { applyApiCors } from "../cors.js";
 import { resolveVisualStyleProfile } from "./visual-style-profiles.js";
 import { normalizeLegacyShot, getSceneReadiness } from "./jai-scene-contract.js";
+import { validateCharacterRigContinuity, validateMotionStepContinuity } from "../jai-2d-motion-engine.js";
 
 function parseRange(value) {
   const match = String(value || "").replace(/[–—]/g, "-").match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
@@ -11,6 +12,61 @@ function parseRange(value) {
 }
 function clean(value, max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+function getVectorPathBounds(path) {
+  const source = String(path || "").trim();
+  const tokens = source.match(/[a-zA-Z]|[-+]?(?:\d*\.)?\d+(?:e[-+]?\d+)?/gi) || [];
+  if (!tokens.length || tokens.join("").length === 0) return null;
+  // Reject unparsed characters instead of silently measuring a partial path.
+  if (source.replace(/[\s,]/g, "").toLowerCase() !== tokens.join("").toLowerCase()) return null;
+  const arity = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7 };
+  const points = [];
+  let i = 0, command = "", x = 0, y = 0, startX = 0, startY = 0, firstMove = false;
+  const add = (px, py) => {
+    if (!Number.isFinite(px) || !Number.isFinite(py)) throw new Error("invalid path coordinate");
+    points.push([px, py]);
+  };
+  try {
+    while (i < tokens.length) {
+      if (/^[a-z]$/i.test(tokens[i])) {
+        command = tokens[i++];
+        if (command.toUpperCase() === "Z") {
+          x = startX; y = startY; add(x, y); command = "";
+          continue;
+        }
+      } else if (!command) return null;
+      const upper = command.toUpperCase(), relative = command !== upper, count = arity[upper];
+      if (!count) return null;
+      if (i + count > tokens.length || tokens.slice(i, i + count).some(token => /^[a-z]$/i.test(token))) return null;
+      const v = tokens.slice(i, i + count).map(Number);
+      if (v.some(value => !Number.isFinite(value))) return null;
+      i += count;
+      const ax = value => relative ? x + value : value;
+      const ay = value => relative ? y + value : value;
+      if (upper === "M" || upper === "L" || upper === "T") {
+        x = ax(v[0]); y = ay(v[1]); add(x, y);
+        if (upper === "M") { startX = x; startY = y; command = relative ? "l" : "L"; }
+      } else if (upper === "H") { x = ax(v[0]); add(x, y); }
+      else if (upper === "V") { y = ay(v[0]); add(x, y); }
+      else if (upper === "C") {
+        add(ax(v[0]), ay(v[1])); add(ax(v[2]), ay(v[3]));
+        x = ax(v[4]); y = ay(v[5]); add(x, y);
+      } else if (upper === "S" || upper === "Q") {
+        add(ax(v[0]), ay(v[1])); x = ax(v[2]); y = ay(v[3]); add(x, y);
+      } else if (upper === "A") {
+        if (v[0] < 0 || v[1] < 0 || ![0,1].includes(v[3]) || ![0,1].includes(v[4])) return null;
+        // Arc extrema are conservatively enclosed by the endpoint plus its radii.
+        add(x - v[0], y - v[1]); add(x + v[0], y + v[1]);
+        x = ax(v[5]); y = ay(v[6]); add(x - v[0], y - v[1]); add(x + v[0], y + v[1]); add(x, y);
+      }
+      firstMove = true;
+    }
+  } catch { return null; }
+  if (!firstMove || points.length < 3) return null;
+  const xs = points.map(point => point[0]), ys = points.map(point => point[1]);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  return { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY,
+    areaRatio: Math.max(0, maxX - minX) * Math.max(0, maxY - minY) / (720 * 1280) };
 }
 const RIG_PARENT = {
   head: "torso", hair: "head", eyes: "head", mouth: "head", face: "head",
@@ -30,12 +86,13 @@ function buildReusableRigs(shots) {
     const key = String(layer.character_id);
     if (!characters.has(key)) characters.set(key, new Map());
     const parts = characters.get(key), part = String(layer.part_id).slice(0, 80);
-    if (!parts.has(part)) parts.set(part, { bone_id: part, part_id: part, description: layer.description, pivot_x: layer.pivot_x, pivot_y: layer.pivot_y, source_layer_id: layer.id, source_shot_id: shot.shot_id });
+    if (!parts.has(part)) parts.set(part, { bone_id: part, part_id: part, parent_bone_id: clean(layer.parent_part_id, 80), description: layer.description, pivot_x: layer.pivot_x, pivot_y: layer.pivot_y, source_layer_id: layer.id, source_shot_id: shot.shot_id });
+    else if (!parts.get(part).parent_bone_id && clean(layer.parent_part_id, 80)) parts.get(part).parent_bone_id = clean(layer.parent_part_id, 80);
   }
   return [...characters.entries()].map(([character_id, parts]) => {
     const ids = new Set([...parts.keys()].map(part => character_id + ":" + part.toLowerCase().replace(/[ -]/g, "_")));
     return { rig_id: "rig-" + character_id, character_id, coordinate_space: "720x1280", reusable: true,
-      bones: [...parts.values()].map(bone => ({ ...bone, parent_bone_id: inferBoneParent(bone.part_id, character_id, ids) })) };
+      bones: [...parts.values()].map(bone => ({ ...bone, parent_bone_id: bone.parent_bone_id && ids.has(character_id + ":" + bone.parent_bone_id.toLowerCase().replace(/[ -]/g, "_")) && bone.parent_bone_id.toLowerCase().replace(/[ -]/g, "_") !== bone.part_id.toLowerCase().replace(/[ -]/g, "_") ? bone.parent_bone_id : inferBoneParent(bone.part_id, character_id, ids) })) };
   });
 }
 function buildCharacterBible(shots) {
@@ -93,8 +150,8 @@ function validateShots(shots, story) {
     for (const key of required) if (!clean(shot[key], key === "visual_prompt_en" ? 1800 : 700)) return "La toma " + (index + 1) + " no incluye " + key + ".";
     if (clean(shot.visual_prompt_en, 1800).split(/\s+/).length < 25) return "El prompt de la toma " + (index + 1) + " necesita describir un fotograma concreto con mayor precisión.";
     if (!/^#[0-9a-fA-F]{6}$/.test(clean(shot.background_color, 16))) return "La toma " + (index + 1) + " necesita un color de fondo hexadecimal válido.";
-    if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 10) return "La toma " + (index + 1) + " necesita entre 3 y 6 capas vectoriales independientes.";
-    const layerIds = new Set();
+    if (!Array.isArray(shot.layers) || shot.layers.length < 3 || shot.layers.length > 6) return "La toma " + (index + 1) + " necesita entre 3 y 6 capas vectoriales independientes.";
+    const layerIds = new Set(), layerPaths = new Set(), layerDescriptions = new Set(), subjectBounds = [];
     for (const [layerIndex, layer] of shot.layers.entries()) {
       const id = clean(layer?.id, 60), path = typeof layer?.path_d === "string" ? layer.path_d.trim() : "";
       const fill = clean(layer?.fill, 16), stroke = clean(layer?.stroke, 16);
@@ -106,9 +163,22 @@ function validateShots(shots, story) {
       if (!/^#[0-9a-fA-F]{6}$/.test(fill) && fill !== "none") return "La capa " + id + " tiene un relleno no válido.";
       if (!/^#[0-9a-fA-F]{6}$/.test(stroke) && stroke !== "none") return "La capa " + id + " tiene un contorno no válido.";
       if (!Number.isFinite(strokeWidth) || strokeWidth < 0 || strokeWidth > 24 || !Number.isFinite(pivotX) || pivotX < 0 || pivotX > 720 || !Number.isFinite(pivotY) || pivotY < 0 || pivotY > 1280) return "La capa " + id + " tiene grosor o punto de pivote fuera del lienzo.";
+      const normalizedPath = path.replace(/\s+/g, " ").trim();
+      const bounds = getVectorPathBounds(path);
+      if (!bounds || bounds.width < 12 || bounds.height < 12 || bounds.areaRatio < 0.001) return "La capa " + id + " no contiene geometría vectorial visible suficiente.";
+      if (bounds.minX < -72 || bounds.maxX > 792 || bounds.minY < -128 || bounds.maxY > 1408) return "La capa " + id + " de la toma " + (index + 1) + " queda fuera del lienzo vertical 720x1280 y podría no aparecer en el render.";
+      if (layerPaths.has(normalizedPath)) return "La toma " + (index + 1) + " repite una ruta vectorial: sus capas no son ilustraciones independientes.";
+      const descriptionKey = clean(layer.description, 260).toLowerCase();
+      if (layerDescriptions.has(descriptionKey)) return "La toma " + (index + 1) + " repite descripciones de capas y no demuestra componentes visuales distintos.";
+      const normalizedRole = String(layer.role).trim().toLowerCase().replace(/[\s-]+/g, "_");
+      if (["subject", "main_subject", "primary_subject"].includes(normalizedRole)) subjectBounds.push(bounds);
+      layerPaths.add(normalizedPath); layerDescriptions.add(descriptionKey);
       layerIds.add(id);
     }
-    if (!Array.isArray(shot.animation_steps) || shot.animation_steps.length < 2 || shot.animation_steps.length > 4) return "La toma " + (index + 1) + " necesita entre 2 y 4 acciones de animación.";
+    if (!subjectBounds.length || !subjectBounds.some(bounds => bounds.areaRatio >= 0.06 && bounds.areaRatio <= 0.78)) {
+      return "La toma " + (index + 1) + " no tiene un sujeto principal con tamaño legible: la silueta debe ocupar entre 6% y 78% del lienzo.";
+    }
+    if (!Array.isArray(shot.animation_steps) || shot.animation_steps.length < 2 || shot.animation_steps.length > 3) return "La toma " + (index + 1) + " necesita entre 2 y 3 acciones de animación.";
     const validTransform = value => value && ["x", "y", "rotation", "scale", "opacity"].every(key => Number.isFinite(Number(value[key]))) &&
       Number(value.x) >= -300 && Number(value.x) <= 300 && Number(value.y) >= -300 && Number(value.y) <= 300 &&
       Number(value.rotation) >= -360 && Number(value.rotation) <= 360 && Number(value.scale) >= 0.2 && Number(value.scale) <= 3 &&
@@ -121,6 +191,8 @@ function validateShots(shots, story) {
         return "La acción " + (stepIndex + 1) + " de la toma " + (index + 1) + " no apunta a una capa válida o tiene una transformación/progresión incorrecta.";
       }
     }
+    const motionContinuityError = validateMotionStepContinuity([shot]);
+    if (motionContinuityError) return motionContinuityError;
     const list = byScene.get(sceneIndex) || [];
     list.push({ start, end }); byScene.set(sceneIndex, list);
   }
@@ -141,45 +213,47 @@ export default async function handler(req, res) {
   if (!applyApiCors(req, res)) return res.status(403).json({ error: "Origen no autorizado." });
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "Método no permitido." }); }
-  const { topic, script, story, retention_map = [], style_profile_id = "" } = req.body || {};
+  const { topic, script, story, retention_map = [], style_profile_id = "", shot_plan = null } = req.body || {};
   if (typeof topic !== "string" || !topic.trim() || topic.length > 500 || typeof script !== "string" || !script.trim() || script.length > 8000) {
     return res.status(400).json({ error: "Se requiere un tema y una narración válidos." });
   }
   if (!Array.isArray(story) || story.length < 4 || story.length > 5 || story.some(scene => !parseRange(scene?.time))) {
     return res.status(400).json({ error: "Se requiere un storyboard válido de 4 o 5 escenas conceptuales." });
   }
-  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) return res.status(503).json({ error: "No hay un proveedor editorial configurado." });
+  if (!Array.isArray(req.body?.shot_plan) && !process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) return res.status(503).json({ error: "No hay un proveedor editorial configurado." });
 
   const styleProfile = resolveVisualStyleProfile(style_profile_id, topic, script);
+  const reusableShotPlan = Array.isArray(shot_plan) ? shot_plan : null;
+  const savedPlanValidationError = reusableShotPlan ? validateShots(reusableShotPlan, story) : null;
+  if (savedPlanValidationError) return res.status(400).json({ error: "El plan de tomas guardado no supera la validación: " + savedPlanValidationError + " No se volverá a generar automáticamente.", diagnosticCode: "SAVED_SHOT_PLAN_INVALID" });
+  const directorStoryboard = story.map((scene, index) => ({ scene_index: index, time: scene.time, objective: clean(scene.objective, 180), teaching_point: clean(scene.teaching_point, 220), visual_proof: clean(scene.visual_proof, 180), visual_subject: clean(scene.visual_subject || scene.visual, 140), visual_state: clean(scene.visual_state, 140), visual_action: clean(scene.visual_action || scene.animation, 160), visual_composition: clean(scene.visual_composition, 120), continuity_anchor: clean(scene.continuity_anchor, 140) }));
 
   const prompt = [
-    "Eres el DIRECTOR DE ESCENAS Y SUPERVISOR DE ANIMACIÓN de J.A.I. Convierte el storyboard conceptual en un plan de tomas ejecutable. Devuelve SOLO JSON válido con la propiedad shots.",
-    "No generes una imagen final ni describas movimientos de cámara como sustituto de acciones. Cada toma debe mostrar un nuevo estado o acción didáctica.",
-    "Divide cada una de las 4 o 5 escenas conceptuales en 2 a 5 tomas, según la complejidad real. El total permitido es de 8 a 25 tomas (máximo 5 por escena). No uses una cantidad fija por vídeo.",
-    "Las tomas de cada escena deben cubrir exactamente su intervalo, en orden, sin huecos ni solapamientos. Usa start_seconds y end_seconds numéricos absolutos dentro del vídeo.",
-    "Cada toma debe incluir: scene_index (índice base cero), start_seconds, end_seconds, narration_segment (fragmento literal de la narración), subtitle, subject, visual_state, visual_action, visual_prompt_en, continuity_anchor, background_color (#RRGGBB), layers (4–10 objetos independientes con id, description, role, path_d, fill, stroke, stroke_width, pivot_x, pivot_y, character_id y part_id cuando aplique) y animation_steps (2–4 acciones con target_id, action, from_state, to_state, start_progress, end_progress, from_transform y to_transform).",
-    "Los elementos deben ser concretos y separables. Mantén la misma identidad, geometría, paleta y orientación de objetos repetidos entre tomas. Si hay personajes, separa cabeza, torso, brazos, antebrazos, manos, piernas, ojos, boca, cabello y accesorios según la acción. Asigna pivotes en articulaciones y IDs estables; las piezas móviles deben ser siluetas independientes con transparencia real al exportar PNG.",
-    "La ilustración vectorial es la escena de producción: cada objeto debe tener su propio path_d independiente, no agrupes objetos móviles en una sola ruta. Usa coordenadas de un lienzo vertical 720x1280; path_d debe contener SOLO comandos de ruta SVG (M,L,H,V,C,S,Q,T,A,Z) y números, nunca etiquetas XML/SVG ni texto. Ordena las capas de atrás hacia delante. Cada forma debe ser una silueta cerrada y reconocible, con relleno y contorno.",
-    "Cada animation_step debe incluir from_transform y to_transform con x, y (desplazamiento en píxeles), rotation (grados), scale (multiplicador) y opacity (0–1). Anima el objeto real descrito por target_id; usa movimientos pequeños y físicamente correctos, no movimiento de cámara ni partículas decorativas. Las capas que no se mueven usan la misma transformación inicial y final.",
-    "PERFIL AUDIOVISUAL DE REFERENCIA: " + styleProfile.label + ". " + styleProfile.prompt + " Paleta: " + styleProfile.palette + " Gramática de movimiento y montaje: " + styleProfile.motion,
-    "MOTOR DE PERSONAJES: define un character_bible con character_id estable, nombre, silueta, proporciones, rasgos faciales, peinado, vestuario, accesorios, paleta hexadecimal, personalidad, voz y gestos distintivos. Reutiliza los mismos rasgos en cada toma y episodio; no rediseñes personajes recurrentes. Devuelve character_bible como array en la respuesta. La continuidad debe conservar character_id, part_id, paleta, pivotes y anclas visuales; cada acción debe corresponder a narration_segment y mostrar una causa, reacción o cambio de estado.",
-    "No reproduz la interfaz de Instagram/TikTok que aparece alrededor de los clips de referencia: barras de estado, botones de me gusta, comentarios, perfiles, navegación ni marcas de agua. Son elementos de captura, no parte del diseño del vídeo.",
-    "No pongas texto dentro de las imágenes. Los subtítulos y etiquetas se añadirán en edición.",
-    "Storyboard: " + JSON.stringify(story),
-    "Narración: " + script,
-    "Mapa de ritmo: " + JSON.stringify(retention_map).slice(0, 10000),
+    "Eres el director visual 2D de J.A.I. Convierte el storyboard existente en tomas vectoriales listas para animación. Devuelve SOLO JSON con la propiedad shots.",
+    "No reescribas el guion, no crees escenas conceptuales, no generes personajes por defecto ni repitas la investigación. Ejecuta visualmente cada escena entregada.",
+    "Crea 2 tomas por escena y usa una tercera solo cuando exista un cambio didáctico real que no quepa en dos. Cada escena debe quedar cubierta exactamente, sin huecos ni solapamientos.",
+    "Cada toma: scene_index, start_seconds, end_seconds, narration_segment (extracto literal breve del guion, nunca una paráfrasis), subtitle, subject, visual_state, visual_action, visual_prompt_en (25–55 palabras concretas), continuity_anchor, background_color hexadecimal, layers (3–6 siluetas vectoriales independientes) y animation_steps (2–3 acciones sobre capas reales).",
+    "Cada layer necesita id, description, role, path_d SVG cerrado, fill, stroke, stroke_width, pivot_x y pivot_y; character_id/part_id solo si realmente es una parte de personaje. Si una parte pertenece a otra, incluye parent_part_id con el part_id exacto del padre; no inventes padres ni character_bible.",
+    "CALIDAD DE ILUSTRACIÓN OBLIGATORIA: dibuja el sujeto específico del tema con siluetas reconocibles y anatomía/estructura coherente; descompón objetos en componentes funcionales reales (por ejemplo recipiente, contenido, herramienta, fuente de calor y detalles pertinentes), no en formas geométricas decorativas.",
+    "No uses un rectángulo, círculo, cápsula o polígono genérico como sustituto del objeto principal. No permitas que una capa de entorno cubra al sujeto. Cada capa debe aportar una pieza visual distinta y legible; usa curvas y contornos detallados, escala protagonista y composición vertical equilibrada.",
+    "Cada toma debe ser visualmente distinta según el avance narrativo: cambia estado, acción, encuadre o evidencia del proceso; conserva la identidad del objeto entre tomas. Evita fondos vacíos, sujetos diminutos, composiciones repetidas y texto dentro del dibujo.",
+    "Cada animation_step requiere target_id existente, action, from_state, to_state, start_progress, end_progress y from_transform/to_transform con x,y,rotation,scale,opacity. Movimiento pequeño, físicamente coherente y ligado a la explicación.",
+    "Mantén identidad, geometría, escala, orientación y paleta entre tomas. Lienzo 720x1280. Sin texto incrustado, interfaz social, marcas de agua ni elementos ajenos.",
+    "ESTILO FIJO J.A.I.: " + styleProfile.label + ". " + styleProfile.prompt + " Paleta: " + styleProfile.palette + ". Movimiento: " + styleProfile.motion,
+    "Escenas editoriales ya aprobadas (no modificar): " + JSON.stringify(directorStoryboard),
+    "Guion fuente para extraer literalmente fragmentos de narración: " + script.slice(0, 2600),
     "Tema: " + topic.trim()
   ].join("\n\n");
 
-  let output = "", provider = "", groqFailure = null, geminiFailure = null;
-  // Cascada de proveedores: si Groq agota su cuota gratuita o no responde,
-  // se intenta Gemini. No se habilitan planes, compras ni proveedores de pago.
-  if (process.env.GROQ_API_KEY) {
+  let output = reusableShotPlan ? JSON.stringify({ shots: reusableShotPlan }) : "", provider = reusableShotPlan ? "Plan recuperado (sin IA)" : "", groqFailure = null, geminiFailure = null;
+  // Groq es el motor primario; Gemini es respaldo solo ante fallos que no sean de cuota.
+  // Ante HTTP 429 se pausa para no gastar una segunda cuota gratuita.
+  if (!output && process.env.GROQ_API_KEY) {
     try {
       const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: "Bearer " + process.env.GROQ_API_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "openai/gpt-oss-120b", messages: [{ role: "system", content: "Devuelve exclusivamente JSON válido." }, { role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.35, max_completion_tokens: 7000 }),
+        body: JSON.stringify({ model: "openai/gpt-oss-120b", messages: [{ role: "system", content: "Devuelve exclusivamente JSON válido." }, { role: "user", content: prompt }], response_format: { type: "json_object" }, temperature: 0.35, max_completion_tokens: 5000 }),
         signal: AbortSignal.timeout(18000)
       });
       const raw = await response.text();
@@ -195,15 +269,15 @@ export default async function handler(req, res) {
       provider = "Groq GPT-OSS 120B";
     } catch (error) {
       groqFailure = { status: Number(error?.status || 0), message: String(error?.message || "Error de Groq").slice(0, 260) };
-      console.warn("[JAI][Scene Director] Groq no disponible; se activa el respaldo gratuito configurado:", groqFailure.message);
+      console.warn(groqFailure.status === 429 ? "[JAI][Scene Director] Cuota de Groq limitada; se pausa sin activar otro proveedor:" : "[JAI][Scene Director] Groq no disponible; se evalúa el respaldo gratuito:", groqFailure.message);
     }
   }
-  if (!output && process.env.GEMINI_API_KEY) {
+  if (!output && groqFailure?.status !== 429 && process.env.GEMINI_API_KEY) {
     try {
       const requestGemini = () => fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
         method: "POST",
         headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.35, maxOutputTokens: 7000 } }),
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0.35, maxOutputTokens: 5000 } }),
         signal: AbortSignal.timeout(18000)
       });
       let response = await requestGemini();
@@ -229,12 +303,18 @@ export default async function handler(req, res) {
     }
   }
   if (!output) {
-    const quotaLimited = [groqFailure, geminiFailure].some(item => item?.status === 429);
+    const quotaFailure = [groqFailure, geminiFailure].find(item => item?.status === 429);
+    const quotaLimited = Boolean(quotaFailure);
+    const retryMatch = String(quotaFailure?.message || "").match(/(?:retry|try again|in)\s*(?:after|in)?\s*(\d+(?:\.\d+)?)\s*s/i);
+    const retryAfterSeconds = quotaLimited ? Math.max(5, Math.min(90, Math.ceil(Number(retryMatch?.[1] || 30)))) : null;
+    if (quotaLimited) res.setHeader("Retry-After", String(retryAfterSeconds));
     return res.status(quotaLimited ? 429 : 502).json({
       error: quotaLimited
-        ? "Se agotó temporalmente la cuota gratuita de los motores editoriales disponibles. No se realizará ningún cobro; conserva tu proyecto y vuelve a intentarlo cuando se renueven las cuotas."
+        ? "Límite temporal del proveedor gratuito. El proyecto y el guion se conservan; espera antes de reintentar. No se hará una segunda llamada de respaldo que pueda consumir más cuota."
         : "Los motores editoriales gratuitos configurados no pudieron completar el plan. No se activó ningún servicio de pago.",
-      diagnosticCode: quotaLimited ? "FREE_QUOTA_EXHAUSTED" : "SCENE_DIRECTOR_FAILED",
+      diagnosticCode: quotaLimited ? "FREE_QUOTA_WAIT" : "SCENE_DIRECTOR_FAILED",
+      retryAfterSeconds,
+      resumeFrom: "editorial_plan",
       providerFailures: [groqFailure, geminiFailure].filter(Boolean)
     });
   }
@@ -289,7 +369,7 @@ export default async function handler(req, res) {
     scene_index: Number(shot.scene_index), start_seconds: Number(shot.start_seconds), end_seconds: Number(shot.end_seconds),
     background_color: clean(shot.background_color, 16),
     layers: shot.layers.map((layer, layerIndex) => ({
-      id: clean(layer?.id, 60) || "layer-" + (layerIndex + 1), description: clean(layer?.description, 260), role: clean(layer?.role, 120), character_id: clean(layer?.character_id, 80), part_id: clean(layer?.part_id, 80),
+      id: clean(layer?.id, 60) || "layer-" + (layerIndex + 1), description: clean(layer?.description, 260), role: clean(layer?.role, 120), character_id: clean(layer?.character_id, 80), part_id: clean(layer?.part_id, 80), parent_part_id: clean(layer?.parent_part_id, 80),
       path_d: layer.path_d.trim(), fill: clean(layer.fill, 16), stroke: clean(layer.stroke, 16), stroke_width: Number(layer.stroke_width),
       pivot_x: Number(layer.pivot_x), pivot_y: Number(layer.pivot_y)
     })),
@@ -300,6 +380,14 @@ export default async function handler(req, res) {
       to_transform: Object.fromEntries(["x", "y", "rotation", "scale", "opacity"].map(key => [key, Number(step.to_transform[key])]))
     }))
   }));
+  const rigValidationError = validateCharacterRigContinuity(normalized);
+  if (rigValidationError) {
+    const savedPlan = Array.isArray(shot_plan);
+    return res.status(savedPlan ? 400 : 502).json({
+      error: rigValidationError,
+      diagnosticCode: savedPlan ? "SAVED_SHOT_PLAN_INVALID" : "SCENE_DIRECTOR_INVALID_RIG"
+    });
+  }
   normalized.forEach(shot => { shot.narration_sync = buildNarrationSync(shot); });
   const characterBible = buildCharacterBible(normalized);
   const reusableRigs = buildReusableRigs(normalized);

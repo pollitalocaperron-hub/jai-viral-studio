@@ -34,7 +34,10 @@ function normalizeAsset(item) {
   };
 }
 
+let cachedOpenverseToken = "";
+let cachedOpenverseTokenExpiresAt = 0;
 async function getOpenverseToken() {
+  if (cachedOpenverseToken && cachedOpenverseTokenExpiresAt > Date.now() + 60000) return cachedOpenverseToken;
   const clientId = process.env.OPENVERSE_CLIENT_ID;
   const clientSecret = process.env.OPENVERSE_CLIENT_SECRET;
   if (!clientId || !clientSecret) return "";
@@ -45,7 +48,9 @@ async function getOpenverseToken() {
   });
   if (!response.ok) throw new Error("Openverse token HTTP " + response.status);
   const data = await response.json();
-  return text(data.access_token, 4000);
+  cachedOpenverseToken = text(data.access_token, 4000);
+  cachedOpenverseTokenExpiresAt = Date.now() + Math.max(0, (Number(data.expires_in) || 3600) - 60) * 1000;
+  return cachedOpenverseToken;
 }
 
 export default async function handler(req, res) {

@@ -4,12 +4,15 @@ import generateHandler from "../api/generate.js";
 import narrateHandler from "../api/narrate.js";
 import inspectVisualHandler from "../api/inspect-visual.js";
 import directScenesHandler from "../api/direct-scenes.js";
+import { resolveLayerMotionChain, resolveMotionTransform, resolvePartParentsFromRigs } from "../jai-2d-motion-engine.js";
 import { resolveVisualStyleProfile } from "../api/visual-style-profiles.js";
 
 // Guard the worst-case provider + retry + repair path against Vercel's 60s function limit.
 const generationSource = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
 const frontendSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
-assert.match(frontendSource, /const transformChain=\[\.\.\.chain,layer\]/, "Character rendering must apply parent-bone transforms before the child part.");
+assert.match(frontendSource, /motionEngine\?\.resolveLayerMotionChain/, "Character rendering must delegate hierarchical bone transforms to the shared 2D motion engine.");
+assert.match(frontendSource, /Number\.isFinite\(rawX\)\?rawX:360,py=Number\.isFinite\(rawY\)\?rawY:640/, "A valid zero-valued bone pivot must be preserved instead of being replaced by the canvas center.");
+assert.match(frontendSource, /motionEngine\.resolveLayerMotionChain\(layer,layers,shot\.animation_steps,p,rigParentsForCharacter\)/, "Each character layer must resolve the matching reusable rig for its own character ID.");
 assert.match(frontendSource, /exportedParts\.has\(reusableKey\)/, "PNG export must deduplicate recurring character parts across shots.");
 assert.match(frontendSource, /canvas\.toDataURL\("image\/png"\)/, "Character layer export must encode transparent canvas output as PNG.");
 assert.match(frontendSource, /currentDurationValidation\?\.within_tolerance&&timelineState\.items\.length&&auditReady&&imagesReady&&hasVoice&&animationRendererReady\(\)/, "Final 2D export must require a validated timeline, approved visuals, narration, scene images and animation-ready vector layers.");
@@ -251,6 +254,37 @@ try {
     assert.equal(res.body.animation_plan_validated, true);
     assert.equal(res.body.vector_preview_ready, true, "Validated independent vector layers and transforms must be renderable as a vector preview");
     assert.equal(res.body.animation_ready, false, "Vector layer transforms must not be advertised as cinematic animation readiness");
+
+    const overlappingMotionPlan = res.body.shots.map((shot, index) => index === 0 ? ({
+      ...shot,
+      animation_steps: shot.animation_steps.map((step, stepIndex) => stepIndex === 0
+        ? { ...step, end_progress: 0.65 }
+        : stepIndex === 1
+          ? { ...step, target_id: "component", start_progress: 0.6, end_progress: 1 }
+          : step)
+    }) : shot);
+    const overlappingMotionResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: {
+      topic: "Animación con solapamiento", script: "Narración de prueba.", story, shot_plan: overlappingMotionPlan
+    } }, overlappingMotionResponse);
+    assert.equal(overlappingMotionResponse.statusCode, 400,
+      "A saved shot plan with overlapping actions on the same layer must be rejected before rendering.");
+    assert.equal(overlappingMotionResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+    assert.match(overlappingMotionResponse.body.error, /solapadas/);
+
+    const jumpingMotionPlan = res.body.shots.map((shot, index) => index === 0 ? ({
+      ...shot,
+      animation_steps: shot.animation_steps.map((step, stepIndex) => stepIndex === 1
+        ? { ...step, target_id: "component", start_progress: 0.65, end_progress: 1 }
+        : stepIndex === 0 ? { ...step, end_progress: 0.65 } : step)
+    }) : shot);
+    const jumpingMotionResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: {
+      topic: "Animación con salto", script: "Narración de prueba.", story, shot_plan: jumpingMotionPlan
+    } }, jumpingMotionResponse);
+    assert.equal(jumpingMotionResponse.statusCode, 400);
+    assert.equal(jumpingMotionResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+    assert.match(jumpingMotionResponse.body.error, /salto entre acciones/);
     assert.equal(res.body.visual_engine_status, "vector_preview_only");
     assert.equal(res.body.cinematic_ready, false, "Vector-only scene direction must never claim cinematic readiness.");
     assert.equal(res.body.scene_contracts.length, res.body.shots.length);
@@ -258,12 +292,62 @@ try {
     assert.equal(res.body.scene_contracts[0].visual.source_type, "vector_scene");
     assert.equal(res.body.shots[0].shot_id, "shot-01");
     assert.equal(res.body.shots[0].layers.length, 3, "Each shot must contain multiple independently rendered vector layers");
+    // Exercise the real director response through the exact shared transform resolver used by the canvas renderer.
+    const directedShot = res.body.shots[0];
+    const characterHead = directedShot.layers.find(layer => layer.part_id === "head");
+    const characterTorso = directedShot.layers.find(layer => layer.part_id === "torso");
+    assert.ok(characterHead && characterTorso, "The director must preserve character part IDs through normalization");
+    assert.equal(directedShot.animation_steps.find(step => step.target_id === characterHead.id).to_transform.opacity, 1,
+      "Normalized keyframes must retain numeric transform values for the renderer");
+    const rendererParents = resolvePartParentsFromRigs(res.body.reusable_rigs, characterHead.character_id,
+      { head: "torso", hair: "head", eyes: "head", mouth: "head", face: "head", upper_arm: "torso", arm_upper: "torso", forearm: "upper_arm", lower_arm: "upper_arm", hand: "forearm", upper_leg: "torso", thigh: "torso", lower_leg: "upper_leg", shin: "upper_leg", foot: "lower_leg" });
+    const rigChain = resolveLayerMotionChain(characterHead, directedShot.layers, directedShot.animation_steps, 0.5, rendererParents);
+    assert.deepEqual(rigChain.map(item => item.bone.id), [characterTorso.id, characterHead.id],
+      "A director-generated head layer must inherit its matching character torso before rendering");
+    assert.equal(rigChain[0].transform.y, -35, "The parent bone must interpolate its own director keyframe at the requested progress");
+    assert.equal(rigChain[1].transform.opacity, 0.5, "The child layer must interpolate its own reveal keyframe");
+    assert.deepEqual(resolveMotionTransform(directedShot.animation_steps.filter(step => step.target_id === characterHead.id), 0.5),
+      { x: 0, y: 10, rotation: 0, scale: 0.925, opacity: 0.5 },
+      "The director's reveal keyframe must resolve to the renderer's interpolated numeric transform contract");
     assert.equal(res.body.reusable_rigs.length, 1, "Repeated character parts must be consolidated into one reusable rig");
     assert.equal(res.body.character_bible.length, 1, "The character bible must only contain characters present in actual shot layers");
     assert.equal(res.body.character_bible[0].character_id, "hero");
     assert.deepEqual(res.body.character_bible[0].parts.map(part => part.part_id).sort(), ["head", "torso"]);
     assert.deepEqual(res.body.reusable_rigs[0].bones.map(bone => bone.bone_id).sort(), ["head", "torso"]);
     assert.equal(res.body.reusable_rigs[0].bones.find(bone => bone.bone_id === "head").parent_bone_id, "torso");
+
+    // Explicit director-authored rig links take precedence over inferred anatomical defaults.
+    const customRigPlan = shots.map(shot => ({ ...shot, layers: shot.layers.map(layer =>
+      layer.id === "housing" ? { ...layer, character_id: "hero", part_id: "housing" } :
+      layer.part_id === "head" ? { ...layer, parent_part_id: "housing" } : layer
+    ) }));
+    const customRigResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Rig personalizado", script: "Narración de prueba.", story, shot_plan: customRigPlan } }, customRigResponse);
+    assert.equal(customRigResponse.statusCode, 200);
+    assert.equal(customRigResponse.body.reusable_rigs[0].bones.find(bone => bone.bone_id === "head").parent_bone_id, "housing",
+      "A valid explicit parent_part_id from the director must override the default head-to-torso inference.");
+
+    // A saved character cannot change the head's parent in a later shot.
+    const inconsistentRigPlan = customRigPlan.map((shot, index) => index === customRigPlan.length - 1
+      ? { ...shot, layers: shot.layers.map(layer => layer.part_id === "head" ? { ...layer, parent_part_id: "torso" } : layer) }
+      : shot);
+    const inconsistentRigResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Rig inconsistente", script: "Narración de prueba.", story, shot_plan: inconsistentRigPlan } }, inconsistentRigResponse);
+    assert.equal(inconsistentRigResponse.statusCode, 400, "A saved shot plan with changing bone parents must be rejected before rendering.");
+    assert.equal(inconsistentRigResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+    assert.match(inconsistentRigResponse.body.error, /cambia el padre/);
+
+    const missingShotParentPlan = customRigPlan.map((shot, index) => index === 1 ? ({
+      ...shot,
+      layers: shot.layers.map(layer => layer.part_id === "housing" ? { ...layer, character_id: "", part_id: "" } : layer)
+    }) : shot);
+    const missingShotParentResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: {
+      topic: "Rig sin padre local", script: "Narración de prueba.", story, shot_plan: missingShotParentPlan
+    } }, missingShotParentResponse);
+    assert.equal(missingShotParentResponse.statusCode, 400);
+    assert.equal(missingShotParentResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+    assert.match(missingShotParentResponse.body.error, /no aparece junto/);
     assert.equal(res.body.narration_sync_validated, true);
     assert.equal(res.body.shots[0].narration_sync.length, 3);
     assert.ok(res.body.shots[0].narration_sync.every(event => event.start_seconds >= res.body.shots[0].start_seconds && event.end_seconds <= res.body.shots[0].end_seconds));
@@ -276,45 +360,53 @@ try {
     assert.equal(emptyBibleResponse.statusCode, 200);
     assert.deepEqual(emptyBibleResponse.body.character_bible, [], "No character bible entries may be invented when shot layers contain no characters.");
 
+    // Subject-role aliases emitted by the director must be normalized consistently.
+    const aliasedRolePlan = shots.map(shot => ({ ...shot, layers: shot.layers.map((layer, index) => index === 0 ? { ...layer, role: "main-subject" } : layer) }));
+    const aliasedRoleResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso con rol alternativo", script: "Narración de prueba.", story, shot_plan: aliasedRolePlan } }, aliasedRoleResponse);
+    assert.equal(aliasedRoleResponse.statusCode, 200, "main-subject must be recognized as the main subject role");
+
+    // A tiny subject cannot pass merely because the background/environment layer is large.
+    const tinySubjectPlan = shots.map(shot => ({ ...shot, layers: shot.layers.map((layer, index) => index === 0 ? { ...layer, path_d: "M 350 600 L 370 600 L 370 620 L 350 620 Z" } : layer) }));
+    const tinySubjectResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso con sujeto diminuto", script: "Narración de prueba.", story, shot_plan: tinySubjectPlan } }, tinySubjectResponse);
+    assert.equal(tinySubjectResponse.statusCode, 400);
+    assert.equal(tinySubjectResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+
+    // A geometrically valid subject positioned outside the 9:16 canvas must fail closed.
+    const offCanvasPlan = shots.map(shot => ({ ...shot, layers: shot.layers.map((layer, index) => index === 0 ? { ...layer, path_d: "M 920 420 L 1120 420 L 1120 760 L 920 760 Z" } : layer) }));
+    const offCanvasResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso fuera del lienzo", script: "Narración de prueba.", story, shot_plan: offCanvasPlan } }, offCanvasResponse);
+    assert.equal(offCanvasResponse.statusCode, 400);
+    assert.equal(offCanvasResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+    assert.match(offCanvasResponse.body.error, /fuera del lienzo vertical/);
+
+    // A previously validated shot plan resumes locally without contacting any AI provider.
+    globalThis.fetch = async () => { throw new Error("A saved shot plan must not call an AI provider"); };
+    const resumed = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso sin personajes", script: "Narración de prueba.", story, shot_plan: noCharacterShots } }, resumed);
+    assert.equal(resumed.statusCode, 200);
+    assert.equal(resumed.body.provider, "Plan recuperado (sin IA)");
+    assert.equal(resumed.body.shot_count, noCharacterShots.length);
+    assert.deepEqual(resumed.body.character_bible, []);
+
   }
 
-  // A free-tier quota error from Groq must route the scene plan to the configured free Gemini fallback.
+  // A Groq quota response must pause immediately instead of spending another provider's quota.
   {
-    const story = makeValidPlan().story;
-    const shots = [];
-    story.forEach((scene, sceneIndex) => {
-      const start = sceneIndex * 9;
-      for (let part = 0; part < 2; part++) {
-        const shotStart = start + part * 4.5;
-        shots.push({
-          scene_index: sceneIndex, start_seconds: shotStart, end_seconds: shotStart + 4.5,
-          narration_segment: "La explicación describe esta acción concreta.",
-          subtitle: "Acción " + (part + 1), subject: "Componente mecánico identificable",
-          visual_state: "Estado inicial y cambio visible", visual_action: "El componente se desplaza de forma observable",
-          visual_prompt_en: "Clean educational 2D editorial illustration of the exact mechanical component in a coherent portrait composition, clear shapes, consistent palette, separated readable parts and a specific teaching action.",
-          continuity_anchor: "Same component geometry, color, scale and orientation across adjacent shots.",
-          background_color: "#F2EEE4", layers: [{"id":"component","description":"Componente principal","role":"subject","character_id":"hero","part_id":"torso","path_d":"M 240 420 C 260 360 460 360 480 420 L 480 760 C 460 820 260 820 240 760 Z","fill":"#E7A65A","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"housing","description":"Estructura contenedora","role":"environment","path_d":"M 150 300 L 570 300 L 570 900 L 150 900 Z","fill":"#D8E1E8","stroke":"#25364A","stroke_width":9,"pivot_x":360,"pivot_y":640},{"id":"detail","description":"Detalle funcional","role":"detail","character_id":"hero","part_id":"head","path_d":"M 300 500 C 330 470 390 470 420 500 L 420 600 L 300 600 Z","fill":"#E9D16C","stroke":"#25364A","stroke_width":7,"pivot_x":360,"pivot_y":550}],
-          animation_steps: [{"target_id":"component","action":"move","from_state":"lower","to_state":"upper","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":-70,"rotation":0,"scale":1,"opacity":1}},{"target_id":"housing","action":"hold","from_state":"fixed","to_state":"fixed","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}},{"target_id":"detail","action":"reveal","from_state":"hidden","to_state":"visible","start_progress":0,"end_progress":1,"from_transform":{"x":0,"y":20,"rotation":0,"scale":0.85,"opacity":0},"to_transform":{"x":0,"y":0,"rotation":0,"scale":1,"opacity":1}}]
-        });
-      }
-    });
     const calls = [];
-    globalThis.fetch = async (url) => {
+    globalThis.fetch = async url => {
       calls.push(String(url));
-      if (String(url).includes("api.groq.com")) return response({ error: { message: "Free tier rate limit reached" } }, 429);
-      if (String(url).includes("generativelanguage.googleapis.com")) {
-        return response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ shots }) }] } }] });
-      }
-      throw new Error("Unexpected provider in free-tier failover test: " + url);
+      if (String(url).includes("api.groq.com")) return response({ error: { message: "Please try again in 8s" } }, 429);
+      throw new Error("A quota-limited request must not call another provider: " + url);
     };
     const res = mockResponse();
-    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story, retention_map: [] } }, res);
-    assert.equal(res.statusCode, 200, "Gemini free fallback must complete the task after Groq quota exhaustion");
-    assert.equal(res.body.provider, "Gemini 3.8 Flash");
-    assert.equal(res.body.shot_count, 8);
-    assert.equal(calls.length, 2, "Only the primary and configured free fallback may be called");
-    assert.ok(calls[0].includes("api.groq.com"));
-    assert.ok(calls[1].includes("generativelanguage.googleapis.com"));
+    await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story: makeValidPlan().story, retention_map: [] } }, res);
+    assert.equal(res.statusCode, 429);
+    assert.equal(res.body.diagnosticCode, "FREE_QUOTA_WAIT");
+    assert.equal(res.body.retryAfterSeconds, 8);
+    assert.equal(res.headers["Retry-After"], "8");
+    assert.equal(calls.length, 1, "Quota waits must not trigger a second paid or free-provider call");
   }
 
   // If all configured free-tier providers are quota-limited, fail closed without paid-provider escalation.
@@ -327,8 +419,8 @@ try {
     const res = mockResponse();
     await directScenesHandler({ method: "POST", body: { topic: "Proceso de prueba", script: "Una narración breve.", story: makeValidPlan().story, retention_map: [] } }, res);
     assert.equal(res.statusCode, 429);
-    assert.equal(res.body.diagnosticCode, "FREE_QUOTA_EXHAUSTED");
-    assert.match(res.body.error, /No se realizará ningún cobro/);
+    assert.equal(res.body.diagnosticCode, "FREE_QUOTA_WAIT");
+    assert.match(res.body.error, /No se hará una segunda llamada/);
   }
 
   // Animation actions must target an existing layer and use a valid time interval.

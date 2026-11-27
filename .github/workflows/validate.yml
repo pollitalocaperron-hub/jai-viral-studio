@@ -37,9 +37,11 @@ jobs:
           node --check --input-type=module < api/direct-scenes.js
           node --check --input-type=module < api/visual-style-profiles.js
           node --check --input-type=module < api/search-visual-assets.js
+          node --check --input-type=module < jai-2d-motion-engine.js
           node --check --input-type=module < jai-openverse-asset-bridge.js
           node --check --input-type=module < jai-visual-asset-store.js
           node --check --input-type=module < jai-media-renderer.js
+          node --check tests/2d-motion-engine.mjs
           node --check tests/media-renderer-contract.mjs
           node --check tests/visual-assets-contract.mjs
           node --check --input-type=module < worker.js
@@ -62,6 +64,8 @@ jobs:
 
   browser-persistence:
     runs-on: ubuntu-24.04
+    env:
+      JAI_BROWSER_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,6 +79,8 @@ jobs:
         run: npm run test:scene-contract
       - name: Test locked visual style and asset library
         run: npm run test:visual-assets
+      - name: Test keyframed 2D motion and character rig propagation
+        run: npm run test:2d-motion
       - name: Test local media import and renderer contracts
         run: npm run test:media-renderer
       - name: Test Cloudflare Worker adapter and shared limiter
@@ -83,9 +89,18 @@ jobs:
         run: npm run test:netlify
       - name: Install Chromium
         timeout-minutes: 10
-        run: npx playwright install chromium
+        run: npx playwright install --with-deps chromium
       - name: Test IndexedDB persistence in Chromium
         run: npm run test:browser
+      - name: Install Google Chrome Stable with native media codecs
+        run: |
+          sudo install -d -m 0755 /etc/apt/keyrings
+          curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor --yes -o /etc/apt/keyrings/google-chrome.gpg
+          echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          google-chrome --version
+          google-chrome --headless --no-sandbox --disable-gpu --dump-dom 'data:text/html,<video id="v"></video><script>document.title=document.querySelector("video").canPlayType("video/mp4; codecs="+String.fromCharCode(34)+"avc1.42E01E, mp4a.40.2"+String.fromCharCode(34))||"NO_H264_AAC"</script>' | grep -q '<title>probably</title>\|<title>maybe</title>'
       - name: Test complete production flow in Chromium
         run: npm run test:e2e
       - name: Test real local media import and canvas rendering in Chromium

@@ -1,4 +1,6 @@
 import { importOpenverseAsset, importLocalMediaFile } from "./jai-visual-asset-store.js";
+import { easeMotionProgress, interpolateMotionTransform, resolveMotionTransform, resolveLayerMotionChain } from "./jai-2d-motion-engine.js";
+window.JAI2DMotionEngine = { easeMotionProgress, interpolateMotionTransform, resolveMotionTransform, resolveLayerMotionChain };
 import { prepareVisualAsset, prepareVisualSequence, drawPreparedVisualNow, awaitPreparedVisualFrame } from "./jai-media-renderer.js";
 window.JAIMediaRenderer = { prepareVisualAsset, prepareVisualSequence, drawPreparedVisualNow, awaitPreparedVisualFrame };
 const API_BASE = location.hostname === "pollitalocaperron-hub.github.io" ? "https://jai-viral-studio.vercel.app" : "";
@@ -29,6 +31,45 @@ function renderLibrary(target) {
     row.append(title, meta, link); target.append(row);
   }
 }
+const GENERIC_TERMS = new Set(["the","and","with","from","into","over","under","scene","shot","close","wide","view","background","foreground","cinematic","illustration","illustrated","visual","image","photo","person","people","man","woman","character","showing","standing","looking","using","holding","near","inside","outside","a","an","of","to","in","on","at","by","for","de","la","el","los","las","un","una","con","desde","sobre","entre","persona","personas","escena","toma","fondo","vista","mostrando","usando"]);
+function visualTerms(value) {
+  return String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").match(/[a-z0-9]{3,}/g)?.filter(word=>!GENERIC_TERMS.has(word)) || [];
+}
+async function autoAssignShotAssets(shots) {
+  const list=Array.isArray(shots)?shots:[];
+  const report={provider:"Openverse",attempted:0,assigned:0,skipped:0,errors:[]};
+  for(let index=0;index<list.length;index++){
+    const shot=list[index],shotId=String(shot?.shot_id||"");
+    if(!shotId||window.jaiVisualAssignments?.[shotId]?.prepared){report.skipped++;continue;}
+    const concepts=[shot.subject,shot.visual_subject,shot.visual_state,shot.visual_action,shot.visual_composition,shot.setting,shot.environment,shot.background,shot.location,shot.on_screen_text,shot.continuity_anchor,shot.visual_prompt_en].filter(Boolean).join(" ");
+    const terms=[...new Set(visualTerms(concepts))];
+    const query=terms.slice(0,7).join(" ");
+    if(query.length<3){report.skipped++;continue;}
+    report.attempted++;
+    try{
+      const response=await fetch(API_BASE+"/api/search-visual-assets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({query})});
+      if(!response.ok)throw new Error("búsqueda HTTP "+response.status);
+      const data=await response.json(),shotSet=new Set(terms);
+      const ranked=(Array.isArray(data.assets)?data.assets:[]).map(asset=>{
+        const titleTerms=visualTerms(asset.title+" "+asset.attribution);
+        const overlap=titleTerms.filter(term=>shotSet.has(term)).length;
+        return {asset,score:overlap/Math.max(1,Math.min(5,shotSet.size))};
+      }).sort((a,b)=>b.score-a.score);
+      const match=ranked.find(item=>item.score>=0.35 && ["cc0","pdm","by"].includes(String(item.asset.license||"").toLowerCase()));
+      if(!match){report.skipped++;continue;}
+      const stored=await importOpenverseAsset(match.asset);
+      const prepared=await prepareVisualAsset(stored);
+      document.dispatchEvent(new CustomEvent("jai:visual-asset-ready",{detail:{asset:stored,prepared,autoAssignShotId:shotId}}));
+      const library=readLibrary();
+      if(!library.some(item=>item.id===match.asset.id))library.unshift(match.asset);
+      saveLibrary(library);
+      report.assigned++;
+    }catch(error){report.errors.push({shot_id:shotId,message:String(error?.message||error).slice(0,180)});}
+  }
+  const saved=document.getElementById("jaiAssetSaved");if(saved)renderLibrary(saved);
+  return report;
+}
+window.JAIAutoVisualAssets={assignShotAssets:autoAssignShotAssets};
 function init() {
   const studio = $("visualStudio");
   if (!studio || $("jaiAssetLibrary")) return;

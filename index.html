@@ -54,7 +54,7 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
 <label for="research">Tu investigación o indicaciones (opcional)</label><textarea id="research" placeholder="Pega aquí tus notas, fuentes, datos que quieras incluir o el enfoque que imaginas..."></textarea><div class="hint">Tus notas se enviarán al motor editorial de J.A.I. para preparar el plan. No incluyas información sensible.</div><div style="height:16px"></div>
 <div class="grid"><div><label for="duration">Duración objetivo</label><select id="duration"><option>30–45 segundos</option><option>45–60 segundos</option><option>60–90 segundos</option></select></div><div><label for="platform">Destino principal</label><select id="platform"><option>Reels</option><option>YouTube Shorts</option><option>TikTok</option><option>Multiplataforma</option></select></div></div>
 <div class="grid" style="margin-top:12px"><div><label for="contentMode">Estilo de producción</label><select id="contentMode"><option value="serie-viral" selected>Serie viral · historia y retención</option><option value="educativo">Educativo · explicación clara</option></select><div class="hint">Gancho inmediato, progresión y un nuevo avance de interés cada 3 segundos.</div></div><div><label for="ctaGoal">Interacción que buscamos</label><select id="ctaGoal"><option value="follow">Síguenos para la siguiente parte</option><option value="share">Comparte este video</option><option value="comment">Comenta tu opinión</option><option value="save">Guarda este video</option><option value="custom">Llamada personalizada</option></select><input id="ctaCustom" maxlength="120" placeholder="Escribe tu llamada a la acción" style="margin-top:8px;display:none"></div></div>
-<div class="grid" id="seriesControls" style="margin-top:12px"><div><label for="seriesLength">Duración de la temporada</label><select id="seriesLength"><option value="10" selected>10 episodios</option><option value="20">20 episodios</option></select></div><div><label>Continuidad automática</label><div class="hint" id="seriesProgress">Temporada nueva · episodio 1</div></div></div><div class="row" style="gap:8px;flex-wrap:wrap"><button class="primary" id="create">Crear plan de producción con IA</button><button class="secondary" id="newProject" type="button">Nuevo proyecto</button></div><div class="hint status" id="status">Sesión nueva · Tus proyectos solo se guardan cuando pulsas «Guardar proyecto».</div><div class="hint" id="memoryStatus">Memoria editorial: preparando historial de aprendizaje…</div></section>
+<div class="grid" id="seriesControls" style="margin-top:12px"><div><label for="seriesLength">Duración de la temporada</label><select id="seriesLength"><option value="10" selected>10 episodios</option><option value="20">20 episodios</option></select></div><div><label>Continuidad automática</label><div class="hint" id="seriesProgress">Temporada nueva · episodio 1</div></div></div><div class="row" style="gap:8px;flex-wrap:wrap"><button class="primary" id="create">Crear plan de producción con IA</button><button class="secondary" id="runProduction" type="button">Crear vídeo automáticamente / Reanudar</button><button class="secondary" id="newProject" type="button">Nuevo proyecto</button></div><div class="hint status" id="status">Sesión nueva · Tus proyectos solo se guardan cuando pulsas «Guardar proyecto».</div><div class="hint" id="memoryStatus">Memoria editorial: preparando historial de aprendizaje…</div></section>
 <section class="card output" id="output"><div class="row" style="justify-content:space-between"><h3 class="section-title">Plan de producción</h3><span class="tag">9:16 · 720 × 1280</span></div><div id="category" style="margin-bottom:10px"></div>
 <div class="jai-pipeline" id="pipelineProgress" aria-live="polite">
  <div class="row" style="justify-content:space-between"><b>Progreso de producción</b><span class="tag" id="pipelineOverall">0 de 6 etapas</span></div>
@@ -111,11 +111,11 @@ button{border:0;border-radius:12px;padding:13px 16px;font:700 14px system-ui;cur
  <div class="scene" style="margin-top:10px"><label>Desfase de subtítulos (s)<input id="subtitleTrackOffset" type="number" min="-5" max="5" step="0.1" value="0"></label><div class="hint">Negativo adelanta los subtítulos; positivo los retrasa. El ajuste también se aplica a la pista y al archivo SRT.</div></div>
  <div id="captionEditor" style="display:grid;gap:9px;margin-top:10px"></div>
 </section>
-<div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de ritmo · microavance cada 3 segundos, sin cortes obligatorios</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Perfil audiovisual de referencia</span></div><p class="hint">El director divide cada escena conceptual en 2–5 tomas sincronizadas con la narración. Todas las tomas mantienen un único estilo visual fijo J.A.I. Reference Motion: motion graphics 2D, fondos azul marino, acentos cian, luz cálida y capas ilustradas con animación intencional. J.A.I. traduce cada perfil a capas vectoriales SVG independientes y acciones de transformación en formato vertical 9:16, sin generar imágenes externas ni consumir créditos de imagen. La calidad visual final se valida toma por toma antes de habilitar la exportación.</p><button class="primary" id="makeVisuals" type="button">Generar ilustraciones vectoriales</button><div class="row"><button class="secondary" id="inspectVisuals" type="button" disabled>Auditar tomas con IA</button></div><div class="hint" id="visualAuditStatus">La inspección compara cada imagen con su enseñanza. Si el servicio no responde, puedes revisar las imágenes y aprobarlas manualmente en conjunto.</div><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div class="row" style="margin-top:10px"><button class="secondary" id="directScenes" type="button" disabled>Diseñar tomas y acciones animables</button></div><div class="hint" id="directScenesStatus">El director descompondrá cada escena conceptual en varias tomas sincronizadas con la narración, identificará capas y describirá acciones concretas antes del render.</div><div id="directScenesOutput" class="visual-grid" style="margin-top:10px"></div><div class="scene" style="margin-top:12px"><b>Banco de personajes y piezas PNG</b><p class="hint">Separa las capas vectoriales en PNG transparentes para reutilizarlas y animarlas.</p><button class="secondary" id="exportCharacterLayers" type="button" disabled>Preparar capas PNG transparentes</button><div id="characterLayerExports" class="hint" style="display:grid;gap:7px;margin-top:10px"></div></div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Secuencia de montaje · Vista previa</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza las tomas del storyboard: cambia su duración, reordénalas, elimina las que no necesites, elige transiciones y ajusta qué tramo de las transformaciones vectoriales se reproduce. También puedes desplazar por separado la narración y los subtítulos para corregir la sincronía. El editor controla la animación 2D por capas; todavía no es un editor de metraje de vídeo externo. Los tiempos se recalculan automáticamente. La exportación usa MP4 si tu navegador lo admite o WebM como respaldo.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="mediaTracks" style="display:grid;gap:10px;margin:12px 0"></div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Reproducir secuencia</button><button class="secondary" id="pausePreview" type="button" disabled>Pausar</button><button class="secondary" id="stopPreview" type="button" disabled>Detener</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar y exportar video</button><button class="secondary" id="cancelRender" type="button" hidden>Cancelar render</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. La narración generada se integrará al vídeo. El formato MP4 se usará si tu navegador lo admite; de lo contrario se descargará WebM.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Alertas editoriales</label><div class="result" id="editorialWarnings">No hay alertas adicionales.</div><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
+<div style="height:13px"></div><label>Storyboard cinematográfico</label><div id="story"></div><div style="height:13px"></div><label>Mapa de ritmo · microavance cada 3 segundos, sin cortes obligatorios</label><div class="result" id="retentionMap">El mapa de retención aparecerá aquí.</div><div style="height:18px"></div><section class="card" id="visualStudio"><div class="row" style="justify-content:space-between"><h3 class="section-title">Director visual cinematográfico</h3><span class="tag">Perfil audiovisual de referencia</span></div><p class="hint">El director divide cada escena conceptual en 2–5 tomas sincronizadas con la narración. Todas las tomas mantienen un único estilo visual fijo J.A.I. Reference Motion: motion graphics 2D, fondos azul marino, acentos cian, luz cálida y capas ilustradas con animación intencional. J.A.I. traduce cada perfil a capas vectoriales SVG independientes y acciones de transformación en formato vertical 9:16, sin generar imágenes externas ni consumir créditos de imagen. La calidad visual final se valida toma por toma antes de habilitar la exportación.</p><button class="primary" id="makeVisuals" type="button">Generar ilustraciones vectoriales</button><div class="row"><button class="secondary" id="inspectVisuals" type="button" disabled>Auditar tomas con IA</button></div><div class="hint" id="visualAuditStatus">La inspección compara cada imagen con su enseñanza. Si el servicio no responde, puedes revisar las imágenes y aprobarlas manualmente en conjunto.</div><div class="hint" id="visualStatus">Primero genera un plan editorial para habilitar las escenas.</div><div class="row" style="margin-top:10px"><button class="secondary" id="directScenes" type="button" disabled>Diseñar tomas y acciones animables</button></div><div class="hint" id="directScenesStatus">El director descompondrá cada escena conceptual en varias tomas sincronizadas con la narración, identificará capas y describirá acciones concretas antes del render.</div><div id="directScenesOutput" class="visual-grid" style="margin-top:10px"></div><div class="scene" style="margin-top:12px"><b>Banco de personajes y piezas PNG</b><p class="hint">Separa las capas vectoriales en PNG transparentes para reutilizarlas y animarlas.</p><button class="secondary" id="exportCharacterLayers" type="button" disabled>Preparar capas PNG transparentes</button><div id="characterLayerExports" class="hint" style="display:grid;gap:7px;margin-top:10px"></div></div><div id="visualScenes" class="visual-grid" style="margin-top:12px"></div></section><div style="height:18px"></div><section class="card" id="timelineEditor"><div class="row" style="justify-content:space-between"><h3 class="section-title">Secuencia de montaje · Vista previa</h3><span class="tag">Montaje 9:16</span></div><p class="hint">Organiza las tomas del storyboard: cambia su duración, reordénalas, elimina las que no necesites, elige transiciones y ajusta qué tramo de las transformaciones vectoriales se reproduce. También puedes desplazar por separado la narración y los subtítulos para corregir la sincronía. El editor controla la animación 2D por capas; todavía no es un editor de metraje de vídeo externo. Los tiempos se recalculan automáticamente. La exportación final exige MP4 (H.264/AAC). Si el navegador no puede producirlo, J.A.I. bloqueará la descarga.</p><div id="timelineSummary" class="hint">Genera el plan y las escenas visuales para preparar la línea de tiempo.</div><div id="mediaTracks" style="display:grid;gap:10px;margin:12px 0"></div><div id="timelineTracks" style="display:grid;gap:9px;margin-top:12px"></div><div class="row" style="margin-top:14px"><button class="secondary" id="buildTimeline" type="button">Preparar línea de tiempo</button><button class="secondary" id="previewTimeline" type="button" disabled>Reproducir secuencia</button><button class="secondary" id="pausePreview" type="button" disabled>Pausar</button><button class="secondary" id="stopPreview" type="button" disabled>Detener</button></div><div id="timelineStatus" class="hint" aria-live="polite">Esperando las escenas visuales.</div><div class="row" style="margin-top:12px"><button class="primary" id="renderVideo" type="button" disabled>Renderizar y exportar video</button><button class="secondary" id="cancelRender" type="button" hidden>Cancelar render</button><a id="downloadVideo" class="secondary" hidden download="jai-viral-studio-prueba.webm">Descargar video</a></div><div class="hint" id="renderStatus" aria-live="polite">Prepara la línea de tiempo para habilitar el renderizado. La narración generada se integrará al vídeo. La descarga solo se habilita si el archivo final es MP4 real; WebM está prohibido.</div><canvas id="renderCanvas" width="720" height="1280" style="display:none;width:100%;max-width:260px;border-radius:12px;margin-top:10px;background:#071326"></canvas></section><div style="height:13px"></div><label>Alertas editoriales</label><div class="result" id="editorialWarnings">No hay alertas adicionales.</div><div style="height:13px"></div><label>Verificaciones</label><div class="result" id="verification"></div><div style="height:13px"></div><label>Control de calidad</label><div class="result" id="quality"></div><div style="height:13px"></div>
 <div class="steps"><div class="step"><b>01 · Investigación</b><span>Verificar afirmaciones y fuentes.</span></div><div class="step"><b>02 · Dirección visual</b><span>Objetos, diagramas y movimiento.</span></div><div class="step"><b>03 · Voz</b><span>Narración y sincronización.</span></div><div class="step"><b>04 · Montaje</b><span>Ritmo, subtítulos y sonido.</span></div><div class="step"><b>05 · Revisión</b><span>Exactitud y originalidad.</span></div><div class="step"><b>06 · Exportación</b><span>MP4/WebM vertical 9:16.</span></div></div>
 <div class="row" style="margin-top:14px"><button class="secondary" id="copy">Copiar plan</button><button class="secondary" id="save">Guardar plan</button></div><p class="hint" id="autosaveStatus" role="status">La recuperación automática se activa al generar un plan.</p></section>
 <section class="card"><h3 class="section-title">Proyectos guardados</h3><div id="projects" class="hint">Todavía no hay proyectos guardados en este dispositivo.</div></section>
-<footer>J.A.I. Viral Studio · Memoria editorial acumulativa · Exportación MP4 nativa cuando el navegador la admite; WebM de respaldo.</footer></div>
+<footer>J.A.I. Viral Studio · Memoria editorial acumulativa · Exportación MP4 verificado; sin respaldo WebM.</footer></div>
 
 <script>
 const JAI_API_BASE=location.hostname==="pollitalocaperron-hub.github.io"?"https://jai-viral-studio.vercel.app":"";function jaiApiUrl(path){return JAI_API_BASE+path;}const $=id=>document.getElementById(id);let currentPlan="",currentPlanData=null,currentRetentionMap=[],currentTopic="";
@@ -152,9 +152,9 @@ function updateRenderGate(){
  }else if(ready)$("renderStatus").textContent="Control de calidad aprobado. El vídeo puede exportarse.";
 }
 const JAI_AUTOSAVE_DB="jai-viral-studio-recovery",JAI_AUTOSAVE_STORE="sessions",JAI_AUTOSAVE_KEY="latest";
-let jaiAutosaveTimer=null,jaiAutosaveBusy=false,jaiAutosavePending=false,projectRecoveryInProgress=false,jaiAutosaveRevision=0;
+let jaiAutosaveTimer=null,jaiAutosaveBusy=false,jaiAutosavePending=false,projectRecoveryInProgress=false,jaiAutosaveRevision=0,jaiProductionOrchestrator=null,jaiProductionRunState=null,jaiProductionRunning=false;
 function openJaiRecoveryDB(){return new Promise((resolve,reject)=>{if(!("indexedDB" in window)){reject(new Error("IndexedDB no disponible"));return;}const request=indexedDB.open(JAI_AUTOSAVE_DB,1);request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(JAI_AUTOSAVE_STORE))db.createObjectStore(JAI_AUTOSAVE_STORE);};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error("No se pudo abrir el almacenamiento local"));});}
-function jaiRecoverySnapshot(){if(!currentPlanData||!currentTopic)return null;return {savedAt:Date.now(),topic:currentTopic,notes:$("research").value,plan:currentPlan,data:currentPlanData,retentionMap:currentRetentionMap,shotPlan:currentShotPlan,characterBible:currentCharacterBible,reusableRigs:currentReusableRigs,seriesBible:currentSeriesBible,images:jaiSceneImages.map(item=>item&&item.src?{src:item.src,shot:item.shot,time:item.time,sceneIndex:item.sceneIndex,prompt:item.prompt}:null),audit:visualAuditResults,timeline:timelineState.items.map(item=>({...item})),audio:kokoroAudioBlob,audioDuration:kokoroAudioDuration,audioSampleRate:kokoroSampleRate,audioEdit:{...audioEdit},audioTrackOffset,subtitleTrackOffset,captions:captionCues.map(cue=>({...cue}))};}
+function jaiRecoverySnapshot(){if(!currentPlanData||!currentTopic)return null;return {savedAt:Date.now(),topic:currentTopic,notes:$("research").value,plan:currentPlan,data:currentPlanData,retentionMap:currentRetentionMap,shotPlan:currentShotPlan,characterBible:currentCharacterBible,reusableRigs:currentReusableRigs,seriesBible:currentSeriesBible,images:jaiSceneImages.map(item=>item&&item.src?{src:item.src,shot:item.shot,time:item.time,sceneIndex:item.sceneIndex,prompt:item.prompt}:null),audit:visualAuditResults,timeline:timelineState.items.map(item=>({...item})),audio:kokoroAudioBlob,audioDuration:kokoroAudioDuration,audioSampleRate:kokoroSampleRate,audioEdit:{...audioEdit},audioTrackOffset,subtitleTrackOffset,captions:captionCues.map(cue=>({...cue})),productionRun:jaiProductionRunState};}
 async function writeJaiRecovery(){if(jaiAutosaveBusy){jaiAutosavePending=true;return;}const snapshot=jaiRecoverySnapshot();if(!snapshot)return;const revision=jaiAutosaveRevision;jaiAutosaveBusy=true;let db=null;try{db=await openJaiRecoveryDB();if(revision!==jaiAutosaveRevision)return;await new Promise((resolve,reject)=>{const tx=db.transaction(JAI_AUTOSAVE_STORE,"readwrite");tx.objectStore(JAI_AUTOSAVE_STORE).put(snapshot,JAI_AUTOSAVE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("Guardado cancelado"));});const status=$("autosaveStatus");if(status)status.textContent="Recuperación automática guardada · "+new Date(snapshot.savedAt).toLocaleTimeString("es-MX");}catch(error){const status=$("autosaveStatus");if(status)status.textContent="No se pudo guardar automáticamente: "+(error?.name==="QuotaExceededError"?"almacenamiento del dispositivo lleno":error.message);}finally{if(db)db.close();jaiAutosaveBusy=false;if(jaiAutosavePending){jaiAutosavePending=false;writeJaiRecovery();}}}
 function scheduleJaiAutosave(){if(!currentPlanData||!currentTopic)return;if(jaiAutosaveTimer)clearTimeout(jaiAutosaveTimer);const status=$("autosaveStatus");if(status)status.textContent="Guardando cambios de recuperación…";jaiAutosaveTimer=setTimeout(writeJaiRecovery,900);}
 function syncRecoveredPipeline(){
@@ -206,10 +206,18 @@ async function restoreJaiProjectRecord(project){
   const prepared=await prepareJaiRecoveryMedia(snapshot,Array.isArray(snapshot.data.story)?snapshot.data.story:[]);
   if(currentPlanData!==stateAtRequest||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="La sesión cambió durante la validación; no se reemplazó el trabajo actual.";return;}
   loadSavedProject(project,{recovery:true});currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;currentShotPlan=prepared.shotPlan;currentCharacterBible=Array.isArray(snapshot.characterBible)?snapshot.characterBible:[];currentReusableRigs=Array.isArray(snapshot.reusableRigs)?snapshot.reusableRigs:[];currentSeriesBible=snapshot.seriesBible&&typeof snapshot.seriesBible==="object"?snapshot.seriesBible:null;updateSeriesProgress();jaiSceneImages=prepared.images;
+  jaiProductionRunState=snapshot.productionRun&&snapshot.productionRun.version===1?snapshot.productionRun:null;
   visualAuditResults=Array.isArray(snapshot.audit)?snapshot.audit.map((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)?item:null):[];
   const expectedAuditCount=visualAuditUnitCount();if(visualAuditResults.length!==expectedAuditCount)visualAuditResults=Array.from({length:expectedAuditCount},(_,index)=>visualAuditResults[index]||null);
   jaiSceneImages.forEach((item,sceneIndex)=>{if(!item?.image){if(currentShotPlan.length)currentShotPlan.forEach((shot,shotIndex)=>{if(Number(shot.scene_index)===sceneIndex)visualAuditResults[shotIndex]=null;});else visualAuditResults[sceneIndex]=null;}});
   if(snapshot.audio instanceof Blob){kokoroAudioBlob=snapshot.audio;kokoroAudioDuration=Number(snapshot.audioDuration)||0;kokoroSampleRate=Number(snapshot.audioSampleRate)||24000;kokoroAudioUrl=URL.createObjectURL(kokoroAudioBlob);$("kokoroAudio").src=kokoroAudioUrl;$("kokoroAudio").style.display="block";$("downloadNarration").href=kokoroAudioUrl;$("downloadNarration").hidden=false;}
+  const savedRender=await readJaiRecovery("latest-render");
+  if(savedRender?.topic===snapshot.topic&&savedRender.blob instanceof Blob&&savedRender.blob.type.startsWith("video/mp4")){
+   jaiRenderedVideoBlob=savedRender.blob;
+   const oldUrl=$("downloadVideo").dataset.objectUrl;if(oldUrl)URL.revokeObjectURL(oldUrl);
+   const videoUrl=URL.createObjectURL(savedRender.blob);$("downloadVideo").dataset.objectUrl=videoUrl;$("downloadVideo").href=videoUrl;$("downloadVideo").download=savedRender.filename||"jai-viral-studio.mp4";$("downloadVideo").textContent="Descargar video MP4";$("downloadVideo").hidden=false;
+   $("renderStatus").textContent="MP4 recuperado desde el almacenamiento local · "+(savedRender.blob.size/1048576).toFixed(1)+" MB.";
+  }
   audioEdit=snapshot.audioEdit||{trimStart:0,trimEnd:kokoroAudioDuration,gain:1};audioTrackOffset=Number(snapshot.audioTrackOffset)||0;subtitleTrackOffset=Number(snapshot.subtitleTrackOffset)||0;
   captionCues=Array.isArray(snapshot.captions)?snapshot.captions.map(cue=>({...cue})):[];
   if(Array.isArray(snapshot.timeline)&&snapshot.timeline.length&&(!currentShotPlan.length||snapshot.timeline.every(item=>item.directedShot)))timelineState.items=snapshot.timeline.map(item=>({...item}));
@@ -243,7 +251,7 @@ async function restoreJaiRecovery(){
   if(currentPlanData||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){const status=$("autosaveStatus");if(status)status.textContent="Hay un proyecto activo; se conservó sin reemplazarlo por la sesión anterior.";return;}
   const prepared=await prepareJaiRecoveryMedia(snapshot,Array.isArray(snapshot.data.story)?snapshot.data.story:[]);
   if(currentPlanData||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){const status=$("autosaveStatus");if(status)status.textContent="El proyecto cambió durante la validación; se conservó sin reemplazarlo.";return;}
-  loadSavedProject({topic:snapshot.topic,notes:snapshot.notes,plan:snapshot.plan,data:snapshot.data},{recovery:true});currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;currentShotPlan=prepared.shotPlan;jaiSceneImages=prepared.images;
+  loadSavedProject({topic:snapshot.topic,notes:snapshot.notes,plan:snapshot.plan,data:snapshot.data},{recovery:true});jaiProductionRunState=snapshot.productionRun&&snapshot.productionRun.version===1?snapshot.productionRun:null;currentRetentionMap=Array.isArray(snapshot.retentionMap)?snapshot.retentionMap:currentRetentionMap;currentShotPlan=prepared.shotPlan;jaiSceneImages=prepared.images;
   if(jaiSceneImages.length!==currentScenes.length)jaiSceneImages=Array.from({length:currentScenes.length},(_,index)=>jaiSceneImages[index]||null);
   visualAuditResults=Array.isArray(snapshot.audit)?snapshot.audit.map((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)?item:null):[];
   const expectedAuditCount=visualAuditUnitCount();if(visualAuditResults.length!==expectedAuditCount)visualAuditResults=Array.from({length:expectedAuditCount},(_,index)=>visualAuditResults[index]||null);
@@ -257,6 +265,13 @@ async function restoreJaiRecovery(){
    $("kokoroAudio").style.display="block";
    $("downloadNarration").href=kokoroAudioUrl;
    $("downloadNarration").hidden=false;
+  }
+  const savedRender=await readJaiRecovery("latest-render");
+  if(savedRender?.topic===snapshot.topic&&savedRender.blob instanceof Blob&&savedRender.blob.type.startsWith("video/mp4")){
+   jaiRenderedVideoBlob=savedRender.blob;
+   const oldUrl=$("downloadVideo").dataset.objectUrl;if(oldUrl)URL.revokeObjectURL(oldUrl);
+   const videoUrl=URL.createObjectURL(savedRender.blob);$("downloadVideo").dataset.objectUrl=videoUrl;$("downloadVideo").href=videoUrl;$("downloadVideo").download=savedRender.filename||"jai-viral-studio.mp4";$("downloadVideo").textContent="Descargar video MP4";$("downloadVideo").hidden=false;
+   $("renderStatus").textContent="MP4 recuperado desde el almacenamiento local · "+(savedRender.blob.size/1048576).toFixed(1)+" MB.";
   }
   audioEdit=snapshot.audioEdit||{trimStart:0,trimEnd:kokoroAudioDuration,gain:1};
   audioTrackOffset=Number(snapshot.audioTrackOffset)||0;
@@ -347,7 +362,7 @@ function renderStory(value){
 }
 
 let currentScenes=[],jaiSceneImages=[],visualAuditResults=[],currentDurationValidation=null,currentShotPlan=[],currentSceneContracts=[],currentCinematicReady=false,currentCharacterBible=[],currentReusableRigs=[],currentVisualStyleProfileId="",currentSeriesBible=null;
-let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false;
+let planningInProgress=false,shotPlanningInProgress=false,visualGenerationRunning=false,narrationGenerating=false,jaiRenderedVideoBlob=null,jaiLastStageError=null;
 function visualStyleProfileLabel(id){
  return ({
   "cinematic-cartoon-story":"Narrativa animada cinematográfica",
@@ -385,13 +400,13 @@ $("exportCharacterLayers").addEventListener("click",exportCharacterLayerPNGs);
 async function designAnimationShots(){
  if(!currentPlanData||!currentScenes.length){$("directScenesStatus").textContent="Primero genera un plan editorial completo.";return false;}
  if(shotPlanningInProgress||projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("directScenesStatus").textContent="Espera a que termine la tarea actual.";return false;}
- const button=$("directScenes");currentCinematicReady=false;currentSceneContracts=[];shotPlanningInProgress=true;button.disabled=true;$("makeVisuals").disabled=true;
+ const button=$("directScenes");currentCinematicReady=false;currentSceneContracts=[];scheduleJaiAutosave();shotPlanningInProgress=true;button.disabled=true;$("makeVisuals").disabled=true;
  $("directScenesStatus").textContent="El director está descomponiendo las escenas, trazando objetos vectoriales y asignando transformaciones…";
  setTaskProgress("directScenesStatus",5,"Diseñando tomas y capas vectoriales…","indeterminate");
  try{
-  const response=await fetch(jaiApiUrl("/api/direct-scenes"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:currentTopic,script:currentPlanData.script,story:currentScenes,retention_map:currentRetentionMap,style_profile_id:currentVisualStyleProfileId}),signal:AbortSignal.timeout(55000)});
+  const response=await fetch(jaiApiUrl("/api/direct-scenes"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic:currentTopic,script:currentPlanData.script,story:currentScenes,retention_map:currentRetentionMap,style_profile_id:currentVisualStyleProfileId,shot_plan:Array.isArray(currentShotPlan)&&currentShotPlan.length?currentShotPlan:null}),signal:AbortSignal.timeout(55000)});
   const data=await readJsonResponse(response,"Director vectorial de escenas");
-  if(!response.ok)throw new Error(data.error||"No se pudo diseñar la secuencia de tomas.");
+  if(!response.ok){if(response.status===429){const retryAfterSeconds=Math.max(5,Math.min(90,Number(data.retryAfterSeconds)||Number(response.headers.get("Retry-After"))||30));throw Object.assign(new Error("Límite temporal del motor gratuito (429). Proyecto guardado; reanuda en aproximadamente "+retryAfterSeconds+" segundos. No se repetirá la llamada automáticamente."),{status:429,retryAfterSeconds});}throw Object.assign(new Error(data.error||"No se pudo diseñar la secuencia de tomas."),{status:response.status});}
   if(data.vector_preview_ready!==true||!Array.isArray(data.shots)||data.shots.length<currentScenes.length*2)throw new Error("El motor activo no devolvió un plan completo de capas vectoriales independientes.");
   const validShots=data.shots.every(shot=>
    Array.isArray(shot.layers)&&shot.layers.length>=3&&
@@ -422,6 +437,7 @@ async function designAnimationShots(){
   scheduleJaiAutosave();
   return true;
  }catch(error){
+  jaiLastStageError={status:error?.status||error?.statusCode||null,retryAfterSeconds:error?.retryAfterSeconds||null,code:error?.code||null};
   $("directScenesStatus").textContent="No se pudo completar el diseño vectorial: "+error.message;
   return false;
  }finally{shotPlanningInProgress=false;button.disabled=false;$("makeVisuals").disabled=false;}
@@ -508,10 +524,11 @@ async function inspectVisuals(){
    });
    const response=await fetch(jaiApiUrl("/api/inspect-visual"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({images,style_profile_id:currentVisualStyleProfileId,topic:currentTopic,script:currentPlanData?.script||""}),signal:AbortSignal.timeout(45000)});
    const data=await readJsonResponse(response,"Inspector visual");
-   if(!response.ok)throw new Error(data.error||"No se pudo completar la inspección visual.");
+   if(!response.ok)throw Object.assign(new Error(data.error||"No se pudo completar la inspección visual."),{status:response.status,retryAfterSeconds:Number(response.headers.get("Retry-After"))||null});
    if(!Array.isArray(data.results)||data.results.length!==batch.length)throw new Error("El inspector no devolvió un resultado por cada toma del lote.");
    if(!data.results.every((item,index)=>item&&item.scene_index===index&&["pass","revise"].includes(item.status)))throw new Error("El inspector devolvió resultados desordenados o asociados a otra toma; la aprobación se descartó.");
-   data.results.forEach((item,index)=>{visualAuditResults[offset+index]={...item,scene_index:offset+index,conceptual_scene_index:batch[index].sceneIndex};});
+   const simulatedInspection=data.inspection_mode==="simulated";
+   data.results.forEach((item,index)=>{visualAuditResults[offset+index]={...item,scene_index:offset+index,conceptual_scene_index:batch[index].sceneIndex,...(simulatedInspection?{simulated:true}: {})};});
    const completed=offset+batch.length,percent=Math.round(completed/total*100);
    setTaskProgress("visualAuditStatus",percent,"Inspeccionadas "+completed+"/"+total+" tomas");
    setPipelineStage("audit",percent,"Inspección de tomas: "+completed+" de "+total,"running");
@@ -520,8 +537,9 @@ async function inspectVisuals(){
   const passed=visualAuditResults.filter(item=>item?.status==="pass").length,failed=total-passed;
   setPipelineStage("audit",100,"Inspección terminada: "+passed+"/"+total+" tomas aprobadas","done");
   updateRenderGate();
-  $("visualAuditStatus").textContent=failed===0?"Inspección completada: todas las escenas superaron la revisión visual de sus "+total+" tomas.": "Inspección completada: "+failed+" de "+total+" tomas necesitan revisión. Consulta cada escena y sus observaciones.";
+  const simulated=visualAuditResults.some(item=>item?.simulated);$("visualAuditStatus").textContent=(simulated?"PRUEBA SIMULADA · no acredita calidad artística real. ":"")+(failed===0?"Inspección completada: todas las escenas superaron la revisión visual de sus "+total+" tomas.": "Inspección completada: "+failed+" de "+total+" tomas necesitan revisión. Consulta cada escena y sus observaciones.");
  }catch(error){
+  jaiLastStageError={status:error?.status||error?.statusCode||null,retryAfterSeconds:error?.retryAfterSeconds||null,code:error?.code||null};
   setPipelineStage("audit",0,"Inspección incompleta; requiere revisión manual","error");
   $("visualAuditStatus").textContent="No se pudo completar la inspección: "+error.message+". Las tomas ya revisadas se conservaron; puedes aprobar manualmente las escenas tras revisarlas.";
   setTaskProgress("visualAuditStatus",0,"Inspección incompleta; recursos conservados");
@@ -981,7 +999,24 @@ function paintReferenceBackdrop(ctx,w,h,shot){
  const profile=String(shot?.style_profile_id||"paper-craft-explainer");
  const base=shot?.background_color||"#F2EEE4";
  ctx.save();
- if(profile==="cinematic-cartoon-story"){
+ if(profile==="jai-reference-motion-01"){
+  const room=ctx.createLinearGradient(0,0,0,h);room.addColorStop(0,"#071426");room.addColorStop(.58,"#10243B");room.addColorStop(.78,"#182B3D");room.addColorStop(1,"#241B18");
+  ctx.fillStyle=room;ctx.fillRect(0,0,w,h);
+  const cyanGlow=ctx.createRadialGradient(w*.5,h*.38,8,w*.5,h*.38,w*.62);cyanGlow.addColorStop(0,"rgba(27,220,247,.22)");cyanGlow.addColorStop(1,"rgba(27,220,247,0)");
+  ctx.fillStyle=cyanGlow;ctx.fillRect(0,0,w,h*.82);
+  ctx.save();ctx.globalAlpha=.42;ctx.strokeStyle="#36DDF4";ctx.lineWidth=Math.max(1,w*.004);
+  for(let i=0;i<5;i++){const inset=i*.075;ctx.beginPath();ctx.moveTo(w*(.06+inset),h*(.08+inset*.7));ctx.lineTo(w*(.94-inset),h*(.08+inset*.7));ctx.lineTo(w*(.66-inset*.55),h*(.68-inset*.35));ctx.lineTo(w*(.34+inset*.55),h*(.68-inset*.35));ctx.closePath();ctx.stroke();}
+  for(let i=0;i<7;i++){const y=h*(.18+i*.065);ctx.beginPath();ctx.moveTo(0,y);ctx.bezierCurveTo(w*.3,y-h*.12,w*.7,y-h*.12,w,y);ctx.stroke();}
+  ctx.restore();
+  const wood=ctx.createLinearGradient(0,h*.76,0,h);wood.addColorStop(0,"#5B3A2A");wood.addColorStop(.22,"#95613D");wood.addColorStop(.58,"#70472F");wood.addColorStop(1,"#38271F");
+  ctx.fillStyle=wood;ctx.fillRect(0,h*.76,w,h*.24);
+  ctx.save();ctx.globalAlpha=.28;ctx.strokeStyle="#D99A58";ctx.lineWidth=Math.max(1,w*.003);
+  for(let y=h*.79;y<h;y+=Math.max(12,h*.035)){ctx.beginPath();ctx.moveTo(0,y);ctx.bezierCurveTo(w*.28,y-h*.012,w*.68,y+h*.012,w,y);ctx.stroke();}
+  ctx.restore();
+  ctx.save();ctx.globalAlpha=.2;ctx.strokeStyle="#F5B65F";ctx.lineWidth=Math.max(2,w*.012);
+  for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(w*(.12+i*.18),h*.05);ctx.lineTo(w*(.3+i*.13),h*.76);ctx.stroke();}
+  ctx.restore();
+ }else if(profile==="cinematic-cartoon-story"){
   const sky=ctx.createLinearGradient(0,0,0,h);sky.addColorStop(0,"#101A3A");sky.addColorStop(.68,base);sky.addColorStop(1,"#211B2B");
   ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
   const glow=ctx.createRadialGradient(w*.76,h*.25,12,w*.76,h*.25,w*.58);glow.addColorStop(0,"rgba(255,190,91,.24)");glow.addColorStop(1,"rgba(255,190,91,0)");
@@ -1029,33 +1064,32 @@ function paintVectorShot(ctx,w,h,shot,progress){
  ctx.scale(w/720,h/1280);
  const partParents={head:"torso",hair:"head",eyes:"head",mouth:"head",face:"head",upper_arm:"torso",arm_upper:"torso",forearm:"upper_arm",lower_arm:"upper_arm",hand:"forearm",upper_leg:"torso",thigh:"torso",lower_leg:"upper_leg",shin:"upper_leg",foot:"lower_leg"};
  const normalizePart=value=>String(value||"").toLowerCase().replace(/[ -]/g,"_");
- const transformFor=layer=>{
-  let transform={x:0,y:0,rotation:0,scale:1,opacity:1};
-  const steps=(Array.isArray(shot.animation_steps)?shot.animation_steps:[]).filter(step=>step.target_id===layer.id).sort((a,b)=>Number(a.start_progress)-Number(b.start_progress));
-  if(!steps.length)return transform;
-  let selected=steps.find(step=>p>=Number(step.start_progress)&&p<=Number(step.end_progress));
-  if(!selected){const completed=steps.filter(step=>p>Number(step.end_progress));selected=p<Number(steps[0].start_progress)?steps[0]:(completed[completed.length-1]||steps[0]);}
-  const a=selected.from_transform||transform,b=selected.to_transform||a;
-  const raw=Math.max(0,Math.min(1,(p-Number(selected.start_progress))/Math.max(.001,Number(selected.end_progress)-Number(selected.start_progress))));
-  const t=raw*raw*(3-2*raw);
-  transform={x:interpolateNumber(a.x,b.x,t),y:interpolateNumber(a.y,b.y,t),rotation:interpolateNumber(a.rotation,b.rotation,t),scale:interpolateNumber(a.scale,b.scale,t),opacity:interpolateNumber(a.opacity,b.opacity,t)};
-  if(p<Number(selected.start_progress))transform={...a};if(p>Number(selected.end_progress))transform={...b};
-  return transform;
- };
+ const motionEngine=window.JAI2DMotionEngine;
+ const rigParentsForCharacter=characterId=>motionEngine?.resolvePartParentsFromRigs
+  ?motionEngine.resolvePartParentsFromRigs(currentReusableRigs,characterId,partParents)
+  :partParents;
+ const transformFor=layer=>motionEngine?.resolveMotionTransform
+  ?motionEngine.resolveMotionTransform((Array.isArray(shot.animation_steps)?shot.animation_steps:[]).filter(step=>step.target_id===layer.id),p)
+  :{x:0,y:0,rotation:0,scale:1,opacity:1};
  const applyBoneTransform=(bone,transform)=>{
-  const px=Number(bone.pivot_x)||360,py=Number(bone.pivot_y)||640;
+  const rawX=Number(bone.pivot_x),rawY=Number(bone.pivot_y);const px=Number.isFinite(rawX)?rawX:360,py=Number.isFinite(rawY)?rawY:640;
   ctx.translate(px+transform.x,py+transform.y);ctx.rotate(transform.rotation*Math.PI/180);ctx.scale(transform.scale,transform.scale);ctx.translate(-px,-py);
  };
- for(const layer of layers){
-  const path=paths[layers.indexOf(layer)],chain=[],seen=new Set([layer.id]);
-  if(layer.character_id&&layer.part_id){
-   let parentPart=partParents[normalizePart(layer.part_id)],depth=0;
-   while(parentPart&&depth++<8){
-    const parent=layers.find(candidate=>candidate.character_id===layer.character_id&&normalizePart(candidate.part_id)===parentPart&&!seen.has(candidate.id));
-    if(!parent)break;chain.unshift(parent);seen.add(parent.id);parentPart=partParents[normalizePart(parent.part_id)];
-   }
-  }
-  const transformChain=[...chain,layer].map(bone=>({bone,transform:transformFor(bone)}));
+ const orderedLayers=layers.map((layer,index)=>({layer,index})).sort((a,b)=>{
+  const rank=layer=>{
+   const role=String(layer?.role||"").toLowerCase().replace(/[\s-]+/g,"_");
+   if(role==="background"||role==="backdrop")return 0;
+   if(role==="environment"||role==="setting")return 1;
+   if(role==="detail"||role==="foreground"||role==="overlay")return 3;
+   return 2;
+  };
+  return rank(a.layer)-rank(b.layer)||a.index-b.index;
+ });
+ for(const entry of orderedLayers){
+  const layer=entry.layer,path=paths[entry.index];
+  const transformChain=motionEngine?.resolveLayerMotionChain
+   ?motionEngine.resolveLayerMotionChain(layer,layers,shot.animation_steps,p,rigParentsForCharacter)
+   :[{bone:layer,transform:transformFor(layer)}];
   ctx.save();for(const entry of transformChain)applyBoneTransform(entry.bone,entry.transform);
   ctx.globalAlpha=Math.max(0,Math.min(1,transformChain.reduce((alpha,entry)=>alpha*Number(entry.transform.opacity),1)));ctx.lineJoin="round";ctx.lineCap="round";
   ctx.shadowColor="rgba(24,38,54,.16)";ctx.shadowBlur=8;ctx.shadowOffsetY=5;
@@ -1196,6 +1230,18 @@ document.addEventListener("jai:visual-asset-ready",event=>{
  const detail=event.detail||{},asset=detail.asset,prepared=detail.prepared;
  if(!asset||!prepared||!Array.isArray(currentShotPlan)||!currentShotPlan.length)return;
  const host=$("visualScenes");if(!host)return;
+ if(detail.autoAssignShotId){
+  const shotId=String(detail.autoAssignShotId),shot=currentShotPlan.find(item=>String(item.shot_id)===shotId);
+  if(!shot)return;
+  window.jaiVisualAssignments[shotId]={asset,prepared};
+  shot.visual_asset_id=asset.asset_id;shot.visual_source_type=prepared.source_type;
+  if(Array.isArray(timelineState.items))timelineState.items.forEach(item=>{if(String(item.shot_id)===shotId)item.mediaAsset=prepared;});
+  if(typeof stopTimelinePreview==="function")stopTimelinePreview("");
+  if(typeof renderTimeline==="function")renderTimeline();
+  if(typeof updateRenderGate==="function")updateRenderGate();
+  if(typeof scheduleJaiAutosave==="function")scheduleJaiAutosave();
+  return;
+ }
  let panel=$("jaiAssetAssignmentPanel");if(panel)panel.remove();
  panel=document.createElement("section");panel.id="jaiAssetAssignmentPanel";panel.className="scene";
  const title=document.createElement("b");title.textContent="Asignar recurso importado a una toma";
@@ -1272,14 +1318,53 @@ function drawVideoScene(item,index,progress,audioElapsed=0){
  }
  // El progreso de render es exclusivo de la interfaz; nunca se dibuja dentro del vídeo exportado.
 }
+let jaiFfmpegInstance=null,jaiFfmpegLoadPromise=null,jaiFfmpegWorkerURL=null;
+async function transcodeFinalMp4(inputBlob,inputMime){
+ if(!(inputBlob instanceof Blob)||inputBlob.size<1024)throw new Error("No hay un archivo intermedio válido para convertir a MP4.");
+ const {FFmpeg}=await import("https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js");
+ const {fetchFile,toBlobURL}=await import("https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.2/dist/esm/index.js");
+ if(!jaiFfmpegInstance){
+  if(!jaiFfmpegLoadPromise){
+   jaiFfmpegLoadPromise=(async()=>{
+    const ffmpeg=new FFmpeg(),baseURL="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+    ffmpeg.on("log",({message})=>{window.jaiFfmpegLastLog=String(message||"").slice(-400);});
+    ffmpeg.on("progress",({progress})=>{window.jaiFfmpegProgress=Number(progress)||0;});
+    // FFmpeg.wasm 0.12 ejecuta este worker como módulo. El core UMD no expone
+    // el export default que el worker importa cuando importScripts no está disponible;
+    // usar el core ESM permite que createFFmpegCore se resuelva correctamente.
+    const workerBootstrap='import "'+"https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js"+'";';
+    jaiFfmpegWorkerURL=URL.createObjectURL(new Blob([workerBootstrap],{type:"text/javascript"}));
+    try{
+     await ffmpeg.load({classWorkerURL:jaiFfmpegWorkerURL,coreURL:await toBlobURL(baseURL+"/ffmpeg-core.js","text/javascript"),wasmURL:await toBlobURL(baseURL+"/ffmpeg-core.wasm","application/wasm")});
+    }catch(error){URL.revokeObjectURL(jaiFfmpegWorkerURL);jaiFfmpegWorkerURL=null;throw error;}
+    jaiFfmpegInstance=ffmpeg;return ffmpeg;
+   })().catch(error=>{jaiFfmpegLoadPromise=null;throw error;});
+  }
+  await jaiFfmpegLoadPromise;
+ }
+ const ffmpeg=jaiFfmpegInstance,inputName=/mp4/i.test(inputMime)?"jai-input.mp4":"jai-input.webm",outputName="jai-final.mp4";
+ try{
+  setPipelineStage("render",94,"Convirtiendo a MP4 H.264/AAC…","running");
+  $("renderStatus").textContent="Convirtiendo el render intermedio a MP4 real con vídeo H.264 y audio AAC. La descarga permanece bloqueada hasta verificar el resultado.";
+  await ffmpeg.writeFile(inputName,await fetchFile(inputBlob));
+  // Bound WebAssembly encoder/filter threads to avoid exhausting FFmpeg.wasm memory at flush.
+  const exitCode=await ffmpeg.exec(["-filter_threads","1","-threads","1","-i",inputName,"-map","0:v:0","-map","0:a:0","-vf","fps=30,scale=720:1280:flags=fast_bilinear","-c:v","libx264","-threads:v","1","-preset","ultrafast","-crf","23","-pix_fmt","yuv420p","-c:a","aac","-threads:a","1","-b:a","128k","-movflags","+faststart",outputName]);
+  if(exitCode!==0)throw new Error("FFmpeg terminó con código "+exitCode+"; último registro: "+(window.jaiFfmpegLastLog||"sin registro"));
+  const data=await ffmpeg.readFile(outputName),bytes=data instanceof Uint8Array?data:new Uint8Array(data);
+  if(bytes.length<1024||String.fromCharCode(...bytes.subarray(4,8))!=="ftyp")throw new Error("FFmpeg no produjo una estructura MP4 válida (firma ftyp ausente).");
+  return new Blob([bytes],{type:"video/mp4"});
+ }finally{for(const name of [inputName,outputName])try{await ffmpeg.deleteFile(name);}catch{}}
+}
 async function inspectRenderedBlob(blob,expectedDuration,expectedAudioTrackCount){
  if(!(blob instanceof Blob)||blob.size<1024)throw new Error("El archivo exportado está vacío o es demasiado pequeño.");
  const url=URL.createObjectURL(blob),video=document.createElement("video");
  video.preload="auto";video.muted=true;video.playsInline=true;video.src=url;
+ const mediaDiagnostic=()=>({blobSize:blob.size,blobType:blob.type,mediaErrorCode:video.error?.code??null,mediaErrorMessage:video.error?.message||null,networkState:video.networkState,readyState:video.readyState,currentSrc:video.currentSrc?video.currentSrc.slice(0,80):null});
+ window.jaiMp4InspectionDiagnostic=null;
  const wait=(target,event,timeout=12000)=>new Promise((resolve,reject)=>{
   const timer=setTimeout(()=>{cleanup();reject(new Error("Tiempo agotado al validar "+event+" del vídeo."));},timeout);
   const cleanup=()=>{clearTimeout(timer);target.removeEventListener(event,done);target.removeEventListener("error",failed);};
-  const done=()=>{cleanup();resolve();},failed=()=>{cleanup();reject(new Error("El navegador no pudo decodificar el vídeo exportado."));};
+  const done=()=>{cleanup();resolve();},failed=()=>{const detail=mediaDiagnostic();window.jaiMp4InspectionDiagnostic=detail;cleanup();reject(new Error("El navegador no pudo decodificar el vídeo exportado: "+JSON.stringify(detail)));};
   target.addEventListener(event,done,{once:true});target.addEventListener("error",failed,{once:true});
  });
  try{
@@ -1321,7 +1406,7 @@ async function renderVideo(){
  if(!window.MediaRecorder||typeof renderCanvas.captureStream!=="function"){$("renderStatus").textContent="Este navegador no permite grabar el lienzo. Prueba con Chrome actualizado.";return;}
  const mimeCandidates=["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
  const mime=mimeCandidates.find(type=>MediaRecorder.isTypeSupported(type));
- if(!mime){setPipelineStage("render",0,"Formato de vídeo no compatible con este navegador","error");$("renderStatus").textContent="Este navegador no admite grabación MP4 ni WebM desde el editor. Prueba Chrome actualizado.";return;}
+ if(!mime){setPipelineStage("render",0,"Formato de vídeo no compatible con este navegador","error");$("renderStatus").textContent="Este navegador no admite grabación de vídeo. J.A.I. no puede iniciar la exportación en este navegador.";return;}
  renderRecording=true;renderCancelRequested=false;setRenderEditingLock(true);setPipelineStage("render",2,"Preparando lienzo vertical 720 × 1280…","running");$("renderVideo").disabled=true;$("cancelRender").hidden=false;$("cancelRender").disabled=false;$("downloadVideo").hidden=true;renderCanvas.style.display="block";
  let stream=null,audioBuffer=null,audioSource=null,audioStartOffset=0,animationId=null,finished=false;
  const cleanup=()=>{
@@ -1369,26 +1454,40 @@ async function renderVideo(){
    finished=true;
    if(renderCancelRequested){cleanup();setPipelineStage("render",0,"Render cancelado por el usuario","idle");$("renderStatus").textContent="Render cancelado. No se generó ningún archivo; puedes ajustar el montaje y volver a intentarlo.";return;}
    const actualMime=renderRecorder?.mimeType||mime;
-   const blob=new Blob(chunks,{type:actualMime});
+   window.jaiRenderSourceMime=actualMime;
    const expectedDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
    const audioTrackCount=stream?.getAudioTracks?.().length||0;
+   let blob;
    try{
-    setPipelineStage("render",92,"Verificando decodificación, duración, resolución y movimiento…","running");
+    const sourceBlob=new Blob(chunks,{type:actualMime});
+    blob=await transcodeFinalMp4(sourceBlob,actualMime);
+    if(!/^video\/mp4(?:;|$)/i.test(blob.type))throw new Error("La conversión no produjo MIME video/mp4.");
+   }catch(conversionError){
+    cleanup();setPipelineStage("render",0,"Conversión MP4 rechazada","error");$("downloadVideo").hidden=true;
+    const conversionDetail={name:conversionError?.name||typeof conversionError,message:conversionError?.message||String(conversionError),stack:conversionError?.stack||null,ffmpegLastLog:window.jaiFfmpegLastLog||null,ffmpegProgress:Number.isFinite(window.jaiFfmpegProgress)?window.jaiFfmpegProgress:null,workerURL:typeof jaiFfmpegWorkerURL==="string"?jaiFfmpegWorkerURL:null};
+    window.jaiFfmpegFailure=conversionDetail;
+    $("renderStatus").textContent="Exportación rechazada: falló la conversión a MP4 H.264/AAC. No se ofrecerá el archivo intermedio ni se cambiará su extensión. Diagnóstico: "+JSON.stringify(conversionDetail);
+    return;
+   }
+   try{
+    setPipelineStage("render",97,"Verificando MP4, duración, resolución y movimiento…","running");
     const qc=await inspectRenderedBlob(blob,expectedDuration,audioTrackCount);
     if(audioBuffer&&qc.audioTrackCount<1)throw new Error("La pista de narración no llegó al archivo final.");
     $("renderStatus").textContent="Control técnico aprobado · "+qc.width+"×"+qc.height+" · "+qc.duration.toFixed(2)+" s · "+qc.distinctFrames+"/"+qc.sampledFrames+" muestras visuales distintas · pista de audio presente.";
    }catch(qcError){
     cleanup();setPipelineStage("render",0,"Control de calidad rechazado","error");$("downloadVideo").hidden=true;
-    $("renderStatus").textContent="Exportación rechazada por control de calidad: "+qcError.message+" No se ofrecerá un archivo que no haya superado la verificación.";
+    $("renderStatus").textContent="Exportación rechazada por control de calidad: "+qcError.message+" No se ofrecerá un archivo que no haya superado la verificación.";window.jaiMp4RejectedBlob=blob instanceof Blob?blob:null;window.jaiMp4InspectionDiagnostic=window.jaiMp4InspectionDiagnostic||{message:qcError.message,blobSize:blob?.size||0,blobType:blob?.type||null,ffmpegLastLog:window.jaiFfmpegLastLog||null,ffmpegProgress:Number.isFinite(window.jaiFfmpegProgress)?window.jaiFfmpegProgress:null};
     return;
    }
    cleanup();
    if(!blob.size){setPipelineStage("render",0,"El navegador no entregó datos de vídeo","error");$("renderStatus").textContent="El navegador terminó la grabación sin generar datos. No se creó un archivo descargable. Prueba Chrome actualizado, mantén esta pestaña visible y vuelve a renderizar.";return;}
    const previous=$("downloadVideo").dataset.objectUrl;if(previous)URL.revokeObjectURL(previous);
+   jaiRenderedVideoBlob=blob;
+   try{await writeJaiRecoveryKey("latest-render",{topic:currentTopic,savedAt:Date.now(),filename:"jai-viral-studio.mp4",blob});}catch(storageError){$("renderStatus").textContent+=" El MP4 no pudo guardarse para recuperación local: "+(storageError?.message||"almacenamiento no disponible")+". La descarga actual sigue disponible.";}
    const url=URL.createObjectURL(blob);$("downloadVideo").dataset.objectUrl=url;
-   const isMp4=actualMime.toLowerCase().includes("mp4");const extension=isMp4?"mp4":"webm";
+   const extension="mp4";
    $("downloadVideo").href=url;$("downloadVideo").download="jai-viral-studio."+extension;$("downloadVideo").textContent="Descargar video "+extension.toUpperCase();$("downloadVideo").hidden=false;
-   $("renderStatus").textContent="Vídeo exportado y control técnico aprobado ("+(blob.size/1048576).toFixed(1)+" MB), formato "+extension.toUpperCase()+(audioBuffer?" con narración integrada ("+audioBuffer.duration.toFixed(1)+" s).":" sin narración.")+(isMp4?"":" Este navegador exportó WebM porque no admite MP4 directo.");setTaskProgress("renderStatus",100,"Exportación completada · "+extension.toUpperCase());setPipelineStage("render",100,"Vídeo listo · "+extension.toUpperCase()+" · "+(blob.size/1048576).toFixed(1)+" MB","done");
+   $("renderStatus").textContent="Vídeo exportado y control técnico aprobado ("+(blob.size/1048576).toFixed(1)+" MB), formato "+extension.toUpperCase()+(audioBuffer?" con narración integrada ("+audioBuffer.duration.toFixed(1)+" s).":" sin narración.");setTaskProgress("renderStatus",100,"Exportación completada · "+extension.toUpperCase());setPipelineStage("render",100,"Vídeo listo · "+extension.toUpperCase()+" · "+(blob.size/1048576).toFixed(1)+" MB","done");
   };
   const timelineDuration=timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0);
   const totalDuration=timelineDuration;
@@ -1531,7 +1630,7 @@ async function makePlan(){
  $("create").disabled=true;$("status").textContent="J.A.I. está preparando tu guion…";setPipelineStage("plan",5,"Analizando tema y preparando el plan…","running");
  try{
   const response=await fetch(jaiApiUrl("/api/generate"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({topic,notes,duration:$("duration").value,platform:$("platform").value,format_mode:$("contentMode").value,cta_goal:$("ctaGoal").value,cta_custom:$("ctaCustom").value,learning_memory:buildLearningMemoryContext(),series_bible:prepareSeriesBible(topic)}),signal:AbortSignal.timeout(65000)});
-  const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;throw failure;}
+  const data=await readJsonResponse(response,"Generador del plan");if(!response.ok){const failure=new Error(data.error||"No se pudo generar el plan.");failure.blockedClaims=data.blockedClaims;failure.status=response.status;failure.retryAfterSeconds=Number(response.headers.get("Retry-After"))||null;throw failure;}
   if(kokoroAudioUrl)URL.revokeObjectURL(kokoroAudioUrl);
   kokoroAudioUrl=null;kokoroAudioBlob=null;kokoroAudioDuration=0;audioEdit={trimStart:0,trimEnd:0,gain:1};audioTrackOffset=0;subtitleTrackOffset=0;captionCues=[];syncAudioEditControls();
   $("kokoroAudio").pause();$("kokoroAudio").removeAttribute("src");$("kokoroAudio").style.display="none";
@@ -1541,7 +1640,7 @@ async function makePlan(){
   $("category").innerHTML='<span class="tag">'+escapeHtml(data.category||"Educación")+'</span><span class="tag">IA · Groq + respaldo Gemini</span><span class="tag">Perfil audiovisual · '+escapeHtml(visualStyleProfileLabel(currentVisualStyleProfileId))+'</span>';
   $("angle").textContent=readable(data.angle||"Enfoque pendiente.");$("researchBrief").textContent=readable(data.research_brief||"Investigación no desglosada.");renderResearchSources(data.research_sources);$("causalChain").textContent=readable(data.causal_chain||"Cadena causal pendiente.");$("conceptExplanations").textContent=readable(data.concept_explanations||"Conceptos pendientes.");$("factAudit").textContent=readable(data.fact_audit||"Auditoría pendiente.");$("hook").textContent=readable(data.hook||"Hook pendiente.");$("seriesBridge").textContent=readable(data.series_bridge||"Sin continuidad de serie.");$("callToAction").textContent=readable(data.call_to_action||"Sin llamada a la acción.");$("script").textContent=readable(data.script||"Guion pendiente.");
   renderStory(data.story||"Storyboard pendiente.");currentDurationValidation=data.duration_validation||null;currentRetentionMap=Array.isArray(data.retention_map)?data.retention_map:[];renderRetentionMap(data.retention_map||"Gemini no devolvió el mapa de retención.");currentScenes=Array.isArray(data.story)?data.story:[];currentShotPlan=[];currentCharacterBible=[];$("exportCharacterLayers").disabled=true;$("characterLayerExports").replaceChildren();$("directScenes").disabled=!currentScenes.length;$("directScenesOutput").replaceChildren();$("directScenesStatus").textContent="Plan nuevo: diseña ahora las tomas y acciones animables.";jaiSceneImages=[];visualAuditResults=[];$("inspectVisuals").disabled=true;$("visualAuditStatus").textContent="La inspección visual independiente estará disponible cuando todas las escenas tengan imagen.";$("visualScenes").replaceChildren();$("visualStatus").textContent="Storyboard listo. Se generará un fotograma educativo por escena, con la representación apropiada al tema.";$("editorialWarnings").textContent=Array.isArray(data.editorial_warnings)&&data.editorial_warnings.length?readable(data.editorial_warnings):"No hay alertas editoriales adicionales.";$("verification").textContent=readable(data.verification||"Sin datos.");$("quality").textContent=readable(data.quality_check||"Sin datos.")+"\n\nVALIDACIÓN AUTOMÁTICA DE DURACIÓN\n"+readable(data.duration_validation||"No disponible");
-  setPipelineStage("plan",100,data.clarification_required?"Aclaración necesaria":"Plan editorial y storyboard listos",data.clarification_required?"warning":"done");rememberGeneratedPlan(topic,data);currentTopic=topic;jaiSceneImages=[];currentPlanData=data;currentPlan=[
+  setPipelineStage("plan",100,data.clarification_required?"Aclaración necesaria":"Plan editorial y storyboard listos",data.clarification_required?"warning":"done");rememberGeneratedPlan(topic,data);currentTopic=topic;jaiRenderedVideoBlob=null;const oldVideoUrl=$("downloadVideo").dataset.objectUrl;if(oldVideoUrl)URL.revokeObjectURL(oldVideoUrl);$("downloadVideo").hidden=true;$("downloadVideo").removeAttribute("href");await deleteJaiRecoveryKey("latest-render").catch(()=>{});jaiSceneImages=[];currentPlanData=data;currentPlan=[
    "J.A.I. VIRAL STUDIO",
    "Tema: "+topic,
    "Categoría: "+readable(data.category),
@@ -1591,7 +1690,7 @@ async function makePlan(){
   renderRetentionMap(normalizedRetention);
   currentPlan=currentPlan.replace(readable(data.retention_map),readable(normalizedRetention));
   $("output").classList.add("show");scheduleJaiAutosave();const durationOk=!!(data.duration_validation&&data.duration_validation.within_tolerance);$("status").textContent=data.clarification_required?("J.A.I. necesita una aclaración antes de producir: "+(data.clarification_question||"añade contexto al tema y vuelve a intentarlo.")):durationOk?"¡Plan generado! Revisa las escenas, verificaciones y control de calidad antes de producir.":"Plan generado, pero la validación editorial detectó problemas de duración o cronología. Corrige el guion y los tiempos antes de producir."; $("output").scrollIntoView({behavior:"smooth",block:"start"});
- }catch(error){setPipelineStage("plan",0,"No se pudo completar el plan","error");const timedOut=error&&(error.name==="TimeoutError"||error.name==="AbortError");const networkFailure=error&&((error.name==="TypeError")||/failed to fetch|networkerror|load failed/i.test(error.message||""));$("status").textContent=timedOut?"La generación superó el tiempo de espera. El motor pudo quedar saturado; inténtalo una vez más.":networkFailure?"No se pudo conectar con el motor de generación de J.A.I. La solicitud no devolvió el guion. Recarga la página e inténtalo una vez más; si persiste, revisaremos el servicio de Vercel.":(error.message||"Ocurrió un error al generar el plan.");if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{planningInProgress=false;$("create").disabled=false;}
+ }catch(error){jaiLastStageError={status:error?.status||error?.statusCode||null,retryAfterSeconds:error?.retryAfterSeconds||null,code:error?.code||null};setPipelineStage("plan",0,"No se pudo completar el plan","error");const timedOut=error&&(error.name==="TimeoutError"||error.name==="AbortError");const networkFailure=error&&((error.name==="TypeError")||/failed to fetch|networkerror|load failed/i.test(error.message||""));$("status").textContent=timedOut?"La generación superó el tiempo de espera. El motor pudo quedar saturado; inténtalo una vez más.":networkFailure?"No se pudo conectar con el motor de generación de J.A.I. La solicitud no devolvió el guion. Recarga la página e inténtalo una vez más; si persiste, revisaremos el servicio de Vercel.":(error.message||"Ocurrió un error al generar el plan.");if(error.blockedClaims)$("status").textContent+=" Afirmaciones bloqueadas: "+error.blockedClaims.join(" · ");}finally{planningInProgress=false;$("create").disabled=false;}
 }
 
 let kokoroAudioBlob=null,kokoroAudioUrl=null,kokoroAudioDuration=0,kokoroSampleRate=24000,kokoroSource=null,kokoroAudioContext=null;
@@ -1717,10 +1816,10 @@ $("generateNarration").addEventListener("click",async()=>{
  if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("kokoroStatus").textContent="Espera a que termine la tarea actual o la recuperación antes de generar otra narración.";return;}
  const button=$("generateNarration");narrationGenerating=true;setPipelineStage("voice",0,"Generando voz neuronal…","running");button.disabled=true;$("downloadNarration").hidden=true;
  try{
-  $("kokoroStatus").textContent="Intentando el motor gratuito principal de voz; si alcanza su cuota, se activa el respaldo gratuito…";setTaskProgress("kokoroStatus",0,"Generando voz neuronal…","indeterminate");
+  $("kokoroStatus").textContent="Generando narración con Gemini TTS gratuito. Si alcanza su cuota, se conservará el proyecto y se podrá reintentar más tarde; no se activará otro proveedor.";setTaskProgress("kokoroStatus",0,"Generando voz neuronal…","indeterminate");
   const response=await fetch(jaiApiUrl("/api/narrate"),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text,voice:$("kokoroVoice").value}),signal:AbortSignal.timeout(58000)});
   const data=await readJsonResponse(response,"Generador de voz Gemini");
-  if(!response.ok)throw new Error(data.error||"No se pudo generar la narración.");
+  if(!response.ok)throw Object.assign(new Error(data.error||"No se pudo generar la narración."),{status:response.status,retryAfterSeconds:Number(response.headers.get("Retry-After"))||null});
   if(!data.audioBase64)throw new Error("El servicio no devolvió audio.");
   kokoroSampleRate=data.sampleRate||24000;
   kokoroAudioBlob=makePcmWavBlob(data.audioBase64,kokoroSampleRate);
@@ -1733,7 +1832,7 @@ $("generateNarration").addEventListener("click",async()=>{
   $("kokoroAudio").src=kokoroAudioUrl;$("kokoroAudio").style.display="block";syncAudioEditControls();
   $("downloadNarration").href=kokoroAudioUrl;$("downloadNarration").hidden=false;scheduleJaiAutosave();
   setPipelineStage("voice",100,"Narración lista · "+kokoroAudioDuration.toFixed(1)+" s","done");$("kokoroStatus").textContent="Narración lista: "+kokoroAudioDuration.toFixed(1)+" segundos · "+(data.provider||"motor gratuito")+". Ya puedes escucharla, descargarla e integrarla en el video final.";setTaskProgress("kokoroStatus",100,"Narración completada · "+kokoroAudioDuration.toFixed(1)+" s");
- }catch(error){$("kokoroStatus").textContent="No se pudo generar la voz: "+(error.message||"error desconocido");setTaskProgress("kokoroStatus",0,"Generación de voz fallida");}
+ }catch(error){jaiLastStageError={status:error?.status||error?.statusCode||null,retryAfterSeconds:error?.retryAfterSeconds||null,code:error?.code||null};$("kokoroStatus").textContent="No se pudo generar la voz: "+(error.message||"error desconocido");setTaskProgress("kokoroStatus",0,"Generación de voz fallida");}
  finally{narrationGenerating=false;button.disabled=false;}
 });
 $("audioTrimStart").addEventListener("change",()=>{audioEdit.trimStart=Number($("audioTrimStart").value)||0;if(audioEdit.trimEnd>0&&audioEdit.trimEnd<=audioEdit.trimStart)audioEdit.trimEnd=Math.min(kokoroAudioDuration,audioEdit.trimStart+.1);syncAudioEditControls();renderMediaTracks();updateRenderGate();scheduleJaiAutosave();});
@@ -1806,6 +1905,104 @@ $("useTopicSuggestion").addEventListener("click",()=>{const field=$("topic");if(
 setInterval(advanceTopicSuggestion,6500);
 $("topic").addEventListener("input",()=>{if($("topic").value.trim())$("status").textContent="Tema propio listo. J.A.I. trabajará sobre lo que escribiste.";});
 $("create").addEventListener("click",makePlan);
+$("runProduction").addEventListener("click",runJaiProduction);
+
+async function getJaiProductionOrchestrator(){
+ if(jaiProductionOrchestrator)return jaiProductionOrchestrator;
+ const module=await import("./jai-production-orchestrator.js");
+ jaiProductionOrchestrator=module.createProductionOrchestrator({
+  stages:[
+   {name:"plan",run:async()=>{
+    const requestedTopic=$("topic").value.trim();
+    if(!currentPlanData||!currentScenes.length||currentTopic!==requestedTopic){jaiLastStageError=null;await makePlan();}
+    if(!currentPlanData||!currentScenes.length||currentTopic!==requestedTopic||currentPlanData.clarification_required)throw Object.assign(new Error(currentPlanData?.clarification_question||$("status").textContent||"El plan editorial no quedó listo para el tema solicitado."),jaiLastStageError||{});
+    return {ok:true,output:{topic:currentTopic,sceneCount:currentScenes.length}};
+   }},
+   {name:"director",run:async()=>{
+    if(!currentShotPlan.length){jaiLastStageError=null;const ok=await designAnimationShots();if(!ok)throw Object.assign(new Error($("directScenesStatus").textContent||"El director no completó las tomas."),jaiLastStageError||{});}
+    if(!currentShotPlan.length)throw new Error("El director no produjo tomas utilizables.");
+    return {ok:true,output:{shotCount:currentShotPlan.length,style:currentVisualStyleProfileId}};
+   }},
+   {name:"visuals",run:async()=>{
+    const ready=jaiSceneImages.length===currentScenes.length&&currentScenes.every((scene,index)=>jaiSceneImages[index]?.image);
+    if(!ready)await generateAIVisuals();
+    if(jaiSceneImages.length!==currentScenes.length||!currentScenes.every((scene,index)=>jaiSceneImages[index]?.image))throw new Error($("visualStatus").textContent||"No se generaron todas las ilustraciones.");
+    let assetReport={attempted:0,assigned:0,skipped:currentShotPlan.length,errors:[]};
+    for(let wait=0;wait<40&&!window.JAIAutoVisualAssets;wait++)await new Promise(resolve=>setTimeout(resolve,100));
+    if(window.JAIAutoVisualAssets?.assignShotAssets){
+     assetReport=await window.JAIAutoVisualAssets.assignShotAssets(currentShotPlan);
+     if(assetReport.assigned) $("visualStatus").textContent="Ilustraciones base listas; "+assetReport.assigned+" recurso(s) Openverse con licencia y archivo original verificados se asignaron automáticamente a sus tomas.";
+     else $("visualStatus").textContent="Ilustraciones base listas. Openverse no encontró coincidencias suficientemente pertinentes; se conservan los fotogramas 2D generados.";
+    }
+    return {ok:true,output:{sceneImages:jaiSceneImages.length,renderer:"vector-2d",openverse:assetReport}};
+   }},
+   {name:"inspection",run:async()=>{
+    if(!visualAuditPassed()||visualAuditResults.some(item=>item?.simulated)){
+     visualAuditResults=Array.from({length:visualAuditUnitCount()},()=>null);
+     await inspectVisuals();
+    }
+    if(!visualAuditPassed())throw Object.assign(new Error($("visualAuditStatus").textContent||"La inspección visual no aprobó todas las tomas."),jaiLastStageError||{});
+    const simulated=visualAuditResults.some(item=>item?.simulated);
+    return {ok:true,inspection_mode:simulated?"simulated":"real",output:{approved:visualAuditResults.length,manual:visualAuditResults.some(item=>item?.manual)}};
+   }},
+   {name:"narration",run:async()=>{
+    if(!(kokoroAudioBlob&&kokoroAudioDuration>0)){
+     jaiLastStageError=null;$("generateNarration").click();
+     for(let i=0;i<240&&narrationGenerating;i++)await new Promise(resolve=>setTimeout(resolve,500));
+    }
+    if(!(kokoroAudioBlob&&kokoroAudioDuration>0))throw Object.assign(new Error($("kokoroStatus").textContent||"La narración no se completó."),jaiLastStageError||{});
+    return {ok:true,output:{duration:kokoroAudioDuration,sampleRate:kokoroSampleRate}};
+   }},
+   {name:"timeline",run:async()=>{
+    if(!timelineState.items.length)buildTimeline();
+    if(!timelineState.items.length)throw new Error($("timelineStatus").textContent||"No se pudo construir la línea de tiempo.");
+    if(!currentDurationValidation?.within_tolerance)throw new Error("La duración del storyboard no está validada.");
+    return {ok:true,output:{items:timelineState.items.length,duration:timelineState.items.reduce((sum,item)=>sum+Math.max(.1,Number(item.seconds)||0),0)}};
+   }},
+   {name:"render",run:async()=>{
+    if(!$("downloadVideo").hidden&&$("downloadVideo").href)return {ok:true,output:{download:$("downloadVideo").download,reused:true}};
+    $("renderVideo").click();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    if(!renderRecording&&pipelineState.render.status!=="done")throw new Error($("renderStatus").textContent||"El render no pudo iniciarse.");
+    for(let i=0;i<900;i++){
+     if(!renderRecording&&pipelineState.render.status==="done"&&!$("downloadVideo").hidden&&$("downloadVideo").href)return {ok:true,output:{download:$("downloadVideo").download,reused:false}};
+     if(!renderRecording&&pipelineState.render.status==="error")throw new Error($("renderStatus").textContent||"Falló el render.");
+     await new Promise(resolve=>setTimeout(resolve,500));
+    }
+    throw new Error("El render sigue sin finalizar. El checkpoint conserva las etapas anteriores; puedes reanudar sin repetirlas.");
+   }}
+  ],
+  loadCheckpoint:async()=>{const snapshot=await readJaiRecovery(JAI_AUTOSAVE_KEY);return snapshot?.productionRun||jaiProductionRunState||null;},
+  saveCheckpoint:async state=>{
+   jaiProductionRunState=state;
+   const snapshot=jaiRecoverySnapshot();
+   if(snapshot)await writeJaiRecoveryKey(JAI_AUTOSAVE_KEY,{...snapshot,productionRun:state});
+   if(state.completed.includes("render")&&jaiRenderedVideoBlob)await writeJaiRecoveryKey("latest-render",{topic:currentTopic,savedAt:Date.now(),filename:$("downloadVideo").download,blob:jaiRenderedVideoBlob});
+  }
+ });
+ return jaiProductionOrchestrator;
+}
+async function runJaiProduction(){
+ if(jaiProductionRunning||projectRecoveryInProgress||planningInProgress||shotPlanningInProgress||visualGenerationRunning||narrationGenerating||renderRecording)return;
+ if(!$("topic").value.trim()&&!currentPlanData){$("topic").focus();$("status").textContent="Escribe el tema antes de crear el vídeo.";return;}
+ jaiProductionRunning=true;$("runProduction").disabled=true;$("create").disabled=true;
+ let audioActivation=Promise.resolve();try{const AudioCtx=window.AudioContext||window.webkitAudioContext;if(AudioCtx){kokoroAudioContext=kokoroAudioContext||new AudioCtx();audioActivation=kokoroAudioContext.resume();}}catch{}
+ $("status").textContent="Producción automática iniciada. J.A.I. guardará cada etapa y podrá reanudarla.";
+ try{
+  await audioActivation;
+  const orchestrator=await getJaiProductionOrchestrator();
+  const result=await orchestrator.run({resume:true,context:{topic:$("topic").value.trim()||currentTopic}});
+  if(result.ok){
+   $("status").textContent="Producción completada. El MP4 superó el control técnico y está listo para descargar.";
+   $("renderStatus").scrollIntoView?.({behavior:"smooth",block:"center"});
+  }else{
+   const error=result.state.error;
+   $("status").textContent=(result.state.status==="waiting_retry"?"Producción pausada por límite temporal (429). ":"Producción detenida y guardada. ")+(result.error?.message||error?.message||"Error en "+error?.stage)+". Pulsa «Crear vídeo automáticamente / Reanudar» para continuar desde el checkpoint.";
+  }
+ }catch(error){$("status").textContent="No se pudo iniciar el orquestador: "+(error?.message||String(error));}
+ finally{jaiProductionRunning=false;$("runProduction").disabled=false;$("create").disabled=false;}
+}
+
 $("newProject").addEventListener("click",async()=>{
  if(projectRecoveryInProgress||planningInProgress||visualGenerationRunning||narrationGenerating||renderRecording){$("status").textContent="Espera a que termine la tarea actual o la recuperación antes de iniciar otro proyecto.";return;}
  if(!window.confirm("¿Iniciar un proyecto nuevo? Se borrará la recuperación automática de la sesión actual. Los proyectos guardados manualmente no se eliminarán."))return;
@@ -1816,6 +2013,7 @@ $("newProject").addEventListener("click",async()=>{
   await new Promise((resolve,reject)=>{
    const tx=db.transaction(JAI_AUTOSAVE_STORE,"readwrite");
    tx.objectStore(JAI_AUTOSAVE_STORE).delete(JAI_AUTOSAVE_KEY);
+   tx.objectStore(JAI_AUTOSAVE_STORE).delete("latest-render");
    tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error("No se pudo limpiar la recuperación"));
   });
   db.close();
