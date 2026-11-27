@@ -322,6 +322,18 @@ try {
     assert.equal(inconsistentRigResponse.statusCode, 400, "A saved shot plan with changing bone parents must be rejected before rendering.");
     assert.equal(inconsistentRigResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
     assert.match(inconsistentRigResponse.body.error, /cambia el padre/);
+
+    const missingShotParentPlan = customRigPlan.map((shot, index) => index === 1 ? ({
+      ...shot,
+      layers: shot.layers.map(layer => layer.part_id === "housing" ? { ...layer, character_id: "", part_id: "" } : layer)
+    }) : shot);
+    const missingShotParentResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: {
+      topic: "Rig sin padre local", script: "Narración de prueba.", story, shot_plan: missingShotParentPlan
+    } }, missingShotParentResponse);
+    assert.equal(missingShotParentResponse.statusCode, 400);
+    assert.equal(missingShotParentResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+    assert.match(missingShotParentResponse.body.error, /no aparece junto/);
     assert.equal(res.body.narration_sync_validated, true);
     assert.equal(res.body.shots[0].narration_sync.length, 3);
     assert.ok(res.body.shots[0].narration_sync.every(event => event.start_seconds >= res.body.shots[0].start_seconds && event.end_seconds <= res.body.shots[0].end_seconds));
