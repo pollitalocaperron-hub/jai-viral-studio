@@ -295,6 +295,16 @@ try {
     assert.equal(customRigResponse.statusCode, 200);
     assert.equal(customRigResponse.body.reusable_rigs[0].bones.find(bone => bone.bone_id === "head").parent_bone_id, "housing",
       "A valid explicit parent_part_id from the director must override the default head-to-torso inference.");
+
+    // A saved character cannot change the head's parent in a later shot.
+    const inconsistentRigPlan = customRigPlan.map((shot, index) => index === customRigPlan.length - 1
+      ? { ...shot, layers: shot.layers.map(layer => layer.part_id === "head" ? { ...layer, parent_part_id: "torso" } : layer) }
+      : shot);
+    const inconsistentRigResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Rig inconsistente", script: "Narración de prueba.", story, shot_plan: inconsistentRigPlan } }, inconsistentRigResponse);
+    assert.equal(inconsistentRigResponse.statusCode, 400, "A saved shot plan with changing bone parents must be rejected before rendering.");
+    assert.equal(inconsistentRigResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+    assert.match(inconsistentRigResponse.body.error, /cambia el padre/);
     assert.equal(res.body.narration_sync_validated, true);
     assert.equal(res.body.shots[0].narration_sync.length, 3);
     assert.ok(res.body.shots[0].narration_sync.every(event => event.start_seconds >= res.body.shots[0].start_seconds && event.end_seconds <= res.body.shots[0].end_seconds));
