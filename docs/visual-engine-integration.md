@@ -55,6 +55,10 @@ The 2D motion engine now validates reusable character skeletons across the full 
 
 This is structural continuity validation only. It does not claim that generated vector artwork is anatomically correct or that visual continuity has passed human/artistic review.
 
+### Motion-step continuity
+
+Animation steps targeting the same layer are checked before a shot plan is accepted. Sequential steps must meet at the same transform, and overlapping steps are rejected; separate layers may still animate concurrently. A character's explicit parent bone must also be present in the same shot, because the current renderer can only propagate parent transforms through layers included in that shot. These checks prevent abrupt pose jumps and silent loss of inherited articulation.
+
 ## Export quality gate
 
 The browser export path now decodes the recorded Blob before exposing a download. It checks:
