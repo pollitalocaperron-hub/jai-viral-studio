@@ -83,10 +83,13 @@ export function validateCharacterRigContinuity(shots){
   const characters=new Map();
   const normalize=value=>String(value||"").trim().toLowerCase().replace(/[ -]+/g,"_");
   for(const [shotIndex,shot] of (Array.isArray(shots)?shots:[]).entries()){
+    const shotParts=new Map();
     for(const layer of Array.isArray(shot?.layers)?shot.layers:[]){
       const characterId=String(layer?.character_id||"").trim();
       const partId=normalize(layer?.part_id);
       if(!characterId||!partId)continue;
+      if(!shotParts.has(characterId))shotParts.set(characterId,new Set());
+      shotParts.get(characterId).add(partId);
       if(!characters.has(characterId))characters.set(characterId,{parts:new Set(),parents:new Map()});
       const rig=characters.get(characterId);
       rig.parts.add(partId);
@@ -96,6 +99,14 @@ export function validateCharacterRigContinuity(shots){
       const existing=rig.parents.get(partId);
       if(existing&&existing!==parentId)return "El rig del personaje "+characterId+" cambia el padre de "+partId+" entre tomas ("+existing+" / "+parentId+").";
       rig.parents.set(partId,parentId);
+    }
+    for(const layer of Array.isArray(shot?.layers)?shot.layers:[]){
+      const characterId=String(layer?.character_id||"").trim();
+      const partId=normalize(layer?.part_id);
+      const parentId=normalize(layer?.parent_part_id);
+      if(characterId&&partId&&parentId&&!shotParts.get(characterId)?.has(parentId)){
+        return "En la toma "+(shotIndex+1)+", el padre "+parentId+" no aparece junto a la pieza "+partId+" del personaje "+characterId+".";
+      }
     }
   }
   for(const [characterId,rig] of characters){
