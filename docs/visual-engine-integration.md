@@ -49,6 +49,12 @@ Imported still images can be assigned to a specific directed shot. The timeline 
 
 Storage is browser-local to the current device/profile, not shared cloud storage. Clearing browser site data or using another device does not transfer these blobs. A durable shared library still requires an approved persistent object store and credentials. The export gate remains closed until independent asset, continuity, full-file decode, and audiovisual QC pass.
 
+## Character rig continuity
+
+The 2D motion engine now validates reusable character skeletons across the full directed shot list before the scene director response is accepted. A character part must keep the same explicit parent across shots; explicit parents must exist in that character's collected parts; self-links and cyclic hierarchies are rejected. Parts with identical names remain isolated by character ID. Invalid saved plans fail closed instead of silently changing a character's skeleton during animation.
+
+This is structural continuity validation only. It does not claim that generated vector artwork is anatomically correct or that visual continuity has passed human/artistic review.
+
 ## Export quality gate
 
 The browser export path now decodes the recorded Blob before exposing a download. It checks:
