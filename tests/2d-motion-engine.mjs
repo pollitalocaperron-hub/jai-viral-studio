@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { easeMotionProgress, interpolateMotionTransform, resolveMotionTransform, resolveLayerMotionChain, resolvePartParentsFromRigs } from "../jai-2d-motion-engine.js";
+import { easeMotionProgress, interpolateMotionTransform, resolveMotionTransform, resolveLayerMotionChain, resolvePartParentsFromRigs, validateCharacterRigContinuity } from "../jai-2d-motion-engine.js";
 
 assert.equal(easeMotionProgress(0),0);
 assert.equal(easeMotionProgress(1),1);
@@ -66,3 +66,24 @@ const customRigLayers=[
 const customRigChain=resolveLayerMotionChain(customRigLayers[2],customRigLayers,[],.5,generatedRigParents);
 assert.deepEqual(customRigChain.map(item=>item.bone.id),["body","skull","iris"],
  "Renderer hierarchy must follow the director-generated reusable rig, including non-default parent links");
+
+
+const consistentRigShots=[
+ {shot_id:"shot-1",layers:[{character_id:"hero",part_id:"torso"},{character_id:"hero",part_id:"head",parent_part_id:"torso"}]},
+ {shot_id:"shot-2",layers:[{character_id:"hero",part_id:"torso"},{character_id:"hero",part_id:"head",parent_part_id:"torso"}]}
+];
+assert.equal(validateCharacterRigContinuity(consistentRigShots),null);
+assert.equal(validateCharacterRigContinuity([
+ {layers:[{character_id:"hero",part_id:"torso"},{character_id:"hero",part_id:"head",parent_part_id:"torso"}]},
+ {layers:[{character_id:"hero",part_id:"neck"},{character_id:"hero",part_id:"head",parent_part_id:"neck"}]}
+])?.includes("cambia el padre"),true,"A character bone cannot silently change parent between shots");
+assert.equal(validateCharacterRigContinuity([
+ {layers:[{character_id:"hero",part_id:"head",parent_part_id:"torso"}]}
+])?.includes("padre inexistente"),true,"Explicit parent links must resolve to a real part in the character bible");
+assert.equal(validateCharacterRigContinuity([
+ {layers:[{character_id:"hero",part_id:"torso",parent_part_id:"head"},{character_id:"hero",part_id:"head",parent_part_id:"torso"}]}
+])?.includes("ciclo"),true,"Cyclic bone hierarchies must be rejected");
+assert.equal(validateCharacterRigContinuity([
+ {layers:[{character_id:"hero",part_id:"head",parent_part_id:"torso"},{character_id:"robot",part_id:"head",parent_part_id:"body"},{character_id:"robot",part_id:"body"}]}
+]),null,"Identically named parts in different characters must remain isolated");
+console.log("Character rig continuity: consistent parents, orphan rejection, cycle rejection and multi-character isolation: PASS");
