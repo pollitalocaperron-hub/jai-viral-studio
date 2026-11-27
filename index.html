@@ -1065,6 +1065,10 @@ function paintVectorShot(ctx,w,h,shot,progress){
  const partParents={head:"torso",hair:"head",eyes:"head",mouth:"head",face:"head",upper_arm:"torso",arm_upper:"torso",forearm:"upper_arm",lower_arm:"upper_arm",hand:"forearm",upper_leg:"torso",thigh:"torso",lower_leg:"upper_leg",shin:"upper_leg",foot:"lower_leg"};
  const normalizePart=value=>String(value||"").toLowerCase().replace(/[ -]/g,"_");
  const motionEngine=window.JAI2DMotionEngine;
+ const characterIds=[...new Set(layers.map(layer=>layer?.character_id).filter(Boolean))];
+ const rigParents=characterIds.length&&motionEngine?.resolvePartParentsFromRigs
+  ?motionEngine.resolvePartParentsFromRigs(currentReusableRigs,characterIds[0],partParents)
+  :partParents;
  const transformFor=layer=>motionEngine?.resolveMotionTransform
   ?motionEngine.resolveMotionTransform((Array.isArray(shot.animation_steps)?shot.animation_steps:[]).filter(step=>step.target_id===layer.id),p)
   :{x:0,y:0,rotation:0,scale:1,opacity:1};
@@ -1085,7 +1089,7 @@ function paintVectorShot(ctx,w,h,shot,progress){
  for(const entry of orderedLayers){
   const layer=entry.layer,path=paths[entry.index];
   const transformChain=motionEngine?.resolveLayerMotionChain
-   ?motionEngine.resolveLayerMotionChain(layer,layers,shot.animation_steps,p,partParents)
+   ?motionEngine.resolveLayerMotionChain(layer,layers,shot.animation_steps,p,rigParents)
    :[{bone:layer,transform:transformFor(layer)}];
   ctx.save();for(const entry of transformChain)applyBoneTransform(entry.bone,entry.transform);
   ctx.globalAlpha=Math.max(0,Math.min(1,transformChain.reduce((alpha,entry)=>alpha*Number(entry.transform.opacity),1)));ctx.lineJoin="round";ctx.lineCap="round";
