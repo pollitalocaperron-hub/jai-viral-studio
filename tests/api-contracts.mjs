@@ -4,7 +4,7 @@ import generateHandler from "../api/generate.js";
 import narrateHandler from "../api/narrate.js";
 import inspectVisualHandler from "../api/inspect-visual.js";
 import directScenesHandler from "../api/direct-scenes.js";
-import { resolveLayerMotionChain, resolveMotionTransform } from "../jai-2d-motion-engine.js";
+import { resolveLayerMotionChain, resolveMotionTransform, resolvePartParentsFromRigs } from "../jai-2d-motion-engine.js";
 import { resolveVisualStyleProfile } from "../api/visual-style-profiles.js";
 
 // Guard the worst-case provider + retry + repair path against Vercel's 60s function limit.
@@ -267,8 +267,9 @@ try {
     assert.ok(characterHead && characterTorso, "The director must preserve character part IDs through normalization");
     assert.equal(directedShot.animation_steps.find(step => step.target_id === characterHead.id).to_transform.opacity, 1,
       "Normalized keyframes must retain numeric transform values for the renderer");
-    const rigChain = resolveLayerMotionChain(characterHead, directedShot.layers, directedShot.animation_steps, 0.5,
+    const rendererParents = resolvePartParentsFromRigs(res.body.reusable_rigs, characterHead.character_id,
       { head: "torso", hair: "head", eyes: "head", mouth: "head", face: "head", upper_arm: "torso", arm_upper: "torso", forearm: "upper_arm", lower_arm: "upper_arm", hand: "forearm", upper_leg: "torso", thigh: "torso", lower_leg: "upper_leg", shin: "upper_leg", foot: "lower_leg" });
+    const rigChain = resolveLayerMotionChain(characterHead, directedShot.layers, directedShot.animation_steps, 0.5, rendererParents);
     assert.deepEqual(rigChain.map(item => item.bone.id), [characterTorso.id, characterHead.id],
       "A director-generated head layer must inherit its matching character torso before rendering");
     assert.equal(rigChain[0].transform.y, -35, "The parent bone must interpolate its own director keyframe at the requested progress");
