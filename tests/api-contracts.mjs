@@ -284,6 +284,17 @@ try {
     assert.deepEqual(res.body.character_bible[0].parts.map(part => part.part_id).sort(), ["head", "torso"]);
     assert.deepEqual(res.body.reusable_rigs[0].bones.map(bone => bone.bone_id).sort(), ["head", "torso"]);
     assert.equal(res.body.reusable_rigs[0].bones.find(bone => bone.bone_id === "head").parent_bone_id, "torso");
+
+    // Explicit director-authored rig links take precedence over inferred anatomical defaults.
+    const customRigPlan = shots.map(shot => ({ ...shot, layers: shot.layers.map(layer =>
+      layer.id === "housing" ? { ...layer, character_id: "hero", part_id: "housing" } :
+      layer.part_id === "head" ? { ...layer, parent_part_id: "housing" } : layer
+    ) }));
+    const customRigResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: { topic: "Rig personalizado", script: "Narración de prueba.", story, shot_plan: customRigPlan } }, customRigResponse);
+    assert.equal(customRigResponse.statusCode, 200);
+    assert.equal(customRigResponse.body.reusable_rigs[0].bones.find(bone => bone.bone_id === "head").parent_bone_id, "housing",
+      "A valid explicit parent_part_id from the director must override the default head-to-torso inference.");
     assert.equal(res.body.narration_sync_validated, true);
     assert.equal(res.body.shots[0].narration_sync.length, 3);
     assert.ok(res.body.shots[0].narration_sync.every(event => event.start_seconds >= res.body.shots[0].start_seconds && event.end_seconds <= res.body.shots[0].end_seconds));
