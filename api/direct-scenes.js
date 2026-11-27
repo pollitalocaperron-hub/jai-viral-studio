@@ -166,6 +166,7 @@ function validateShots(shots, story) {
       const normalizedPath = path.replace(/\s+/g, " ").trim();
       const bounds = getVectorPathBounds(path);
       if (!bounds || bounds.width < 12 || bounds.height < 12 || bounds.areaRatio < 0.001) return "La capa " + id + " no contiene geometría vectorial visible suficiente.";
+      if (bounds.minX < -72 || bounds.maxX > 792 || bounds.minY < -128 || bounds.maxY > 1408) return "La capa " + id + " de la toma " + (index + 1) + " queda fuera del lienzo vertical 720x1280 y podría no aparecer en el render.";
       if (layerPaths.has(normalizedPath)) return "La toma " + (index + 1) + " repite una ruta vectorial: sus capas no son ilustraciones independientes.";
       const descriptionKey = clean(layer.description, 260).toLowerCase();
       if (layerDescriptions.has(descriptionKey)) return "La toma " + (index + 1) + " repite descripciones de capas y no demuestra componentes visuales distintos.";
