@@ -86,6 +86,7 @@ function buildReusableRigs(shots) {
     if (!characters.has(key)) characters.set(key, new Map());
     const parts = characters.get(key), part = String(layer.part_id).slice(0, 80);
     if (!parts.has(part)) parts.set(part, { bone_id: part, part_id: part, parent_bone_id: clean(layer.parent_part_id, 80), description: layer.description, pivot_x: layer.pivot_x, pivot_y: layer.pivot_y, source_layer_id: layer.id, source_shot_id: shot.shot_id });
+    else if (!parts.get(part).parent_bone_id && clean(layer.parent_part_id, 80)) parts.get(part).parent_bone_id = clean(layer.parent_part_id, 80);
   }
   return [...characters.entries()].map(([character_id, parts]) => {
     const ids = new Set([...parts.keys()].map(part => character_id + ":" + part.toLowerCase().replace(/[ -]/g, "_")));
