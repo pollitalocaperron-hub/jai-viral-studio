@@ -80,8 +80,13 @@ export function resolvePartParentsFromRigs(rigs,characterId,fallback={}){
  * Returns null for a consistent rig or a human-readable validation error.
  */
 export function validateCharacterRigContinuity(shots){
-  const characters=new Map();
+  const characters=new Map(),shotRecords=[];
   const normalize=value=>String(value||"").trim().toLowerCase().replace(/[ -]+/g,"_");
+  const inferredParents={
+    head:"torso",hair:"head",eyes:"head",mouth:"head",face:"head",
+    upper_arm:"torso",arm_upper:"torso",forearm:"upper_arm",lower_arm:"upper_arm",hand:"forearm",
+    upper_leg:"torso",thigh:"torso",lower_leg:"upper_leg",shin:"upper_leg",foot:"lower_leg"
+  };
   for(const [shotIndex,shot] of (Array.isArray(shots)?shots:[]).entries()){
     const shotParts=new Map();
     for(const layer of Array.isArray(shot?.layers)?shot.layers:[]){
@@ -100,11 +105,18 @@ export function validateCharacterRigContinuity(shots){
       if(existing&&existing!==parentId)return "El rig del personaje "+characterId+" cambia el padre de "+partId+" entre tomas ("+existing+" / "+parentId+").";
       rig.parents.set(partId,parentId);
     }
+    shotRecords.push({shotIndex,shot,shotParts});
+  }
+  for(const {shotIndex,shot,shotParts} of shotRecords){
     for(const layer of Array.isArray(shot?.layers)?shot.layers:[]){
       const characterId=String(layer?.character_id||"").trim();
       const partId=normalize(layer?.part_id);
-      const parentId=normalize(layer?.parent_part_id);
-      if(characterId&&partId&&parentId&&!shotParts.get(characterId)?.has(parentId)){
+      if(!characterId||!partId)continue;
+      const rig=characters.get(characterId);
+      const explicitParent=normalize(layer?.parent_part_id);
+      const inferredParent=inferredParents[partId];
+      const parentId=explicitParent||(inferredParent&&rig?.parts.has(inferredParent)?inferredParent:"");
+      if(parentId&&!shotParts.get(characterId)?.has(parentId)){
         return "En la toma "+(shotIndex+1)+", el padre "+parentId+" no aparece junto a la pieza "+partId+" del personaje "+characterId+".";
       }
     }
@@ -125,7 +137,6 @@ export function validateCharacterRigContinuity(shots){
   }
   return null;
 }
-
 
 /**
  * Prevents abrupt jumps or ambiguous overlap when one layer has multiple
