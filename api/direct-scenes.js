@@ -1,6 +1,7 @@
 import { applyApiCors } from "../cors.js";
 import { resolveVisualStyleProfile } from "./visual-style-profiles.js";
 import { normalizeLegacyShot, getSceneReadiness } from "./jai-scene-contract.js";
+import { validateCharacterRigContinuity } from "../jai-2d-motion-engine.js";
 
 function parseRange(value) {
   const match = String(value || "").replace(/[–—]/g, "-").match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
@@ -375,6 +376,14 @@ export default async function handler(req, res) {
       to_transform: Object.fromEntries(["x", "y", "rotation", "scale", "opacity"].map(key => [key, Number(step.to_transform[key])]))
     }))
   }));
+  const rigValidationError = validateCharacterRigContinuity(normalized);
+  if (rigValidationError) {
+    const savedPlan = Array.isArray(shot_plan);
+    return res.status(savedPlan ? 400 : 502).json({
+      error: rigValidationError,
+      diagnosticCode: savedPlan ? "SAVED_SHOT_PLAN_INVALID" : "SCENE_DIRECTOR_INVALID_RIG"
+    });
+  }
   normalized.forEach(shot => { shot.narration_sync = buildNarrationSync(shot); });
   const characterBible = buildCharacterBible(normalized);
   const reusableRigs = buildReusableRigs(normalized);
