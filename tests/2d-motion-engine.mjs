@@ -84,6 +84,6 @@ assert.equal(validateCharacterRigContinuity([
  {layers:[{character_id:"hero",part_id:"torso",parent_part_id:"head"},{character_id:"hero",part_id:"head",parent_part_id:"torso"}]}
 ])?.includes("ciclo"),true,"Cyclic bone hierarchies must be rejected");
 assert.equal(validateCharacterRigContinuity([
- {layers:[{character_id:"hero",part_id:"head",parent_part_id:"torso"},{character_id:"robot",part_id:"head",parent_part_id:"body"},{character_id:"robot",part_id:"body"}]}
+ {layers:[{character_id:"hero",part_id:"torso"},{character_id:"hero",part_id:"head",parent_part_id:"torso"},{character_id:"robot",part_id:"head",parent_part_id:"body"},{character_id:"robot",part_id:"body"}]}
 ]),null,"Identically named parts in different characters must remain isolated");
 console.log("Character rig continuity: consistent parents, orphan rejection, cycle rejection and multi-character isolation: PASS");
