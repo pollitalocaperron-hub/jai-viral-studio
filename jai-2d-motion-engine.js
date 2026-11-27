@@ -61,3 +61,14 @@ export function resolveLayerMotionChain(layer,layers,steps,progress,partParents)
     transform:resolveMotionTransform((Array.isArray(steps)?steps:[]).filter(step=>step?.target_id===bone.id),progress)
   }));
 }
+
+export function resolvePartParentsFromRigs(rigs,characterId,fallback={}){
+  const parents={...(fallback&&typeof fallback==="object"?fallback:{})};
+  const rig=(Array.isArray(rigs)?rigs:[]).find(item=>item?.character_id===characterId);
+  for(const bone of Array.isArray(rig?.bones)?rig.bones:[]){
+    const part=String(bone?.part_id||"").toLowerCase().replace(/[ -]/g,"_");
+    const parent=String(bone?.parent_bone_id||"").toLowerCase().replace(/[ -]/g,"_");
+    if(part&&parent&&part!==parent)parents[part]=parent;
+  }
+  return parents;
+}
