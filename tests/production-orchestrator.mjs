@@ -86,4 +86,26 @@ const build = (handlers, calls, store, options = {}) => createProductionOrchestr
   assert.equal(second.state.context.topic, "Tema B");
 }
 
-console.log("Production orchestrator contract: 6 scenarios passed.");
+
+
+// 7. Concurrent start requests cannot launch a second production run.
+{
+  const calls = {}, store = memory();
+  let releaseFirst;
+  const firstStage = new Promise(resolve => { releaseFirst = resolve; });
+  const handlers = { plan: async () => { await firstStage; return { ok: true, output: "plan-output" }; } };
+  const orchestrator = build(handlers, calls, store);
+  const firstRun = orchestrator.run({ resume: false });
+  await new Promise(resolve => setImmediate(resolve));
+  await assert.rejects(
+    () => orchestrator.run({ resume: true }),
+    /Ya existe una producción en ejecución/
+  );
+  assert.equal(calls.plan, 1, "Concurrent request must not invoke the first stage twice");
+  releaseFirst();
+  const completed = await firstRun;
+  assert.equal(completed.ok, true);
+  assert.equal(completed.state.status, "completed");
+}
+
+console.log("Production orchestrator contract: 7 scenarios passed.");
