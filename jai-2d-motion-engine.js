@@ -73,3 +73,44 @@ export function resolvePartParentsFromRigs(rigs,characterId,fallback={}){
   }
   return parents;
 }
+
+
+/**
+ * Rejects character rigs whose bone hierarchy changes between shots.
+ * Returns null for a consistent rig or a human-readable validation error.
+ */
+export function validateCharacterRigContinuity(shots){
+  const characters=new Map();
+  const normalize=value=>String(value||"").trim().toLowerCase().replace(/[ -]+/g,"_");
+  for(const [shotIndex,shot] of (Array.isArray(shots)?shots:[]).entries()){
+    for(const layer of Array.isArray(shot?.layers)?shot.layers:[]){
+      const characterId=String(layer?.character_id||"").trim();
+      const partId=normalize(layer?.part_id);
+      if(!characterId||!partId)continue;
+      if(!characters.has(characterId))characters.set(characterId,{parts:new Set(),parents:new Map()});
+      const rig=characters.get(characterId);
+      rig.parts.add(partId);
+      const parentId=normalize(layer?.parent_part_id);
+      if(!parentId)continue;
+      if(parentId===partId)return "El rig del personaje "+characterId+" contiene una articulación que se enlaza consigo misma ("+partId+").";
+      const existing=rig.parents.get(partId);
+      if(existing&&existing!==parentId)return "El rig del personaje "+characterId+" cambia el padre de "+partId+" entre tomas ("+existing+" / "+parentId+").";
+      rig.parents.set(partId,parentId);
+    }
+  }
+  for(const [characterId,rig] of characters){
+    for(const [partId,parentId] of rig.parents){
+      if(!rig.parts.has(parentId))return "El rig del personaje "+characterId+" enlaza "+partId+" con el padre inexistente "+parentId+".";
+    }
+    for(const partId of rig.parts){
+      const visited=new Set();
+      let cursor=partId;
+      while(rig.parents.has(cursor)){
+        if(visited.has(cursor))return "El rig del personaje "+characterId+" contiene un ciclo de articulaciones en "+cursor+".";
+        visited.add(cursor);
+        cursor=rig.parents.get(cursor);
+      }
+    }
+  }
+  return null;
+}
