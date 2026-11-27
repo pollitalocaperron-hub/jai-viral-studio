@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { easeMotionProgress, interpolateMotionTransform, resolveMotionTransform, resolveLayerMotionChain, resolvePartParentsFromRigs, validateCharacterRigContinuity } from "../jai-2d-motion-engine.js";
+import { easeMotionProgress, interpolateMotionTransform, resolveMotionTransform, resolveLayerMotionChain, resolvePartParentsFromRigs, validateCharacterRigContinuity, validateMotionStepContinuity } from "../jai-2d-motion-engine.js";
 
 assert.equal(easeMotionProgress(0),0);
 assert.equal(easeMotionProgress(1),1);
@@ -87,3 +87,25 @@ assert.equal(validateCharacterRigContinuity([
  {layers:[{character_id:"hero",part_id:"torso"},{character_id:"hero",part_id:"head",parent_part_id:"torso"},{character_id:"robot",part_id:"head",parent_part_id:"body"},{character_id:"robot",part_id:"body"}]}
 ]),null,"Identically named parts in different characters must remain isolated");
 console.log("Character rig continuity: consistent parents, orphan rejection, cycle rejection and multi-character isolation: PASS");
+
+
+const poseA={x:0,y:0,rotation:0,scale:1,opacity:1};
+const poseB={x:0,y:-40,rotation:8,scale:1,opacity:1};
+const poseC={x:12,y:-40,rotation:0,scale:1,opacity:1};
+assert.equal(validateMotionStepContinuity([{animation_steps:[
+ {target_id:"arm",start_progress:0,end_progress:.45,from_transform:poseA,to_transform:poseB},
+ {target_id:"arm",start_progress:.45,end_progress:1,from_transform:poseB,to_transform:poseC}
+]}]),null,"Sequential actions on one layer must join at the exact same pose");
+assert.match(validateMotionStepContinuity([{animation_steps:[
+ {target_id:"arm",start_progress:0,end_progress:.55,from_transform:poseA,to_transform:poseB},
+ {target_id:"arm",start_progress:.5,end_progress:1,from_transform:poseB,to_transform:poseC}
+]}])||"",/solapadas/,"Overlapping actions on one layer must be rejected");
+assert.match(validateMotionStepContinuity([{animation_steps:[
+ {target_id:"arm",start_progress:0,end_progress:.5,from_transform:poseA,to_transform:poseB},
+ {target_id:"arm",start_progress:.5,end_progress:1,from_transform:poseA,to_transform:poseC}
+]}])||"",/salto/,"A pose discontinuity between sequential actions must be rejected");
+assert.equal(validateMotionStepContinuity([{animation_steps:[
+ {target_id:"arm",start_progress:0,end_progress:.6,from_transform:poseA,to_transform:poseB},
+ {target_id:"head",start_progress:.2,end_progress:.9,from_transform:poseA,to_transform:poseC}
+]}]),null,"Different layers may animate concurrently");
+console.log("Motion continuity: sequential pose joins, overlap rejection and concurrent independent layers: PASS");
