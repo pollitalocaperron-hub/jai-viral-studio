@@ -223,7 +223,8 @@ export default async function handler(req, res) {
 
   const styleProfile = resolveVisualStyleProfile(style_profile_id, topic, script);
   const reusableShotPlan = Array.isArray(shot_plan) ? shot_plan : null;
-  if (reusableShotPlan && validateShots(reusableShotPlan, story)) return res.status(400).json({ error: "El plan de tomas guardado no supera la validación; no se volverá a generar automáticamente.", diagnosticCode: "SAVED_SHOT_PLAN_INVALID" });
+  const savedPlanValidationError = reusableShotPlan ? validateShots(reusableShotPlan, story) : null;
+  if (savedPlanValidationError) return res.status(400).json({ error: "El plan de tomas guardado no supera la validación: " + savedPlanValidationError + " No se volverá a generar automáticamente.", diagnosticCode: "SAVED_SHOT_PLAN_INVALID" });
   const directorStoryboard = story.map((scene, index) => ({ scene_index: index, time: scene.time, objective: clean(scene.objective, 180), teaching_point: clean(scene.teaching_point, 220), visual_proof: clean(scene.visual_proof, 180), visual_subject: clean(scene.visual_subject || scene.visual, 140), visual_state: clean(scene.visual_state, 140), visual_action: clean(scene.visual_action || scene.animation, 160), visual_composition: clean(scene.visual_composition, 120), continuity_anchor: clean(scene.continuity_anchor, 140) }));
 
   const prompt = [
