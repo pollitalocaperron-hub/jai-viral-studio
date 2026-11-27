@@ -271,6 +271,20 @@ try {
       "A saved shot plan with overlapping actions on the same layer must be rejected before rendering.");
     assert.equal(overlappingMotionResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
     assert.match(overlappingMotionResponse.body.error, /solapadas/);
+
+    const jumpingMotionPlan = res.body.shots.map((shot, index) => index === 0 ? ({
+      ...shot,
+      animation_steps: shot.animation_steps.map((step, stepIndex) => stepIndex === 1
+        ? { ...step, target_id: "component", start_progress: 0.65, end_progress: 1 }
+        : stepIndex === 0 ? { ...step, end_progress: 0.65 } : step)
+    }) : shot);
+    const jumpingMotionResponse = mockResponse();
+    await directScenesHandler({ method: "POST", body: {
+      topic: "Animación con salto", script: "Narración de prueba.", story, shot_plan: jumpingMotionPlan
+    } }, jumpingMotionResponse);
+    assert.equal(jumpingMotionResponse.statusCode, 400);
+    assert.equal(jumpingMotionResponse.body.diagnosticCode, "SAVED_SHOT_PLAN_INVALID");
+    assert.match(jumpingMotionResponse.body.error, /salto entre acciones/);
     assert.equal(res.body.visual_engine_status, "vector_preview_only");
     assert.equal(res.body.cinematic_ready, false, "Vector-only scene direction must never claim cinematic readiness.");
     assert.equal(res.body.scene_contracts.length, res.body.shots.length);
