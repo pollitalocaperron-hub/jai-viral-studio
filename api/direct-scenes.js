@@ -85,12 +85,12 @@ function buildReusableRigs(shots) {
     const key = String(layer.character_id);
     if (!characters.has(key)) characters.set(key, new Map());
     const parts = characters.get(key), part = String(layer.part_id).slice(0, 80);
-    if (!parts.has(part)) parts.set(part, { bone_id: part, part_id: part, description: layer.description, pivot_x: layer.pivot_x, pivot_y: layer.pivot_y, source_layer_id: layer.id, source_shot_id: shot.shot_id });
+    if (!parts.has(part)) parts.set(part, { bone_id: part, part_id: part, parent_bone_id: clean(layer.parent_part_id, 80), description: layer.description, pivot_x: layer.pivot_x, pivot_y: layer.pivot_y, source_layer_id: layer.id, source_shot_id: shot.shot_id });
   }
   return [...characters.entries()].map(([character_id, parts]) => {
     const ids = new Set([...parts.keys()].map(part => character_id + ":" + part.toLowerCase().replace(/[ -]/g, "_")));
     return { rig_id: "rig-" + character_id, character_id, coordinate_space: "720x1280", reusable: true,
-      bones: [...parts.values()].map(bone => ({ ...bone, parent_bone_id: inferBoneParent(bone.part_id, character_id, ids) })) };
+      bones: [...parts.values()].map(bone => ({ ...bone, parent_bone_id: bone.parent_bone_id && ids.has(character_id + ":" + bone.parent_bone_id.toLowerCase().replace(/[ -]/g, "_")) && bone.parent_bone_id.toLowerCase().replace(/[ -]/g, "_") !== bone.part_id.toLowerCase().replace(/[ -]/g, "_") ? bone.parent_bone_id : inferBoneParent(bone.part_id, character_id, ids) })) };
   });
 }
 function buildCharacterBible(shots) {
@@ -363,7 +363,7 @@ export default async function handler(req, res) {
     scene_index: Number(shot.scene_index), start_seconds: Number(shot.start_seconds), end_seconds: Number(shot.end_seconds),
     background_color: clean(shot.background_color, 16),
     layers: shot.layers.map((layer, layerIndex) => ({
-      id: clean(layer?.id, 60) || "layer-" + (layerIndex + 1), description: clean(layer?.description, 260), role: clean(layer?.role, 120), character_id: clean(layer?.character_id, 80), part_id: clean(layer?.part_id, 80),
+      id: clean(layer?.id, 60) || "layer-" + (layerIndex + 1), description: clean(layer?.description, 260), role: clean(layer?.role, 120), character_id: clean(layer?.character_id, 80), part_id: clean(layer?.part_id, 80), parent_part_id: clean(layer?.parent_part_id, 80),
       path_d: layer.path_d.trim(), fill: clean(layer.fill, 16), stroke: clean(layer.stroke, 16), stroke_width: Number(layer.stroke_width),
       pivot_x: Number(layer.pivot_x), pivot_y: Number(layer.pivot_y)
     })),
