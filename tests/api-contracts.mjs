@@ -11,6 +11,7 @@ import { resolveVisualStyleProfile } from "../api/visual-style-profiles.js";
 const generationSource = readFileSync(new URL("../api/generate.js", import.meta.url), "utf8");
 const frontendSource = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 assert.match(frontendSource, /motionEngine\?\.resolveLayerMotionChain/, "Character rendering must delegate hierarchical bone transforms to the shared 2D motion engine.");
+assert.match(frontendSource, /Number\.isFinite\(rawX\)\?rawX:360,py=Number\.isFinite\(rawY\)\?rawY:640/, "A valid zero-valued bone pivot must be preserved instead of being replaced by the canvas center.");
 assert.match(frontendSource, /motionEngine\.resolveLayerMotionChain\(layer,layers,shot\.animation_steps,p,rigParentsForCharacter\)/, "Each character layer must resolve the matching reusable rig for its own character ID.");
 assert.match(frontendSource, /exportedParts\.has\(reusableKey\)/, "PNG export must deduplicate recurring character parts across shots.");
 assert.match(frontendSource, /canvas\.toDataURL\("image\/png"\)/, "Character layer export must encode transparent canvas output as PNG.");
